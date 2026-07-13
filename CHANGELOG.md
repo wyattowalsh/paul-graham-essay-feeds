@@ -5,9 +5,10 @@
 ### Changed
 
 - **Slim repo:** drop `docs/`, `reference/`, `site/`, `scripts/`, `ROADMAP.md`,
-  committed `data/*`, `reports/*`, and `SHA256SUMS`. Only **`feeds/`** is the
-  committed publishable surface; runtime state/report/checksums are gitignored.
-- Vercel `buildCommand` copies `feeds/` into `public/feeds/` (no static site).
+  committed `data/*`, `reports/*`, and `SHA256SUMS`. Runtime state/report/checksums
+  are gitignored; committed publishables are **`feeds/`** only (no site).
+- README status badges (CI, license, Python/uv/Ruff/pytest, live feed links).
+- Vercel `buildCommand` copies `feeds/` into `public/feeds/`.
 - **Denested layout** at repository root; uvx-friendly cwd defaults and default
   Vercel `public_base_url`.
 
