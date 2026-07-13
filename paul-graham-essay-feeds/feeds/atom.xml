@@ -1,0 +1,1645 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<atom:feed xmlns:atom="http://www.w3.org/2005/Atom" xml:lang="en">
+  <atom:title>Paul Graham: Essays</atom:title>
+  <atom:id>tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds</atom:id>
+  <atom:updated>2026-07-13T04:01:15Z</atom:updated>
+  <atom:subtitle>Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.</atom:subtitle>
+  <atom:author>
+    <atom:name>Paul Graham</atom:name>
+    <atom:uri>https://paulgraham.com/</atom:uri>
+  </atom:author>
+  <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/articles.html" />
+  <atom:link rel="self" type="application/atom+xml" href="https://paul-graham-essay-feeds.vercel.app/feeds/atom.xml" />
+  <atom:generator>pg-essay-feeds/0.1.0</atom:generator>
+  <atom:entry>
+    <atom:title>How to Earn a Billion Dollars</atom:title>
+    <atom:id>https://paulgraham.com/earn.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/earn.html" />
+    <atom:summary>Read “How to Earn a Billion Dollars” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Convert Between Wealth and Income Tax</atom:title>
+    <atom:id>https://paulgraham.com/winc.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/winc.html" />
+    <atom:summary>Read “How to Convert Between Wealth and Income Tax” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Brand Age</atom:title>
+    <atom:id>https://paulgraham.com/brandage.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/brandage.html" />
+    <atom:summary>Read “The Brand Age” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Shape of the Essay Field</atom:title>
+    <atom:id>https://paulgraham.com/field.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/field.html" />
+    <atom:summary>Read “The Shape of the Essay Field” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Good Writing</atom:title>
+    <atom:id>https://paulgraham.com/goodwriting.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/goodwriting.html" />
+    <atom:summary>Read “Good Writing” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What to Do</atom:title>
+    <atom:id>https://paulgraham.com/do.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/do.html" />
+    <atom:summary>Read “What to Do” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Origins of Wokeness</atom:title>
+    <atom:id>https://paulgraham.com/woke.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/woke.html" />
+    <atom:summary>Read “The Origins of Wokeness” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Writes and Write-Nots</atom:title>
+    <atom:id>https://paulgraham.com/writes.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/writes.html" />
+    <atom:summary>Read “Writes and Write-Nots” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>When To Do What You Love</atom:title>
+    <atom:id>https://paulgraham.com/when.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/when.html" />
+    <atom:summary>Read “When To Do What You Love” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Founder Mode</atom:title>
+    <atom:id>https://paulgraham.com/foundermode.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/foundermode.html" />
+    <atom:summary>Read “Founder Mode” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Right Kind of Stubborn</atom:title>
+    <atom:id>https://paulgraham.com/persistence.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/persistence.html" />
+    <atom:summary>Read “The Right Kind of Stubborn” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Reddits</atom:title>
+    <atom:id>https://paulgraham.com/reddits.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/reddits.html" />
+    <atom:summary>Read “The Reddits” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Start Google</atom:title>
+    <atom:id>https://paulgraham.com/google.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/google.html" />
+    <atom:summary>Read “How to Start Google” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Best Essay</atom:title>
+    <atom:id>https://paulgraham.com/best.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/best.html" />
+    <atom:summary>Read “The Best Essay” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Superlinear Returns</atom:title>
+    <atom:id>https://paulgraham.com/superlinear.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/superlinear.html" />
+    <atom:summary>Read “Superlinear Returns” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Do Great Work</atom:title>
+    <atom:id>https://paulgraham.com/greatwork.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/greatwork.html" />
+    <atom:summary>Read “How to Do Great Work” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Get New Ideas</atom:title>
+    <atom:id>https://paulgraham.com/getideas.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/getideas.html" />
+    <atom:summary>Read “How to Get New Ideas” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Need to Read</atom:title>
+    <atom:id>https://paulgraham.com/read.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/read.html" />
+    <atom:summary>Read “The Need to Read” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What You (Want to)* Want</atom:title>
+    <atom:id>https://paulgraham.com/want.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/want.html" />
+    <atom:summary>Read “What You (Want to)* Want” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Alien Truth</atom:title>
+    <atom:id>https://paulgraham.com/alien.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/alien.html" />
+    <atom:summary>Read “Alien Truth” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What I've Learned from Users</atom:title>
+    <atom:id>https://paulgraham.com/users.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/users.html" />
+    <atom:summary>Read “What I've Learned from Users” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Heresy</atom:title>
+    <atom:id>https://paulgraham.com/heresy.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/heresy.html" />
+    <atom:summary>Read “Heresy” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Putting Ideas into Words</atom:title>
+    <atom:id>https://paulgraham.com/words.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/words.html" />
+    <atom:summary>Read “Putting Ideas into Words” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Is There Such a Thing as Good Taste?</atom:title>
+    <atom:id>https://paulgraham.com/goodtaste.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/goodtaste.html" />
+    <atom:summary>Read “Is There Such a Thing as Good Taste?” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Beyond Smart</atom:title>
+    <atom:id>https://paulgraham.com/smart.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/smart.html" />
+    <atom:summary>Read “Beyond Smart” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Weird Languages</atom:title>
+    <atom:id>https://paulgraham.com/weird.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/weird.html" />
+    <atom:summary>Read “Weird Languages” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Work Hard</atom:title>
+    <atom:id>https://paulgraham.com/hwh.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/hwh.html" />
+    <atom:summary>Read “How to Work Hard” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>A Project of One's Own</atom:title>
+    <atom:id>https://paulgraham.com/own.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/own.html" />
+    <atom:summary>Read “A Project of One's Own” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Fierce Nerds</atom:title>
+    <atom:id>https://paulgraham.com/fn.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/fn.html" />
+    <atom:summary>Read “Fierce Nerds” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Crazy New Ideas</atom:title>
+    <atom:id>https://paulgraham.com/newideas.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/newideas.html" />
+    <atom:summary>Read “Crazy New Ideas” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>An NFT That Saves Lives</atom:title>
+    <atom:id>https://paulgraham.com/nft.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/nft.html" />
+    <atom:summary>Read “An NFT That Saves Lives” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Real Reason to End the Death Penalty</atom:title>
+    <atom:id>https://paulgraham.com/real.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/real.html" />
+    <atom:summary>Read “The Real Reason to End the Death Penalty” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How People Get Rich Now</atom:title>
+    <atom:id>https://paulgraham.com/richnow.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/richnow.html" />
+    <atom:summary>Read “How People Get Rich Now” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Write Simply</atom:title>
+    <atom:id>https://paulgraham.com/simply.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/simply.html" />
+    <atom:summary>Read “Write Simply” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Donate Unrestricted</atom:title>
+    <atom:id>https://paulgraham.com/donate.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/donate.html" />
+    <atom:summary>Read “Donate Unrestricted” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What I Worked On</atom:title>
+    <atom:id>https://paulgraham.com/worked.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/worked.html" />
+    <atom:summary>Read “What I Worked On” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Earnestness</atom:title>
+    <atom:id>https://paulgraham.com/earnest.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/earnest.html" />
+    <atom:summary>Read “Earnestness” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Billionaires Build</atom:title>
+    <atom:id>https://paulgraham.com/ace.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ace.html" />
+    <atom:summary>Read “Billionaires Build” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Airbnbs</atom:title>
+    <atom:id>https://paulgraham.com/airbnbs.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/airbnbs.html" />
+    <atom:summary>Read “The Airbnbs” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Think for Yourself</atom:title>
+    <atom:id>https://paulgraham.com/think.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/think.html" />
+    <atom:summary>Read “How to Think for Yourself” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Early Work</atom:title>
+    <atom:id>https://paulgraham.com/early.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/early.html" />
+    <atom:summary>Read “Early Work” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Modeling a Wealth Tax</atom:title>
+    <atom:id>https://paulgraham.com/wtax.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/wtax.html" />
+    <atom:summary>Read “Modeling a Wealth Tax” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Four Quadrants of Conformism</atom:title>
+    <atom:id>https://paulgraham.com/conformism.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/conformism.html" />
+    <atom:summary>Read “The Four Quadrants of Conformism” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Orthodox Privilege</atom:title>
+    <atom:id>https://paulgraham.com/orth.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/orth.html" />
+    <atom:summary>Read “Orthodox Privilege” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Coronavirus and Credibility</atom:title>
+    <atom:id>https://paulgraham.com/cred.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/cred.html" />
+    <atom:summary>Read “Coronavirus and Credibility” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Write Usefully</atom:title>
+    <atom:id>https://paulgraham.com/useful.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/useful.html" />
+    <atom:summary>Read “How to Write Usefully” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Being a Noob</atom:title>
+    <atom:id>https://paulgraham.com/noob.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/noob.html" />
+    <atom:summary>Read “Being a Noob” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Haters</atom:title>
+    <atom:id>https://paulgraham.com/fh.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/fh.html" />
+    <atom:summary>Read “Haters” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Two Kinds of Moderate</atom:title>
+    <atom:id>https://paulgraham.com/mod.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/mod.html" />
+    <atom:summary>Read “The Two Kinds of Moderate” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Fashionable Problems</atom:title>
+    <atom:id>https://paulgraham.com/fp.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/fp.html" />
+    <atom:summary>Read “Fashionable Problems” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Having Kids</atom:title>
+    <atom:id>https://paulgraham.com/kids.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/kids.html" />
+    <atom:summary>Read “Having Kids” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Lesson to Unlearn</atom:title>
+    <atom:id>https://paulgraham.com/lesson.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/lesson.html" />
+    <atom:summary>Read “The Lesson to Unlearn” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Novelty and Heresy</atom:title>
+    <atom:id>https://paulgraham.com/nov.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/nov.html" />
+    <atom:summary>Read “Novelty and Heresy” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Bus Ticket Theory of Genius</atom:title>
+    <atom:id>https://paulgraham.com/genius.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/genius.html" />
+    <atom:summary>Read “The Bus Ticket Theory of Genius” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>General and Surprising</atom:title>
+    <atom:id>https://paulgraham.com/sun.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/sun.html" />
+    <atom:summary>Read “General and Surprising” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Charisma / Power</atom:title>
+    <atom:id>https://paulgraham.com/pow.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/pow.html" />
+    <atom:summary>Read “Charisma / Power” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Risk of Discovery</atom:title>
+    <atom:id>https://paulgraham.com/disc.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/disc.html" />
+    <atom:summary>Read “The Risk of Discovery” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Make Pittsburgh a Startup Hub</atom:title>
+    <atom:id>https://paulgraham.com/pgh.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/pgh.html" />
+    <atom:summary>Read “How to Make Pittsburgh a Startup Hub” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Life is Short</atom:title>
+    <atom:id>https://paulgraham.com/vb.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/vb.html" />
+    <atom:summary>Read “Life is Short” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Economic Inequality</atom:title>
+    <atom:id>https://paulgraham.com/ineq.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ineq.html" />
+    <atom:summary>Read “Economic Inequality” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Refragmentation</atom:title>
+    <atom:id>https://paulgraham.com/re.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/re.html" />
+    <atom:summary>Read “The Refragmentation” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Jessica Livingston</atom:title>
+    <atom:id>https://paulgraham.com/jessica.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/jessica.html" />
+    <atom:summary>Read “Jessica Livingston” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>A Way to Detect Bias</atom:title>
+    <atom:id>https://paulgraham.com/bias.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/bias.html" />
+    <atom:summary>Read “A Way to Detect Bias” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Write Like You Talk</atom:title>
+    <atom:id>https://paulgraham.com/talk.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/talk.html" />
+    <atom:summary>Read “Write Like You Talk” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Default Alive or Default Dead?</atom:title>
+    <atom:id>https://paulgraham.com/aord.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/aord.html" />
+    <atom:summary>Read “Default Alive or Default Dead?” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why It's Safe for Founders to Be Nice</atom:title>
+    <atom:id>https://paulgraham.com/safe.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/safe.html" />
+    <atom:summary>Read “Why It's Safe for Founders to Be Nice” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Change Your Name</atom:title>
+    <atom:id>https://paulgraham.com/name.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/name.html" />
+    <atom:summary>Read “Change Your Name” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What Microsoft Is this the Altair Basic of?</atom:title>
+    <atom:id>https://paulgraham.com/altair.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/altair.html" />
+    <atom:summary>Read “What Microsoft Is this the Altair Basic of?” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Ronco Principle</atom:title>
+    <atom:id>https://paulgraham.com/ronco.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ronco.html" />
+    <atom:summary>Read “The Ronco Principle” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What Doesn't Seem Like Work?</atom:title>
+    <atom:id>https://paulgraham.com/work.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/work.html" />
+    <atom:summary>Read “What Doesn't Seem Like Work?” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Don't Talk to Corp Dev</atom:title>
+    <atom:id>https://paulgraham.com/corpdev.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/corpdev.html" />
+    <atom:summary>Read “Don't Talk to Corp Dev” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Let the Other 95% of Great Programmers In</atom:title>
+    <atom:id>https://paulgraham.com/95.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/95.html" />
+    <atom:summary>Read “Let the Other 95% of Great Programmers In” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Be an Expert in a Changing World</atom:title>
+    <atom:id>https://paulgraham.com/ecw.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ecw.html" />
+    <atom:summary>Read “How to Be an Expert in a Changing World” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How You Know</atom:title>
+    <atom:id>https://paulgraham.com/know.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/know.html" />
+    <atom:summary>Read “How You Know” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Fatal Pinch</atom:title>
+    <atom:id>https://paulgraham.com/pinch.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/pinch.html" />
+    <atom:summary>Read “The Fatal Pinch” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Mean People Fail</atom:title>
+    <atom:id>https://paulgraham.com/mean.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/mean.html" />
+    <atom:summary>Read “Mean People Fail” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Before the Startup</atom:title>
+    <atom:id>https://paulgraham.com/before.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/before.html" />
+    <atom:summary>Read “Before the Startup” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Raise Money</atom:title>
+    <atom:id>https://paulgraham.com/fr.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/fr.html" />
+    <atom:summary>Read “How to Raise Money” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Investor Herd Dynamics</atom:title>
+    <atom:id>https://paulgraham.com/herd.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/herd.html" />
+    <atom:summary>Read “Investor Herd Dynamics” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Convince Investors</atom:title>
+    <atom:id>https://paulgraham.com/convince.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/convince.html" />
+    <atom:summary>Read “How to Convince Investors” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Do Things that Don't Scale</atom:title>
+    <atom:id>https://paulgraham.com/ds.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ds.html" />
+    <atom:summary>Read “Do Things that Don't Scale” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Startup Investing Trends</atom:title>
+    <atom:id>https://paulgraham.com/invtrend.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/invtrend.html" />
+    <atom:summary>Read “Startup Investing Trends” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Get Startup Ideas</atom:title>
+    <atom:id>https://paulgraham.com/startupideas.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/startupideas.html" />
+    <atom:summary>Read “How to Get Startup Ideas” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Hardware Renaissance</atom:title>
+    <atom:id>https://paulgraham.com/hw.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/hw.html" />
+    <atom:summary>Read “The Hardware Renaissance” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Startup = Growth</atom:title>
+    <atom:id>https://paulgraham.com/growth.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/growth.html" />
+    <atom:summary>Read “Startup = Growth” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Black Swan Farming</atom:title>
+    <atom:id>https://paulgraham.com/swan.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/swan.html" />
+    <atom:summary>Read “Black Swan Farming” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Top of My Todo List</atom:title>
+    <atom:id>https://paulgraham.com/todo.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/todo.html" />
+    <atom:summary>Read “The Top of My Todo List” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Writing and Speaking</atom:title>
+    <atom:id>https://paulgraham.com/speak.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/speak.html" />
+    <atom:summary>Read “Writing and Speaking” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How Y Combinator Started</atom:title>
+    <atom:id>https://paulgraham.com/ycstart.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ycstart.html" />
+    <atom:summary>Read “How Y Combinator Started” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Defining Property</atom:title>
+    <atom:id>https://paulgraham.com/property.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/property.html" />
+    <atom:summary>Read “Defining Property” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Frighteningly Ambitious Startup Ideas</atom:title>
+    <atom:id>https://paulgraham.com/ambitious.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ambitious.html" />
+    <atom:summary>Read “Frighteningly Ambitious Startup Ideas” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>A Word to the Resourceful</atom:title>
+    <atom:id>https://paulgraham.com/word.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/word.html" />
+    <atom:summary>Read “A Word to the Resourceful” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Schlep Blindness</atom:title>
+    <atom:id>https://paulgraham.com/schlep.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/schlep.html" />
+    <atom:summary>Read “Schlep Blindness” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Snapshot: Viaweb, June 1998</atom:title>
+    <atom:id>https://paulgraham.com/vw.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/vw.html" />
+    <atom:summary>Read “Snapshot: Viaweb, June 1998” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why Startup Hubs Work</atom:title>
+    <atom:id>https://paulgraham.com/hubs.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/hubs.html" />
+    <atom:summary>Read “Why Startup Hubs Work” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Patent Pledge</atom:title>
+    <atom:id>https://paulgraham.com/patentpledge.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/patentpledge.html" />
+    <atom:summary>Read “The Patent Pledge” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Subject: Airbnb</atom:title>
+    <atom:id>https://paulgraham.com/airbnb.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/airbnb.html" />
+    <atom:summary>Read “Subject: Airbnb” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Founder Control</atom:title>
+    <atom:id>https://paulgraham.com/control.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/control.html" />
+    <atom:summary>Read “Founder Control” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Tablets</atom:title>
+    <atom:id>https://paulgraham.com/tablets.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/tablets.html" />
+    <atom:summary>Read “Tablets” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What We Look for in Founders</atom:title>
+    <atom:id>https://paulgraham.com/founders.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/founders.html" />
+    <atom:summary>Read “What We Look for in Founders” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The New Funding Landscape</atom:title>
+    <atom:id>https://paulgraham.com/superangels.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/superangels.html" />
+    <atom:summary>Read “The New Funding Landscape” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Where to See Silicon Valley</atom:title>
+    <atom:id>https://paulgraham.com/seesv.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/seesv.html" />
+    <atom:summary>Read “Where to See Silicon Valley” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>High Resolution Fundraising</atom:title>
+    <atom:id>https://paulgraham.com/hiresfund.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/hiresfund.html" />
+    <atom:summary>Read “High Resolution Fundraising” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What Happened to Yahoo</atom:title>
+    <atom:id>https://paulgraham.com/yahoo.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/yahoo.html" />
+    <atom:summary>Read “What Happened to Yahoo” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Future of Startup Funding</atom:title>
+    <atom:id>https://paulgraham.com/future.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/future.html" />
+    <atom:summary>Read “The Future of Startup Funding” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Acceleration of Addictiveness</atom:title>
+    <atom:id>https://paulgraham.com/addiction.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/addiction.html" />
+    <atom:summary>Read “The Acceleration of Addictiveness” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Top Idea in Your Mind</atom:title>
+    <atom:id>https://paulgraham.com/top.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/top.html" />
+    <atom:summary>Read “The Top Idea in Your Mind” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Lose Time and Money</atom:title>
+    <atom:id>https://paulgraham.com/selfindulgence.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/selfindulgence.html" />
+    <atom:summary>Read “How to Lose Time and Money” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Organic Startup Ideas</atom:title>
+    <atom:id>https://paulgraham.com/organic.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/organic.html" />
+    <atom:summary>Read “Organic Startup Ideas” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Apple's Mistake</atom:title>
+    <atom:id>https://paulgraham.com/apple.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/apple.html" />
+    <atom:summary>Read “Apple's Mistake” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What Startups Are Really Like</atom:title>
+    <atom:id>https://paulgraham.com/really.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/really.html" />
+    <atom:summary>Read “What Startups Are Really Like” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Persuade xor Discover</atom:title>
+    <atom:id>https://paulgraham.com/discover.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/discover.html" />
+    <atom:summary>Read “Persuade xor Discover” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Post-Medium Publishing</atom:title>
+    <atom:id>https://paulgraham.com/publishing.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/publishing.html" />
+    <atom:summary>Read “Post-Medium Publishing” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The List of N Things</atom:title>
+    <atom:id>https://paulgraham.com/nthings.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/nthings.html" />
+    <atom:summary>Read “The List of N Things” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Anatomy of Determination</atom:title>
+    <atom:id>https://paulgraham.com/determination.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/determination.html" />
+    <atom:summary>Read “The Anatomy of Determination” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What Kate Saw in Silicon Valley</atom:title>
+    <atom:id>https://paulgraham.com/kate.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/kate.html" />
+    <atom:summary>Read “What Kate Saw in Silicon Valley” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Trouble with the Segway</atom:title>
+    <atom:id>https://paulgraham.com/segway.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/segway.html" />
+    <atom:summary>Read “The Trouble with the Segway” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Ramen Profitable</atom:title>
+    <atom:id>https://paulgraham.com/ramenprofitable.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ramenprofitable.html" />
+    <atom:summary>Read “Ramen Profitable” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Maker's Schedule, Manager's Schedule</atom:title>
+    <atom:id>https://paulgraham.com/makersschedule.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/makersschedule.html" />
+    <atom:summary>Read “Maker's Schedule, Manager's Schedule” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>A Local Revolution?</atom:title>
+    <atom:id>https://paulgraham.com/revolution.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/revolution.html" />
+    <atom:summary>Read “A Local Revolution?” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why Twitter is a Big Deal</atom:title>
+    <atom:id>https://paulgraham.com/twitter.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/twitter.html" />
+    <atom:summary>Read “Why Twitter is a Big Deal” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Founder Visa</atom:title>
+    <atom:id>https://paulgraham.com/foundervisa.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/foundervisa.html" />
+    <atom:summary>Read “The Founder Visa” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Five Founders</atom:title>
+    <atom:id>https://paulgraham.com/5founders.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/5founders.html" />
+    <atom:summary>Read “Five Founders” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Relentlessly Resourceful</atom:title>
+    <atom:id>https://paulgraham.com/relres.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/relres.html" />
+    <atom:summary>Read “Relentlessly Resourceful” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Be an Angel Investor</atom:title>
+    <atom:id>https://paulgraham.com/angelinvesting.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/angelinvesting.html" />
+    <atom:summary>Read “How to Be an Angel Investor” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why TV Lost</atom:title>
+    <atom:id>https://paulgraham.com/convergence.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/convergence.html" />
+    <atom:summary>Read “Why TV Lost” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Can You Buy a Silicon Valley? Maybe.</atom:title>
+    <atom:id>https://paulgraham.com/maybe.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/maybe.html" />
+    <atom:summary>Read “Can You Buy a Silicon Valley? Maybe.” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What I've Learned from Hacker News</atom:title>
+    <atom:id>https://paulgraham.com/hackernews.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/hackernews.html" />
+    <atom:summary>Read “What I've Learned from Hacker News” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Startups in 13 Sentences</atom:title>
+    <atom:id>https://paulgraham.com/13sentences.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/13sentences.html" />
+    <atom:summary>Read “Startups in 13 Sentences” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Keep Your Identity Small</atom:title>
+    <atom:id>https://paulgraham.com/identity.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/identity.html" />
+    <atom:summary>Read “Keep Your Identity Small” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>After Credentials</atom:title>
+    <atom:id>https://paulgraham.com/credentials.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/credentials.html" />
+    <atom:summary>Read “After Credentials” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Could VC be a Casualty of the Recession?</atom:title>
+    <atom:id>https://paulgraham.com/divergence.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/divergence.html" />
+    <atom:summary>Read “Could VC be a Casualty of the Recession?” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The High-Res Society</atom:title>
+    <atom:id>https://paulgraham.com/highres.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/highres.html" />
+    <atom:summary>Read “The High-Res Society” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Other Half of "Artists Ship"</atom:title>
+    <atom:id>https://paulgraham.com/artistsship.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/artistsship.html" />
+    <atom:summary>Read “The Other Half of "Artists Ship"” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why to Start a Startup in a Bad Economy</atom:title>
+    <atom:id>https://paulgraham.com/badeconomy.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/badeconomy.html" />
+    <atom:summary>Read “Why to Start a Startup in a Bad Economy” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>A Fundraising Survival Guide</atom:title>
+    <atom:id>https://paulgraham.com/fundraising.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/fundraising.html" />
+    <atom:summary>Read “A Fundraising Survival Guide” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Pooled-Risk Company Management Company</atom:title>
+    <atom:id>https://paulgraham.com/prcmc.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/prcmc.html" />
+    <atom:summary>Read “The Pooled-Risk Company Management Company” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Cities and Ambition</atom:title>
+    <atom:id>https://paulgraham.com/cities.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/cities.html" />
+    <atom:summary>Read “Cities and Ambition” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Disconnecting Distraction</atom:title>
+    <atom:id>https://paulgraham.com/distraction.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/distraction.html" />
+    <atom:summary>Read “Disconnecting Distraction” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Lies We Tell Kids</atom:title>
+    <atom:id>https://paulgraham.com/lies.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/lies.html" />
+    <atom:summary>Read “Lies We Tell Kids” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Be Good</atom:title>
+    <atom:id>https://paulgraham.com/good.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/good.html" />
+    <atom:summary>Read “Be Good” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why There Aren't More Googles</atom:title>
+    <atom:id>https://paulgraham.com/googles.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/googles.html" />
+    <atom:summary>Read “Why There Aren't More Googles” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Some Heroes</atom:title>
+    <atom:id>https://paulgraham.com/heroes.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/heroes.html" />
+    <atom:summary>Read “Some Heroes” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Disagree</atom:title>
+    <atom:id>https://paulgraham.com/disagree.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/disagree.html" />
+    <atom:summary>Read “How to Disagree” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>You Weren't Meant to Have a Boss</atom:title>
+    <atom:id>https://paulgraham.com/boss.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/boss.html" />
+    <atom:summary>Read “You Weren't Meant to Have a Boss” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>A New Venture Animal</atom:title>
+    <atom:id>https://paulgraham.com/ycombinator.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ycombinator.html" />
+    <atom:summary>Read “A New Venture Animal” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Trolls</atom:title>
+    <atom:id>https://paulgraham.com/trolls.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/trolls.html" />
+    <atom:summary>Read “Trolls” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Six Principles for Making New Things</atom:title>
+    <atom:id>https://paulgraham.com/newthings.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/newthings.html" />
+    <atom:summary>Read “Six Principles for Making New Things” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why to Move to a Startup Hub</atom:title>
+    <atom:id>https://paulgraham.com/startuphubs.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/startuphubs.html" />
+    <atom:summary>Read “Why to Move to a Startup Hub” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Future of Web Startups</atom:title>
+    <atom:id>https://paulgraham.com/webstartups.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/webstartups.html" />
+    <atom:summary>Read “The Future of Web Startups” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Do Philosophy</atom:title>
+    <atom:id>https://paulgraham.com/philosophy.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/philosophy.html" />
+    <atom:summary>Read “How to Do Philosophy” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>News from the Front</atom:title>
+    <atom:id>https://paulgraham.com/colleges.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/colleges.html" />
+    <atom:summary>Read “News from the Front” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How Not to Die</atom:title>
+    <atom:id>https://paulgraham.com/die.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/die.html" />
+    <atom:summary>Read “How Not to Die” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Holding a Program in One's Head</atom:title>
+    <atom:id>https://paulgraham.com/head.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/head.html" />
+    <atom:summary>Read “Holding a Program in One's Head” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Stuff</atom:title>
+    <atom:id>https://paulgraham.com/stuff.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/stuff.html" />
+    <atom:summary>Read “Stuff” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Equity Equation</atom:title>
+    <atom:id>https://paulgraham.com/equity.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/equity.html" />
+    <atom:summary>Read “The Equity Equation” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>An Alternative Theory of Unions</atom:title>
+    <atom:id>https://paulgraham.com/unions.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/unions.html" />
+    <atom:summary>Read “An Alternative Theory of Unions” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Hacker's Guide to Investors</atom:title>
+    <atom:id>https://paulgraham.com/guidetoinvestors.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/guidetoinvestors.html" />
+    <atom:summary>Read “The Hacker's Guide to Investors” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Two Kinds of Judgement</atom:title>
+    <atom:id>https://paulgraham.com/judgement.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/judgement.html" />
+    <atom:summary>Read “Two Kinds of Judgement” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Microsoft is Dead</atom:title>
+    <atom:id>https://paulgraham.com/microsoft.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/microsoft.html" />
+    <atom:summary>Read “Microsoft is Dead” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why to Not Not Start a Startup</atom:title>
+    <atom:id>https://paulgraham.com/notnot.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/notnot.html" />
+    <atom:summary>Read “Why to Not Not Start a Startup” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Is It Worth Being Wise?</atom:title>
+    <atom:id>https://paulgraham.com/wisdom.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/wisdom.html" />
+    <atom:summary>Read “Is It Worth Being Wise?” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Learning from Founders</atom:title>
+    <atom:id>https://paulgraham.com/foundersatwork.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/foundersatwork.html" />
+    <atom:summary>Read “Learning from Founders” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How Art Can Be Good</atom:title>
+    <atom:id>https://paulgraham.com/goodart.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/goodart.html" />
+    <atom:summary>Read “How Art Can Be Good” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The 18 Mistakes That Kill Startups</atom:title>
+    <atom:id>https://paulgraham.com/startupmistakes.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/startupmistakes.html" />
+    <atom:summary>Read “The 18 Mistakes That Kill Startups” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>A Student's Guide to Startups</atom:title>
+    <atom:id>https://paulgraham.com/mit.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/mit.html" />
+    <atom:summary>Read “A Student's Guide to Startups” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Present to Investors</atom:title>
+    <atom:id>https://paulgraham.com/investors.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/investors.html" />
+    <atom:summary>Read “How to Present to Investors” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Copy What You Like</atom:title>
+    <atom:id>https://paulgraham.com/copy.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/copy.html" />
+    <atom:summary>Read “Copy What You Like” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Island Test</atom:title>
+    <atom:id>https://paulgraham.com/island.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/island.html" />
+    <atom:summary>Read “The Island Test” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Power of the Marginal</atom:title>
+    <atom:id>https://paulgraham.com/marginal.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/marginal.html" />
+    <atom:summary>Read “The Power of the Marginal” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why Startups Condense in America</atom:title>
+    <atom:id>https://paulgraham.com/america.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/america.html" />
+    <atom:summary>Read “Why Startups Condense in America” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Be Silicon Valley</atom:title>
+    <atom:id>https://paulgraham.com/siliconvalley.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/siliconvalley.html" />
+    <atom:summary>Read “How to Be Silicon Valley” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Hardest Lessons for Startups to Learn</atom:title>
+    <atom:id>https://paulgraham.com/startuplessons.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/startuplessons.html" />
+    <atom:summary>Read “The Hardest Lessons for Startups to Learn” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>See Randomness</atom:title>
+    <atom:id>https://paulgraham.com/randomness.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/randomness.html" />
+    <atom:summary>Read “See Randomness” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Are Software Patents Evil?</atom:title>
+    <atom:id>https://paulgraham.com/softwarepatents.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/softwarepatents.html" />
+    <atom:summary>Read “Are Software Patents Evil?” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>6,631,372</atom:title>
+    <atom:id>https://paulgraham.com/6631327.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/6631327.html" />
+    <atom:summary>Read “6,631,372” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why YC</atom:title>
+    <atom:id>https://paulgraham.com/whyyc.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/whyyc.html" />
+    <atom:summary>Read “Why YC” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Do What You Love</atom:title>
+    <atom:id>https://paulgraham.com/love.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/love.html" />
+    <atom:summary>Read “How to Do What You Love” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Good and Bad Procrastination</atom:title>
+    <atom:id>https://paulgraham.com/procrastination.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/procrastination.html" />
+    <atom:summary>Read “Good and Bad Procrastination” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Web 2.0</atom:title>
+    <atom:id>https://paulgraham.com/web20.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/web20.html" />
+    <atom:summary>Read “Web 2.0” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Fund a Startup</atom:title>
+    <atom:id>https://paulgraham.com/startupfunding.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/startupfunding.html" />
+    <atom:summary>Read “How to Fund a Startup” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Venture Capital Squeeze</atom:title>
+    <atom:id>https://paulgraham.com/vcsqueeze.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/vcsqueeze.html" />
+    <atom:summary>Read “The Venture Capital Squeeze” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Ideas for Startups</atom:title>
+    <atom:id>https://paulgraham.com/ideas.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ideas.html" />
+    <atom:summary>Read “Ideas for Startups” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What I Did this Summer</atom:title>
+    <atom:id>https://paulgraham.com/sfp.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/sfp.html" />
+    <atom:summary>Read “What I Did this Summer” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Inequality and Risk</atom:title>
+    <atom:id>https://paulgraham.com/inequality.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/inequality.html" />
+    <atom:summary>Read “Inequality and Risk” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>After the Ladder</atom:title>
+    <atom:id>https://paulgraham.com/ladder.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ladder.html" />
+    <atom:summary>Read “After the Ladder” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What Business Can Learn from Open Source</atom:title>
+    <atom:id>https://paulgraham.com/opensource.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/opensource.html" />
+    <atom:summary>Read “What Business Can Learn from Open Source” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Hiring is Obsolete</atom:title>
+    <atom:id>https://paulgraham.com/hiring.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/hiring.html" />
+    <atom:summary>Read “Hiring is Obsolete” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Submarine</atom:title>
+    <atom:id>https://paulgraham.com/submarine.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/submarine.html" />
+    <atom:summary>Read “The Submarine” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why Smart People Have Bad Ideas</atom:title>
+    <atom:id>https://paulgraham.com/bronze.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/bronze.html" />
+    <atom:summary>Read “Why Smart People Have Bad Ideas” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Return of the Mac</atom:title>
+    <atom:id>https://paulgraham.com/mac.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/mac.html" />
+    <atom:summary>Read “Return of the Mac” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Writing, Briefly</atom:title>
+    <atom:id>https://paulgraham.com/writing44.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/writing44.html" />
+    <atom:summary>Read “Writing, Briefly” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Undergraduation</atom:title>
+    <atom:id>https://paulgraham.com/college.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/college.html" />
+    <atom:summary>Read “Undergraduation” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>A Unified Theory of VC Suckage</atom:title>
+    <atom:id>https://paulgraham.com/venturecapital.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/venturecapital.html" />
+    <atom:summary>Read “A Unified Theory of VC Suckage” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Start a Startup</atom:title>
+    <atom:id>https://paulgraham.com/start.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/start.html" />
+    <atom:summary>Read “How to Start a Startup” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What You'll Wish You'd Known</atom:title>
+    <atom:id>https://paulgraham.com/hs.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/hs.html" />
+    <atom:summary>Read “What You'll Wish You'd Known” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Made in USA</atom:title>
+    <atom:id>https://paulgraham.com/usa.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/usa.html" />
+    <atom:summary>Read “Made in USA” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>It's Charisma, Stupid</atom:title>
+    <atom:id>https://paulgraham.com/charisma.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/charisma.html" />
+    <atom:summary>Read “It's Charisma, Stupid” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Bradley's Ghost</atom:title>
+    <atom:id>https://paulgraham.com/polls.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/polls.html" />
+    <atom:summary>Read “Bradley's Ghost” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>A Version 1.0</atom:title>
+    <atom:id>https://paulgraham.com/laundry.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/laundry.html" />
+    <atom:summary>Read “A Version 1.0” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What the Bubble Got Right</atom:title>
+    <atom:id>https://paulgraham.com/bubble.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/bubble.html" />
+    <atom:summary>Read “What the Bubble Got Right” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Age of the Essay</atom:title>
+    <atom:id>https://paulgraham.com/essay.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/essay.html" />
+    <atom:summary>Read “The Age of the Essay” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Python Paradox</atom:title>
+    <atom:id>https://paulgraham.com/pypar.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/pypar.html" />
+    <atom:summary>Read “The Python Paradox” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Great Hackers</atom:title>
+    <atom:id>https://paulgraham.com/gh.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/gh.html" />
+    <atom:summary>Read “Great Hackers” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Mind the Gap</atom:title>
+    <atom:id>https://paulgraham.com/gap.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/gap.html" />
+    <atom:summary>Read “Mind the Gap” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>How to Make Wealth</atom:title>
+    <atom:id>https://paulgraham.com/wealth.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/wealth.html" />
+    <atom:summary>Read “How to Make Wealth” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Word "Hacker"</atom:title>
+    <atom:id>https://paulgraham.com/gba.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/gba.html" />
+    <atom:summary>Read “The Word "Hacker"” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What You Can't Say</atom:title>
+    <atom:id>https://paulgraham.com/say.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/say.html" />
+    <atom:summary>Read “What You Can't Say” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Filters that Fight Back</atom:title>
+    <atom:id>https://paulgraham.com/ffb.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/ffb.html" />
+    <atom:summary>Read “Filters that Fight Back” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Hackers and Painters</atom:title>
+    <atom:id>https://paulgraham.com/hp.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/hp.html" />
+    <atom:summary>Read “Hackers and Painters” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>If Lisp is So Great</atom:title>
+    <atom:id>https://paulgraham.com/iflisp.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/iflisp.html" />
+    <atom:summary>Read “If Lisp is So Great” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Hundred-Year Language</atom:title>
+    <atom:id>https://paulgraham.com/hundred.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/hundred.html" />
+    <atom:summary>Read “The Hundred-Year Language” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why Nerds are Unpopular</atom:title>
+    <atom:id>https://paulgraham.com/nerds.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/nerds.html" />
+    <atom:summary>Read “Why Nerds are Unpopular” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Better Bayesian Filtering</atom:title>
+    <atom:id>https://paulgraham.com/better.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/better.html" />
+    <atom:summary>Read “Better Bayesian Filtering” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Design and Research</atom:title>
+    <atom:id>https://paulgraham.com/desres.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/desres.html" />
+    <atom:summary>Read “Design and Research” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>A Plan for Spam</atom:title>
+    <atom:id>https://paulgraham.com/spam.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/spam.html" />
+    <atom:summary>Read “A Plan for Spam” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Revenge of the Nerds</atom:title>
+    <atom:id>https://paulgraham.com/icad.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/icad.html" />
+    <atom:summary>Read “Revenge of the Nerds” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Succinctness is Power</atom:title>
+    <atom:id>https://paulgraham.com/power.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/power.html" />
+    <atom:summary>Read “Succinctness is Power” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What Languages Fix</atom:title>
+    <atom:id>https://paulgraham.com/fix.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/fix.html" />
+    <atom:summary>Read “What Languages Fix” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Taste for Makers</atom:title>
+    <atom:id>https://paulgraham.com/taste.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/taste.html" />
+    <atom:summary>Read “Taste for Makers” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Why Arc Isn't Especially Object-Oriented</atom:title>
+    <atom:id>https://paulgraham.com/noop.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/noop.html" />
+    <atom:summary>Read “Why Arc Isn't Especially Object-Oriented” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>What Made Lisp Different</atom:title>
+    <atom:id>https://paulgraham.com/diff.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/diff.html" />
+    <atom:summary>Read “What Made Lisp Different” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Other Road Ahead</atom:title>
+    <atom:id>https://paulgraham.com/road.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/road.html" />
+    <atom:summary>Read “The Other Road Ahead” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>The Roots of Lisp</atom:title>
+    <atom:id>https://paulgraham.com/rootsoflisp.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/rootsoflisp.html" />
+    <atom:summary>Read “The Roots of Lisp” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Five Questions about Language Design</atom:title>
+    <atom:id>https://paulgraham.com/langdes.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/langdes.html" />
+    <atom:summary>Read “Five Questions about Language Design” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Being Popular</atom:title>
+    <atom:id>https://paulgraham.com/popular.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/popular.html" />
+    <atom:summary>Read “Being Popular” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Java's Cover</atom:title>
+    <atom:id>https://paulgraham.com/javacover.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/javacover.html" />
+    <atom:summary>Read “Java's Cover” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Beating the Averages</atom:title>
+    <atom:id>https://paulgraham.com/avg.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/avg.html" />
+    <atom:summary>Read “Beating the Averages” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Lisp for Web-Based Applications</atom:title>
+    <atom:id>https://paulgraham.com/lwba.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/lwba.html" />
+    <atom:summary>Read “Lisp for Web-Based Applications” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Chapter 1 of Ansi Common Lisp</atom:title>
+    <atom:id>urn:uuid:77a51534-f696-5417-aa1a-564e98a6901a</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt?t=1782253924" />
+    <atom:summary>Read “Chapter 1 of Ansi Common Lisp” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Chapter 2 of Ansi Common Lisp</atom:title>
+    <atom:id>urn:uuid:054911bb-a08d-5f02-9bd2-0db708539fbc</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://sep.turbifycdn.com/ty/cdn/paulgraham/acl2.txt?t=1782253924" />
+    <atom:summary>Read “Chapter 2 of Ansi Common Lisp” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>Programming Bottom-Up</atom:title>
+    <atom:id>https://paulgraham.com/progbot.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/progbot.html" />
+    <atom:summary>Read “Programming Bottom-Up” by Paul Graham.</atom:summary>
+  </atom:entry>
+  <atom:entry>
+    <atom:title>This Year We Can End the Death Penalty in California</atom:title>
+    <atom:id>https://paulgraham.com/prop62.html</atom:id>
+    <atom:updated>2026-07-11T07:24:19Z</atom:updated>
+    <atom:link rel="alternate" type="text/html" href="https://paulgraham.com/prop62.html" />
+    <atom:summary>Read “This Year We Can End the Death Penalty in California” by Paul Graham.</atom:summary>
+  </atom:entry>
+</atom:feed>

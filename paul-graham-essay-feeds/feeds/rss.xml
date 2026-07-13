@@ -1,0 +1,1879 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+  <channel>
+    <title>Paul Graham: Essays</title>
+    <link>https://paulgraham.com/articles.html</link>
+    <description>Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.</description>
+    <language>en-US</language>
+    <lastBuildDate>Mon, 13 Jul 2026 04:01:15 GMT</lastBuildDate>
+    <category>Essays</category>
+    <generator>pg-essay-feeds/0.1.0</generator>
+    <docs>https://www.rssboard.org/rss-specification</docs>
+    <ttl>1440</ttl>
+    <atom:link href="https://paul-graham-essay-feeds.vercel.app/feeds/rss.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>How to Earn a Billion Dollars</title>
+      <link>https://paulgraham.com/earn.html</link>
+      <description>Read “How to Earn a Billion Dollars” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/earn.html</guid>
+    </item>
+    <item>
+      <title>How to Convert Between Wealth and Income Tax</title>
+      <link>https://paulgraham.com/winc.html</link>
+      <description>Read “How to Convert Between Wealth and Income Tax” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/winc.html</guid>
+    </item>
+    <item>
+      <title>The Brand Age</title>
+      <link>https://paulgraham.com/brandage.html</link>
+      <description>Read “The Brand Age” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/brandage.html</guid>
+    </item>
+    <item>
+      <title>The Shape of the Essay Field</title>
+      <link>https://paulgraham.com/field.html</link>
+      <description>Read “The Shape of the Essay Field” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/field.html</guid>
+    </item>
+    <item>
+      <title>Good Writing</title>
+      <link>https://paulgraham.com/goodwriting.html</link>
+      <description>Read “Good Writing” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/goodwriting.html</guid>
+    </item>
+    <item>
+      <title>What to Do</title>
+      <link>https://paulgraham.com/do.html</link>
+      <description>Read “What to Do” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/do.html</guid>
+    </item>
+    <item>
+      <title>The Origins of Wokeness</title>
+      <link>https://paulgraham.com/woke.html</link>
+      <description>Read “The Origins of Wokeness” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/woke.html</guid>
+    </item>
+    <item>
+      <title>Writes and Write-Nots</title>
+      <link>https://paulgraham.com/writes.html</link>
+      <description>Read “Writes and Write-Nots” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/writes.html</guid>
+    </item>
+    <item>
+      <title>When To Do What You Love</title>
+      <link>https://paulgraham.com/when.html</link>
+      <description>Read “When To Do What You Love” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/when.html</guid>
+    </item>
+    <item>
+      <title>Founder Mode</title>
+      <link>https://paulgraham.com/foundermode.html</link>
+      <description>Read “Founder Mode” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/foundermode.html</guid>
+    </item>
+    <item>
+      <title>The Right Kind of Stubborn</title>
+      <link>https://paulgraham.com/persistence.html</link>
+      <description>Read “The Right Kind of Stubborn” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/persistence.html</guid>
+    </item>
+    <item>
+      <title>The Reddits</title>
+      <link>https://paulgraham.com/reddits.html</link>
+      <description>Read “The Reddits” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/reddits.html</guid>
+    </item>
+    <item>
+      <title>How to Start Google</title>
+      <link>https://paulgraham.com/google.html</link>
+      <description>Read “How to Start Google” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/google.html</guid>
+    </item>
+    <item>
+      <title>The Best Essay</title>
+      <link>https://paulgraham.com/best.html</link>
+      <description>Read “The Best Essay” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/best.html</guid>
+    </item>
+    <item>
+      <title>Superlinear Returns</title>
+      <link>https://paulgraham.com/superlinear.html</link>
+      <description>Read “Superlinear Returns” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/superlinear.html</guid>
+    </item>
+    <item>
+      <title>How to Do Great Work</title>
+      <link>https://paulgraham.com/greatwork.html</link>
+      <description>Read “How to Do Great Work” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/greatwork.html</guid>
+    </item>
+    <item>
+      <title>How to Get New Ideas</title>
+      <link>https://paulgraham.com/getideas.html</link>
+      <description>Read “How to Get New Ideas” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/getideas.html</guid>
+    </item>
+    <item>
+      <title>The Need to Read</title>
+      <link>https://paulgraham.com/read.html</link>
+      <description>Read “The Need to Read” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/read.html</guid>
+    </item>
+    <item>
+      <title>What You (Want to)* Want</title>
+      <link>https://paulgraham.com/want.html</link>
+      <description>Read “What You (Want to)* Want” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/want.html</guid>
+    </item>
+    <item>
+      <title>Alien Truth</title>
+      <link>https://paulgraham.com/alien.html</link>
+      <description>Read “Alien Truth” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/alien.html</guid>
+    </item>
+    <item>
+      <title>What I've Learned from Users</title>
+      <link>https://paulgraham.com/users.html</link>
+      <description>Read “What I've Learned from Users” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/users.html</guid>
+    </item>
+    <item>
+      <title>Heresy</title>
+      <link>https://paulgraham.com/heresy.html</link>
+      <description>Read “Heresy” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/heresy.html</guid>
+    </item>
+    <item>
+      <title>Putting Ideas into Words</title>
+      <link>https://paulgraham.com/words.html</link>
+      <description>Read “Putting Ideas into Words” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/words.html</guid>
+    </item>
+    <item>
+      <title>Is There Such a Thing as Good Taste?</title>
+      <link>https://paulgraham.com/goodtaste.html</link>
+      <description>Read “Is There Such a Thing as Good Taste?” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/goodtaste.html</guid>
+    </item>
+    <item>
+      <title>Beyond Smart</title>
+      <link>https://paulgraham.com/smart.html</link>
+      <description>Read “Beyond Smart” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/smart.html</guid>
+    </item>
+    <item>
+      <title>Weird Languages</title>
+      <link>https://paulgraham.com/weird.html</link>
+      <description>Read “Weird Languages” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/weird.html</guid>
+    </item>
+    <item>
+      <title>How to Work Hard</title>
+      <link>https://paulgraham.com/hwh.html</link>
+      <description>Read “How to Work Hard” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/hwh.html</guid>
+    </item>
+    <item>
+      <title>A Project of One's Own</title>
+      <link>https://paulgraham.com/own.html</link>
+      <description>Read “A Project of One's Own” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/own.html</guid>
+    </item>
+    <item>
+      <title>Fierce Nerds</title>
+      <link>https://paulgraham.com/fn.html</link>
+      <description>Read “Fierce Nerds” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/fn.html</guid>
+    </item>
+    <item>
+      <title>Crazy New Ideas</title>
+      <link>https://paulgraham.com/newideas.html</link>
+      <description>Read “Crazy New Ideas” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/newideas.html</guid>
+    </item>
+    <item>
+      <title>An NFT That Saves Lives</title>
+      <link>https://paulgraham.com/nft.html</link>
+      <description>Read “An NFT That Saves Lives” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/nft.html</guid>
+    </item>
+    <item>
+      <title>The Real Reason to End the Death Penalty</title>
+      <link>https://paulgraham.com/real.html</link>
+      <description>Read “The Real Reason to End the Death Penalty” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/real.html</guid>
+    </item>
+    <item>
+      <title>How People Get Rich Now</title>
+      <link>https://paulgraham.com/richnow.html</link>
+      <description>Read “How People Get Rich Now” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/richnow.html</guid>
+    </item>
+    <item>
+      <title>Write Simply</title>
+      <link>https://paulgraham.com/simply.html</link>
+      <description>Read “Write Simply” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/simply.html</guid>
+    </item>
+    <item>
+      <title>Donate Unrestricted</title>
+      <link>https://paulgraham.com/donate.html</link>
+      <description>Read “Donate Unrestricted” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/donate.html</guid>
+    </item>
+    <item>
+      <title>What I Worked On</title>
+      <link>https://paulgraham.com/worked.html</link>
+      <description>Read “What I Worked On” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/worked.html</guid>
+    </item>
+    <item>
+      <title>Earnestness</title>
+      <link>https://paulgraham.com/earnest.html</link>
+      <description>Read “Earnestness” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/earnest.html</guid>
+    </item>
+    <item>
+      <title>Billionaires Build</title>
+      <link>https://paulgraham.com/ace.html</link>
+      <description>Read “Billionaires Build” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ace.html</guid>
+    </item>
+    <item>
+      <title>The Airbnbs</title>
+      <link>https://paulgraham.com/airbnbs.html</link>
+      <description>Read “The Airbnbs” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/airbnbs.html</guid>
+    </item>
+    <item>
+      <title>How to Think for Yourself</title>
+      <link>https://paulgraham.com/think.html</link>
+      <description>Read “How to Think for Yourself” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/think.html</guid>
+    </item>
+    <item>
+      <title>Early Work</title>
+      <link>https://paulgraham.com/early.html</link>
+      <description>Read “Early Work” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/early.html</guid>
+    </item>
+    <item>
+      <title>Modeling a Wealth Tax</title>
+      <link>https://paulgraham.com/wtax.html</link>
+      <description>Read “Modeling a Wealth Tax” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/wtax.html</guid>
+    </item>
+    <item>
+      <title>The Four Quadrants of Conformism</title>
+      <link>https://paulgraham.com/conformism.html</link>
+      <description>Read “The Four Quadrants of Conformism” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/conformism.html</guid>
+    </item>
+    <item>
+      <title>Orthodox Privilege</title>
+      <link>https://paulgraham.com/orth.html</link>
+      <description>Read “Orthodox Privilege” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/orth.html</guid>
+    </item>
+    <item>
+      <title>Coronavirus and Credibility</title>
+      <link>https://paulgraham.com/cred.html</link>
+      <description>Read “Coronavirus and Credibility” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/cred.html</guid>
+    </item>
+    <item>
+      <title>How to Write Usefully</title>
+      <link>https://paulgraham.com/useful.html</link>
+      <description>Read “How to Write Usefully” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/useful.html</guid>
+    </item>
+    <item>
+      <title>Being a Noob</title>
+      <link>https://paulgraham.com/noob.html</link>
+      <description>Read “Being a Noob” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/noob.html</guid>
+    </item>
+    <item>
+      <title>Haters</title>
+      <link>https://paulgraham.com/fh.html</link>
+      <description>Read “Haters” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/fh.html</guid>
+    </item>
+    <item>
+      <title>The Two Kinds of Moderate</title>
+      <link>https://paulgraham.com/mod.html</link>
+      <description>Read “The Two Kinds of Moderate” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/mod.html</guid>
+    </item>
+    <item>
+      <title>Fashionable Problems</title>
+      <link>https://paulgraham.com/fp.html</link>
+      <description>Read “Fashionable Problems” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/fp.html</guid>
+    </item>
+    <item>
+      <title>Having Kids</title>
+      <link>https://paulgraham.com/kids.html</link>
+      <description>Read “Having Kids” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/kids.html</guid>
+    </item>
+    <item>
+      <title>The Lesson to Unlearn</title>
+      <link>https://paulgraham.com/lesson.html</link>
+      <description>Read “The Lesson to Unlearn” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/lesson.html</guid>
+    </item>
+    <item>
+      <title>Novelty and Heresy</title>
+      <link>https://paulgraham.com/nov.html</link>
+      <description>Read “Novelty and Heresy” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/nov.html</guid>
+    </item>
+    <item>
+      <title>The Bus Ticket Theory of Genius</title>
+      <link>https://paulgraham.com/genius.html</link>
+      <description>Read “The Bus Ticket Theory of Genius” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/genius.html</guid>
+    </item>
+    <item>
+      <title>General and Surprising</title>
+      <link>https://paulgraham.com/sun.html</link>
+      <description>Read “General and Surprising” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/sun.html</guid>
+    </item>
+    <item>
+      <title>Charisma / Power</title>
+      <link>https://paulgraham.com/pow.html</link>
+      <description>Read “Charisma / Power” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/pow.html</guid>
+    </item>
+    <item>
+      <title>The Risk of Discovery</title>
+      <link>https://paulgraham.com/disc.html</link>
+      <description>Read “The Risk of Discovery” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/disc.html</guid>
+    </item>
+    <item>
+      <title>How to Make Pittsburgh a Startup Hub</title>
+      <link>https://paulgraham.com/pgh.html</link>
+      <description>Read “How to Make Pittsburgh a Startup Hub” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/pgh.html</guid>
+    </item>
+    <item>
+      <title>Life is Short</title>
+      <link>https://paulgraham.com/vb.html</link>
+      <description>Read “Life is Short” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/vb.html</guid>
+    </item>
+    <item>
+      <title>Economic Inequality</title>
+      <link>https://paulgraham.com/ineq.html</link>
+      <description>Read “Economic Inequality” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ineq.html</guid>
+    </item>
+    <item>
+      <title>The Refragmentation</title>
+      <link>https://paulgraham.com/re.html</link>
+      <description>Read “The Refragmentation” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/re.html</guid>
+    </item>
+    <item>
+      <title>Jessica Livingston</title>
+      <link>https://paulgraham.com/jessica.html</link>
+      <description>Read “Jessica Livingston” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/jessica.html</guid>
+    </item>
+    <item>
+      <title>A Way to Detect Bias</title>
+      <link>https://paulgraham.com/bias.html</link>
+      <description>Read “A Way to Detect Bias” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/bias.html</guid>
+    </item>
+    <item>
+      <title>Write Like You Talk</title>
+      <link>https://paulgraham.com/talk.html</link>
+      <description>Read “Write Like You Talk” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/talk.html</guid>
+    </item>
+    <item>
+      <title>Default Alive or Default Dead?</title>
+      <link>https://paulgraham.com/aord.html</link>
+      <description>Read “Default Alive or Default Dead?” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/aord.html</guid>
+    </item>
+    <item>
+      <title>Why It's Safe for Founders to Be Nice</title>
+      <link>https://paulgraham.com/safe.html</link>
+      <description>Read “Why It's Safe for Founders to Be Nice” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/safe.html</guid>
+    </item>
+    <item>
+      <title>Change Your Name</title>
+      <link>https://paulgraham.com/name.html</link>
+      <description>Read “Change Your Name” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/name.html</guid>
+    </item>
+    <item>
+      <title>What Microsoft Is this the Altair Basic of?</title>
+      <link>https://paulgraham.com/altair.html</link>
+      <description>Read “What Microsoft Is this the Altair Basic of?” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/altair.html</guid>
+    </item>
+    <item>
+      <title>The Ronco Principle</title>
+      <link>https://paulgraham.com/ronco.html</link>
+      <description>Read “The Ronco Principle” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ronco.html</guid>
+    </item>
+    <item>
+      <title>What Doesn't Seem Like Work?</title>
+      <link>https://paulgraham.com/work.html</link>
+      <description>Read “What Doesn't Seem Like Work?” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/work.html</guid>
+    </item>
+    <item>
+      <title>Don't Talk to Corp Dev</title>
+      <link>https://paulgraham.com/corpdev.html</link>
+      <description>Read “Don't Talk to Corp Dev” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/corpdev.html</guid>
+    </item>
+    <item>
+      <title>Let the Other 95% of Great Programmers In</title>
+      <link>https://paulgraham.com/95.html</link>
+      <description>Read “Let the Other 95% of Great Programmers In” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/95.html</guid>
+    </item>
+    <item>
+      <title>How to Be an Expert in a Changing World</title>
+      <link>https://paulgraham.com/ecw.html</link>
+      <description>Read “How to Be an Expert in a Changing World” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ecw.html</guid>
+    </item>
+    <item>
+      <title>How You Know</title>
+      <link>https://paulgraham.com/know.html</link>
+      <description>Read “How You Know” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/know.html</guid>
+    </item>
+    <item>
+      <title>The Fatal Pinch</title>
+      <link>https://paulgraham.com/pinch.html</link>
+      <description>Read “The Fatal Pinch” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/pinch.html</guid>
+    </item>
+    <item>
+      <title>Mean People Fail</title>
+      <link>https://paulgraham.com/mean.html</link>
+      <description>Read “Mean People Fail” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/mean.html</guid>
+    </item>
+    <item>
+      <title>Before the Startup</title>
+      <link>https://paulgraham.com/before.html</link>
+      <description>Read “Before the Startup” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/before.html</guid>
+    </item>
+    <item>
+      <title>How to Raise Money</title>
+      <link>https://paulgraham.com/fr.html</link>
+      <description>Read “How to Raise Money” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/fr.html</guid>
+    </item>
+    <item>
+      <title>Investor Herd Dynamics</title>
+      <link>https://paulgraham.com/herd.html</link>
+      <description>Read “Investor Herd Dynamics” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/herd.html</guid>
+    </item>
+    <item>
+      <title>How to Convince Investors</title>
+      <link>https://paulgraham.com/convince.html</link>
+      <description>Read “How to Convince Investors” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/convince.html</guid>
+    </item>
+    <item>
+      <title>Do Things that Don't Scale</title>
+      <link>https://paulgraham.com/ds.html</link>
+      <description>Read “Do Things that Don't Scale” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ds.html</guid>
+    </item>
+    <item>
+      <title>Startup Investing Trends</title>
+      <link>https://paulgraham.com/invtrend.html</link>
+      <description>Read “Startup Investing Trends” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/invtrend.html</guid>
+    </item>
+    <item>
+      <title>How to Get Startup Ideas</title>
+      <link>https://paulgraham.com/startupideas.html</link>
+      <description>Read “How to Get Startup Ideas” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/startupideas.html</guid>
+    </item>
+    <item>
+      <title>The Hardware Renaissance</title>
+      <link>https://paulgraham.com/hw.html</link>
+      <description>Read “The Hardware Renaissance” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/hw.html</guid>
+    </item>
+    <item>
+      <title>Startup = Growth</title>
+      <link>https://paulgraham.com/growth.html</link>
+      <description>Read “Startup = Growth” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/growth.html</guid>
+    </item>
+    <item>
+      <title>Black Swan Farming</title>
+      <link>https://paulgraham.com/swan.html</link>
+      <description>Read “Black Swan Farming” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/swan.html</guid>
+    </item>
+    <item>
+      <title>The Top of My Todo List</title>
+      <link>https://paulgraham.com/todo.html</link>
+      <description>Read “The Top of My Todo List” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/todo.html</guid>
+    </item>
+    <item>
+      <title>Writing and Speaking</title>
+      <link>https://paulgraham.com/speak.html</link>
+      <description>Read “Writing and Speaking” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/speak.html</guid>
+    </item>
+    <item>
+      <title>How Y Combinator Started</title>
+      <link>https://paulgraham.com/ycstart.html</link>
+      <description>Read “How Y Combinator Started” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ycstart.html</guid>
+    </item>
+    <item>
+      <title>Defining Property</title>
+      <link>https://paulgraham.com/property.html</link>
+      <description>Read “Defining Property” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/property.html</guid>
+    </item>
+    <item>
+      <title>Frighteningly Ambitious Startup Ideas</title>
+      <link>https://paulgraham.com/ambitious.html</link>
+      <description>Read “Frighteningly Ambitious Startup Ideas” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ambitious.html</guid>
+    </item>
+    <item>
+      <title>A Word to the Resourceful</title>
+      <link>https://paulgraham.com/word.html</link>
+      <description>Read “A Word to the Resourceful” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/word.html</guid>
+    </item>
+    <item>
+      <title>Schlep Blindness</title>
+      <link>https://paulgraham.com/schlep.html</link>
+      <description>Read “Schlep Blindness” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/schlep.html</guid>
+    </item>
+    <item>
+      <title>Snapshot: Viaweb, June 1998</title>
+      <link>https://paulgraham.com/vw.html</link>
+      <description>Read “Snapshot: Viaweb, June 1998” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/vw.html</guid>
+    </item>
+    <item>
+      <title>Why Startup Hubs Work</title>
+      <link>https://paulgraham.com/hubs.html</link>
+      <description>Read “Why Startup Hubs Work” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/hubs.html</guid>
+    </item>
+    <item>
+      <title>The Patent Pledge</title>
+      <link>https://paulgraham.com/patentpledge.html</link>
+      <description>Read “The Patent Pledge” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/patentpledge.html</guid>
+    </item>
+    <item>
+      <title>Subject: Airbnb</title>
+      <link>https://paulgraham.com/airbnb.html</link>
+      <description>Read “Subject: Airbnb” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/airbnb.html</guid>
+    </item>
+    <item>
+      <title>Founder Control</title>
+      <link>https://paulgraham.com/control.html</link>
+      <description>Read “Founder Control” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/control.html</guid>
+    </item>
+    <item>
+      <title>Tablets</title>
+      <link>https://paulgraham.com/tablets.html</link>
+      <description>Read “Tablets” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/tablets.html</guid>
+    </item>
+    <item>
+      <title>What We Look for in Founders</title>
+      <link>https://paulgraham.com/founders.html</link>
+      <description>Read “What We Look for in Founders” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/founders.html</guid>
+    </item>
+    <item>
+      <title>The New Funding Landscape</title>
+      <link>https://paulgraham.com/superangels.html</link>
+      <description>Read “The New Funding Landscape” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/superangels.html</guid>
+    </item>
+    <item>
+      <title>Where to See Silicon Valley</title>
+      <link>https://paulgraham.com/seesv.html</link>
+      <description>Read “Where to See Silicon Valley” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/seesv.html</guid>
+    </item>
+    <item>
+      <title>High Resolution Fundraising</title>
+      <link>https://paulgraham.com/hiresfund.html</link>
+      <description>Read “High Resolution Fundraising” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/hiresfund.html</guid>
+    </item>
+    <item>
+      <title>What Happened to Yahoo</title>
+      <link>https://paulgraham.com/yahoo.html</link>
+      <description>Read “What Happened to Yahoo” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/yahoo.html</guid>
+    </item>
+    <item>
+      <title>The Future of Startup Funding</title>
+      <link>https://paulgraham.com/future.html</link>
+      <description>Read “The Future of Startup Funding” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/future.html</guid>
+    </item>
+    <item>
+      <title>The Acceleration of Addictiveness</title>
+      <link>https://paulgraham.com/addiction.html</link>
+      <description>Read “The Acceleration of Addictiveness” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/addiction.html</guid>
+    </item>
+    <item>
+      <title>The Top Idea in Your Mind</title>
+      <link>https://paulgraham.com/top.html</link>
+      <description>Read “The Top Idea in Your Mind” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/top.html</guid>
+    </item>
+    <item>
+      <title>How to Lose Time and Money</title>
+      <link>https://paulgraham.com/selfindulgence.html</link>
+      <description>Read “How to Lose Time and Money” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/selfindulgence.html</guid>
+    </item>
+    <item>
+      <title>Organic Startup Ideas</title>
+      <link>https://paulgraham.com/organic.html</link>
+      <description>Read “Organic Startup Ideas” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/organic.html</guid>
+    </item>
+    <item>
+      <title>Apple's Mistake</title>
+      <link>https://paulgraham.com/apple.html</link>
+      <description>Read “Apple's Mistake” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/apple.html</guid>
+    </item>
+    <item>
+      <title>What Startups Are Really Like</title>
+      <link>https://paulgraham.com/really.html</link>
+      <description>Read “What Startups Are Really Like” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/really.html</guid>
+    </item>
+    <item>
+      <title>Persuade xor Discover</title>
+      <link>https://paulgraham.com/discover.html</link>
+      <description>Read “Persuade xor Discover” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/discover.html</guid>
+    </item>
+    <item>
+      <title>Post-Medium Publishing</title>
+      <link>https://paulgraham.com/publishing.html</link>
+      <description>Read “Post-Medium Publishing” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/publishing.html</guid>
+    </item>
+    <item>
+      <title>The List of N Things</title>
+      <link>https://paulgraham.com/nthings.html</link>
+      <description>Read “The List of N Things” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/nthings.html</guid>
+    </item>
+    <item>
+      <title>The Anatomy of Determination</title>
+      <link>https://paulgraham.com/determination.html</link>
+      <description>Read “The Anatomy of Determination” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/determination.html</guid>
+    </item>
+    <item>
+      <title>What Kate Saw in Silicon Valley</title>
+      <link>https://paulgraham.com/kate.html</link>
+      <description>Read “What Kate Saw in Silicon Valley” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/kate.html</guid>
+    </item>
+    <item>
+      <title>The Trouble with the Segway</title>
+      <link>https://paulgraham.com/segway.html</link>
+      <description>Read “The Trouble with the Segway” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/segway.html</guid>
+    </item>
+    <item>
+      <title>Ramen Profitable</title>
+      <link>https://paulgraham.com/ramenprofitable.html</link>
+      <description>Read “Ramen Profitable” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ramenprofitable.html</guid>
+    </item>
+    <item>
+      <title>Maker's Schedule, Manager's Schedule</title>
+      <link>https://paulgraham.com/makersschedule.html</link>
+      <description>Read “Maker's Schedule, Manager's Schedule” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/makersschedule.html</guid>
+    </item>
+    <item>
+      <title>A Local Revolution?</title>
+      <link>https://paulgraham.com/revolution.html</link>
+      <description>Read “A Local Revolution?” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/revolution.html</guid>
+    </item>
+    <item>
+      <title>Why Twitter is a Big Deal</title>
+      <link>https://paulgraham.com/twitter.html</link>
+      <description>Read “Why Twitter is a Big Deal” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/twitter.html</guid>
+    </item>
+    <item>
+      <title>The Founder Visa</title>
+      <link>https://paulgraham.com/foundervisa.html</link>
+      <description>Read “The Founder Visa” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/foundervisa.html</guid>
+    </item>
+    <item>
+      <title>Five Founders</title>
+      <link>https://paulgraham.com/5founders.html</link>
+      <description>Read “Five Founders” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/5founders.html</guid>
+    </item>
+    <item>
+      <title>Relentlessly Resourceful</title>
+      <link>https://paulgraham.com/relres.html</link>
+      <description>Read “Relentlessly Resourceful” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/relres.html</guid>
+    </item>
+    <item>
+      <title>How to Be an Angel Investor</title>
+      <link>https://paulgraham.com/angelinvesting.html</link>
+      <description>Read “How to Be an Angel Investor” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/angelinvesting.html</guid>
+    </item>
+    <item>
+      <title>Why TV Lost</title>
+      <link>https://paulgraham.com/convergence.html</link>
+      <description>Read “Why TV Lost” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/convergence.html</guid>
+    </item>
+    <item>
+      <title>Can You Buy a Silicon Valley? Maybe.</title>
+      <link>https://paulgraham.com/maybe.html</link>
+      <description>Read “Can You Buy a Silicon Valley? Maybe.” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/maybe.html</guid>
+    </item>
+    <item>
+      <title>What I've Learned from Hacker News</title>
+      <link>https://paulgraham.com/hackernews.html</link>
+      <description>Read “What I've Learned from Hacker News” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/hackernews.html</guid>
+    </item>
+    <item>
+      <title>Startups in 13 Sentences</title>
+      <link>https://paulgraham.com/13sentences.html</link>
+      <description>Read “Startups in 13 Sentences” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/13sentences.html</guid>
+    </item>
+    <item>
+      <title>Keep Your Identity Small</title>
+      <link>https://paulgraham.com/identity.html</link>
+      <description>Read “Keep Your Identity Small” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/identity.html</guid>
+    </item>
+    <item>
+      <title>After Credentials</title>
+      <link>https://paulgraham.com/credentials.html</link>
+      <description>Read “After Credentials” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/credentials.html</guid>
+    </item>
+    <item>
+      <title>Could VC be a Casualty of the Recession?</title>
+      <link>https://paulgraham.com/divergence.html</link>
+      <description>Read “Could VC be a Casualty of the Recession?” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/divergence.html</guid>
+    </item>
+    <item>
+      <title>The High-Res Society</title>
+      <link>https://paulgraham.com/highres.html</link>
+      <description>Read “The High-Res Society” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/highres.html</guid>
+    </item>
+    <item>
+      <title>The Other Half of "Artists Ship"</title>
+      <link>https://paulgraham.com/artistsship.html</link>
+      <description>Read “The Other Half of "Artists Ship"” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/artistsship.html</guid>
+    </item>
+    <item>
+      <title>Why to Start a Startup in a Bad Economy</title>
+      <link>https://paulgraham.com/badeconomy.html</link>
+      <description>Read “Why to Start a Startup in a Bad Economy” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/badeconomy.html</guid>
+    </item>
+    <item>
+      <title>A Fundraising Survival Guide</title>
+      <link>https://paulgraham.com/fundraising.html</link>
+      <description>Read “A Fundraising Survival Guide” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/fundraising.html</guid>
+    </item>
+    <item>
+      <title>The Pooled-Risk Company Management Company</title>
+      <link>https://paulgraham.com/prcmc.html</link>
+      <description>Read “The Pooled-Risk Company Management Company” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/prcmc.html</guid>
+    </item>
+    <item>
+      <title>Cities and Ambition</title>
+      <link>https://paulgraham.com/cities.html</link>
+      <description>Read “Cities and Ambition” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/cities.html</guid>
+    </item>
+    <item>
+      <title>Disconnecting Distraction</title>
+      <link>https://paulgraham.com/distraction.html</link>
+      <description>Read “Disconnecting Distraction” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/distraction.html</guid>
+    </item>
+    <item>
+      <title>Lies We Tell Kids</title>
+      <link>https://paulgraham.com/lies.html</link>
+      <description>Read “Lies We Tell Kids” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/lies.html</guid>
+    </item>
+    <item>
+      <title>Be Good</title>
+      <link>https://paulgraham.com/good.html</link>
+      <description>Read “Be Good” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/good.html</guid>
+    </item>
+    <item>
+      <title>Why There Aren't More Googles</title>
+      <link>https://paulgraham.com/googles.html</link>
+      <description>Read “Why There Aren't More Googles” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/googles.html</guid>
+    </item>
+    <item>
+      <title>Some Heroes</title>
+      <link>https://paulgraham.com/heroes.html</link>
+      <description>Read “Some Heroes” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/heroes.html</guid>
+    </item>
+    <item>
+      <title>How to Disagree</title>
+      <link>https://paulgraham.com/disagree.html</link>
+      <description>Read “How to Disagree” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/disagree.html</guid>
+    </item>
+    <item>
+      <title>You Weren't Meant to Have a Boss</title>
+      <link>https://paulgraham.com/boss.html</link>
+      <description>Read “You Weren't Meant to Have a Boss” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/boss.html</guid>
+    </item>
+    <item>
+      <title>A New Venture Animal</title>
+      <link>https://paulgraham.com/ycombinator.html</link>
+      <description>Read “A New Venture Animal” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ycombinator.html</guid>
+    </item>
+    <item>
+      <title>Trolls</title>
+      <link>https://paulgraham.com/trolls.html</link>
+      <description>Read “Trolls” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/trolls.html</guid>
+    </item>
+    <item>
+      <title>Six Principles for Making New Things</title>
+      <link>https://paulgraham.com/newthings.html</link>
+      <description>Read “Six Principles for Making New Things” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/newthings.html</guid>
+    </item>
+    <item>
+      <title>Why to Move to a Startup Hub</title>
+      <link>https://paulgraham.com/startuphubs.html</link>
+      <description>Read “Why to Move to a Startup Hub” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/startuphubs.html</guid>
+    </item>
+    <item>
+      <title>The Future of Web Startups</title>
+      <link>https://paulgraham.com/webstartups.html</link>
+      <description>Read “The Future of Web Startups” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/webstartups.html</guid>
+    </item>
+    <item>
+      <title>How to Do Philosophy</title>
+      <link>https://paulgraham.com/philosophy.html</link>
+      <description>Read “How to Do Philosophy” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/philosophy.html</guid>
+    </item>
+    <item>
+      <title>News from the Front</title>
+      <link>https://paulgraham.com/colleges.html</link>
+      <description>Read “News from the Front” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/colleges.html</guid>
+    </item>
+    <item>
+      <title>How Not to Die</title>
+      <link>https://paulgraham.com/die.html</link>
+      <description>Read “How Not to Die” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/die.html</guid>
+    </item>
+    <item>
+      <title>Holding a Program in One's Head</title>
+      <link>https://paulgraham.com/head.html</link>
+      <description>Read “Holding a Program in One's Head” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/head.html</guid>
+    </item>
+    <item>
+      <title>Stuff</title>
+      <link>https://paulgraham.com/stuff.html</link>
+      <description>Read “Stuff” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/stuff.html</guid>
+    </item>
+    <item>
+      <title>The Equity Equation</title>
+      <link>https://paulgraham.com/equity.html</link>
+      <description>Read “The Equity Equation” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/equity.html</guid>
+    </item>
+    <item>
+      <title>An Alternative Theory of Unions</title>
+      <link>https://paulgraham.com/unions.html</link>
+      <description>Read “An Alternative Theory of Unions” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/unions.html</guid>
+    </item>
+    <item>
+      <title>The Hacker's Guide to Investors</title>
+      <link>https://paulgraham.com/guidetoinvestors.html</link>
+      <description>Read “The Hacker's Guide to Investors” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/guidetoinvestors.html</guid>
+    </item>
+    <item>
+      <title>Two Kinds of Judgement</title>
+      <link>https://paulgraham.com/judgement.html</link>
+      <description>Read “Two Kinds of Judgement” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/judgement.html</guid>
+    </item>
+    <item>
+      <title>Microsoft is Dead</title>
+      <link>https://paulgraham.com/microsoft.html</link>
+      <description>Read “Microsoft is Dead” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/microsoft.html</guid>
+    </item>
+    <item>
+      <title>Why to Not Not Start a Startup</title>
+      <link>https://paulgraham.com/notnot.html</link>
+      <description>Read “Why to Not Not Start a Startup” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/notnot.html</guid>
+    </item>
+    <item>
+      <title>Is It Worth Being Wise?</title>
+      <link>https://paulgraham.com/wisdom.html</link>
+      <description>Read “Is It Worth Being Wise?” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/wisdom.html</guid>
+    </item>
+    <item>
+      <title>Learning from Founders</title>
+      <link>https://paulgraham.com/foundersatwork.html</link>
+      <description>Read “Learning from Founders” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/foundersatwork.html</guid>
+    </item>
+    <item>
+      <title>How Art Can Be Good</title>
+      <link>https://paulgraham.com/goodart.html</link>
+      <description>Read “How Art Can Be Good” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/goodart.html</guid>
+    </item>
+    <item>
+      <title>The 18 Mistakes That Kill Startups</title>
+      <link>https://paulgraham.com/startupmistakes.html</link>
+      <description>Read “The 18 Mistakes That Kill Startups” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/startupmistakes.html</guid>
+    </item>
+    <item>
+      <title>A Student's Guide to Startups</title>
+      <link>https://paulgraham.com/mit.html</link>
+      <description>Read “A Student's Guide to Startups” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/mit.html</guid>
+    </item>
+    <item>
+      <title>How to Present to Investors</title>
+      <link>https://paulgraham.com/investors.html</link>
+      <description>Read “How to Present to Investors” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/investors.html</guid>
+    </item>
+    <item>
+      <title>Copy What You Like</title>
+      <link>https://paulgraham.com/copy.html</link>
+      <description>Read “Copy What You Like” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/copy.html</guid>
+    </item>
+    <item>
+      <title>The Island Test</title>
+      <link>https://paulgraham.com/island.html</link>
+      <description>Read “The Island Test” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/island.html</guid>
+    </item>
+    <item>
+      <title>The Power of the Marginal</title>
+      <link>https://paulgraham.com/marginal.html</link>
+      <description>Read “The Power of the Marginal” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/marginal.html</guid>
+    </item>
+    <item>
+      <title>Why Startups Condense in America</title>
+      <link>https://paulgraham.com/america.html</link>
+      <description>Read “Why Startups Condense in America” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/america.html</guid>
+    </item>
+    <item>
+      <title>How to Be Silicon Valley</title>
+      <link>https://paulgraham.com/siliconvalley.html</link>
+      <description>Read “How to Be Silicon Valley” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/siliconvalley.html</guid>
+    </item>
+    <item>
+      <title>The Hardest Lessons for Startups to Learn</title>
+      <link>https://paulgraham.com/startuplessons.html</link>
+      <description>Read “The Hardest Lessons for Startups to Learn” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/startuplessons.html</guid>
+    </item>
+    <item>
+      <title>See Randomness</title>
+      <link>https://paulgraham.com/randomness.html</link>
+      <description>Read “See Randomness” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/randomness.html</guid>
+    </item>
+    <item>
+      <title>Are Software Patents Evil?</title>
+      <link>https://paulgraham.com/softwarepatents.html</link>
+      <description>Read “Are Software Patents Evil?” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/softwarepatents.html</guid>
+    </item>
+    <item>
+      <title>6,631,372</title>
+      <link>https://paulgraham.com/6631327.html</link>
+      <description>Read “6,631,372” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/6631327.html</guid>
+    </item>
+    <item>
+      <title>Why YC</title>
+      <link>https://paulgraham.com/whyyc.html</link>
+      <description>Read “Why YC” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/whyyc.html</guid>
+    </item>
+    <item>
+      <title>How to Do What You Love</title>
+      <link>https://paulgraham.com/love.html</link>
+      <description>Read “How to Do What You Love” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/love.html</guid>
+    </item>
+    <item>
+      <title>Good and Bad Procrastination</title>
+      <link>https://paulgraham.com/procrastination.html</link>
+      <description>Read “Good and Bad Procrastination” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/procrastination.html</guid>
+    </item>
+    <item>
+      <title>Web 2.0</title>
+      <link>https://paulgraham.com/web20.html</link>
+      <description>Read “Web 2.0” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/web20.html</guid>
+    </item>
+    <item>
+      <title>How to Fund a Startup</title>
+      <link>https://paulgraham.com/startupfunding.html</link>
+      <description>Read “How to Fund a Startup” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/startupfunding.html</guid>
+    </item>
+    <item>
+      <title>The Venture Capital Squeeze</title>
+      <link>https://paulgraham.com/vcsqueeze.html</link>
+      <description>Read “The Venture Capital Squeeze” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/vcsqueeze.html</guid>
+    </item>
+    <item>
+      <title>Ideas for Startups</title>
+      <link>https://paulgraham.com/ideas.html</link>
+      <description>Read “Ideas for Startups” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ideas.html</guid>
+    </item>
+    <item>
+      <title>What I Did this Summer</title>
+      <link>https://paulgraham.com/sfp.html</link>
+      <description>Read “What I Did this Summer” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/sfp.html</guid>
+    </item>
+    <item>
+      <title>Inequality and Risk</title>
+      <link>https://paulgraham.com/inequality.html</link>
+      <description>Read “Inequality and Risk” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/inequality.html</guid>
+    </item>
+    <item>
+      <title>After the Ladder</title>
+      <link>https://paulgraham.com/ladder.html</link>
+      <description>Read “After the Ladder” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ladder.html</guid>
+    </item>
+    <item>
+      <title>What Business Can Learn from Open Source</title>
+      <link>https://paulgraham.com/opensource.html</link>
+      <description>Read “What Business Can Learn from Open Source” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/opensource.html</guid>
+    </item>
+    <item>
+      <title>Hiring is Obsolete</title>
+      <link>https://paulgraham.com/hiring.html</link>
+      <description>Read “Hiring is Obsolete” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/hiring.html</guid>
+    </item>
+    <item>
+      <title>The Submarine</title>
+      <link>https://paulgraham.com/submarine.html</link>
+      <description>Read “The Submarine” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/submarine.html</guid>
+    </item>
+    <item>
+      <title>Why Smart People Have Bad Ideas</title>
+      <link>https://paulgraham.com/bronze.html</link>
+      <description>Read “Why Smart People Have Bad Ideas” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/bronze.html</guid>
+    </item>
+    <item>
+      <title>Return of the Mac</title>
+      <link>https://paulgraham.com/mac.html</link>
+      <description>Read “Return of the Mac” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/mac.html</guid>
+    </item>
+    <item>
+      <title>Writing, Briefly</title>
+      <link>https://paulgraham.com/writing44.html</link>
+      <description>Read “Writing, Briefly” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/writing44.html</guid>
+    </item>
+    <item>
+      <title>Undergraduation</title>
+      <link>https://paulgraham.com/college.html</link>
+      <description>Read “Undergraduation” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/college.html</guid>
+    </item>
+    <item>
+      <title>A Unified Theory of VC Suckage</title>
+      <link>https://paulgraham.com/venturecapital.html</link>
+      <description>Read “A Unified Theory of VC Suckage” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/venturecapital.html</guid>
+    </item>
+    <item>
+      <title>How to Start a Startup</title>
+      <link>https://paulgraham.com/start.html</link>
+      <description>Read “How to Start a Startup” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/start.html</guid>
+    </item>
+    <item>
+      <title>What You'll Wish You'd Known</title>
+      <link>https://paulgraham.com/hs.html</link>
+      <description>Read “What You'll Wish You'd Known” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/hs.html</guid>
+    </item>
+    <item>
+      <title>Made in USA</title>
+      <link>https://paulgraham.com/usa.html</link>
+      <description>Read “Made in USA” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/usa.html</guid>
+    </item>
+    <item>
+      <title>It's Charisma, Stupid</title>
+      <link>https://paulgraham.com/charisma.html</link>
+      <description>Read “It's Charisma, Stupid” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/charisma.html</guid>
+    </item>
+    <item>
+      <title>Bradley's Ghost</title>
+      <link>https://paulgraham.com/polls.html</link>
+      <description>Read “Bradley's Ghost” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/polls.html</guid>
+    </item>
+    <item>
+      <title>A Version 1.0</title>
+      <link>https://paulgraham.com/laundry.html</link>
+      <description>Read “A Version 1.0” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/laundry.html</guid>
+    </item>
+    <item>
+      <title>What the Bubble Got Right</title>
+      <link>https://paulgraham.com/bubble.html</link>
+      <description>Read “What the Bubble Got Right” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/bubble.html</guid>
+    </item>
+    <item>
+      <title>The Age of the Essay</title>
+      <link>https://paulgraham.com/essay.html</link>
+      <description>Read “The Age of the Essay” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/essay.html</guid>
+    </item>
+    <item>
+      <title>The Python Paradox</title>
+      <link>https://paulgraham.com/pypar.html</link>
+      <description>Read “The Python Paradox” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/pypar.html</guid>
+    </item>
+    <item>
+      <title>Great Hackers</title>
+      <link>https://paulgraham.com/gh.html</link>
+      <description>Read “Great Hackers” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/gh.html</guid>
+    </item>
+    <item>
+      <title>Mind the Gap</title>
+      <link>https://paulgraham.com/gap.html</link>
+      <description>Read “Mind the Gap” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/gap.html</guid>
+    </item>
+    <item>
+      <title>How to Make Wealth</title>
+      <link>https://paulgraham.com/wealth.html</link>
+      <description>Read “How to Make Wealth” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/wealth.html</guid>
+    </item>
+    <item>
+      <title>The Word "Hacker"</title>
+      <link>https://paulgraham.com/gba.html</link>
+      <description>Read “The Word "Hacker"” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/gba.html</guid>
+    </item>
+    <item>
+      <title>What You Can't Say</title>
+      <link>https://paulgraham.com/say.html</link>
+      <description>Read “What You Can't Say” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/say.html</guid>
+    </item>
+    <item>
+      <title>Filters that Fight Back</title>
+      <link>https://paulgraham.com/ffb.html</link>
+      <description>Read “Filters that Fight Back” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/ffb.html</guid>
+    </item>
+    <item>
+      <title>Hackers and Painters</title>
+      <link>https://paulgraham.com/hp.html</link>
+      <description>Read “Hackers and Painters” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/hp.html</guid>
+    </item>
+    <item>
+      <title>If Lisp is So Great</title>
+      <link>https://paulgraham.com/iflisp.html</link>
+      <description>Read “If Lisp is So Great” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/iflisp.html</guid>
+    </item>
+    <item>
+      <title>The Hundred-Year Language</title>
+      <link>https://paulgraham.com/hundred.html</link>
+      <description>Read “The Hundred-Year Language” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/hundred.html</guid>
+    </item>
+    <item>
+      <title>Why Nerds are Unpopular</title>
+      <link>https://paulgraham.com/nerds.html</link>
+      <description>Read “Why Nerds are Unpopular” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/nerds.html</guid>
+    </item>
+    <item>
+      <title>Better Bayesian Filtering</title>
+      <link>https://paulgraham.com/better.html</link>
+      <description>Read “Better Bayesian Filtering” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/better.html</guid>
+    </item>
+    <item>
+      <title>Design and Research</title>
+      <link>https://paulgraham.com/desres.html</link>
+      <description>Read “Design and Research” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/desres.html</guid>
+    </item>
+    <item>
+      <title>A Plan for Spam</title>
+      <link>https://paulgraham.com/spam.html</link>
+      <description>Read “A Plan for Spam” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/spam.html</guid>
+    </item>
+    <item>
+      <title>Revenge of the Nerds</title>
+      <link>https://paulgraham.com/icad.html</link>
+      <description>Read “Revenge of the Nerds” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/icad.html</guid>
+    </item>
+    <item>
+      <title>Succinctness is Power</title>
+      <link>https://paulgraham.com/power.html</link>
+      <description>Read “Succinctness is Power” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/power.html</guid>
+    </item>
+    <item>
+      <title>What Languages Fix</title>
+      <link>https://paulgraham.com/fix.html</link>
+      <description>Read “What Languages Fix” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/fix.html</guid>
+    </item>
+    <item>
+      <title>Taste for Makers</title>
+      <link>https://paulgraham.com/taste.html</link>
+      <description>Read “Taste for Makers” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/taste.html</guid>
+    </item>
+    <item>
+      <title>Why Arc Isn't Especially Object-Oriented</title>
+      <link>https://paulgraham.com/noop.html</link>
+      <description>Read “Why Arc Isn't Especially Object-Oriented” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/noop.html</guid>
+    </item>
+    <item>
+      <title>What Made Lisp Different</title>
+      <link>https://paulgraham.com/diff.html</link>
+      <description>Read “What Made Lisp Different” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/diff.html</guid>
+    </item>
+    <item>
+      <title>The Other Road Ahead</title>
+      <link>https://paulgraham.com/road.html</link>
+      <description>Read “The Other Road Ahead” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/road.html</guid>
+    </item>
+    <item>
+      <title>The Roots of Lisp</title>
+      <link>https://paulgraham.com/rootsoflisp.html</link>
+      <description>Read “The Roots of Lisp” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/rootsoflisp.html</guid>
+    </item>
+    <item>
+      <title>Five Questions about Language Design</title>
+      <link>https://paulgraham.com/langdes.html</link>
+      <description>Read “Five Questions about Language Design” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/langdes.html</guid>
+    </item>
+    <item>
+      <title>Being Popular</title>
+      <link>https://paulgraham.com/popular.html</link>
+      <description>Read “Being Popular” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/popular.html</guid>
+    </item>
+    <item>
+      <title>Java's Cover</title>
+      <link>https://paulgraham.com/javacover.html</link>
+      <description>Read “Java's Cover” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/javacover.html</guid>
+    </item>
+    <item>
+      <title>Beating the Averages</title>
+      <link>https://paulgraham.com/avg.html</link>
+      <description>Read “Beating the Averages” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/avg.html</guid>
+    </item>
+    <item>
+      <title>Lisp for Web-Based Applications</title>
+      <link>https://paulgraham.com/lwba.html</link>
+      <description>Read “Lisp for Web-Based Applications” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/lwba.html</guid>
+    </item>
+    <item>
+      <title>Chapter 1 of Ansi Common Lisp</title>
+      <link>https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt?t=1782253924</link>
+      <description>Read “Chapter 1 of Ansi Common Lisp” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="false">urn:uuid:77a51534-f696-5417-aa1a-564e98a6901a</guid>
+    </item>
+    <item>
+      <title>Chapter 2 of Ansi Common Lisp</title>
+      <link>https://sep.turbifycdn.com/ty/cdn/paulgraham/acl2.txt?t=1782253924</link>
+      <description>Read “Chapter 2 of Ansi Common Lisp” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="false">urn:uuid:054911bb-a08d-5f02-9bd2-0db708539fbc</guid>
+    </item>
+    <item>
+      <title>Programming Bottom-Up</title>
+      <link>https://paulgraham.com/progbot.html</link>
+      <description>Read “Programming Bottom-Up” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/progbot.html</guid>
+    </item>
+    <item>
+      <title>This Year We Can End the Death Penalty in California</title>
+      <link>https://paulgraham.com/prop62.html</link>
+      <description>Read “This Year We Can End the Death Penalty in California” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/prop62.html</guid>
+    </item>
+  </channel>
+</rss>

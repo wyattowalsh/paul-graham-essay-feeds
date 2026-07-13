@@ -1,0 +1,61 @@
+[project]
+name = "paul-graham-essay-feeds"
+version = "0.1.0"
+description = "Unofficial multi-format metadata feeds for Paul Graham's essays"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [{ name = "Wyatt" }]
+keywords = ["paul-graham", "essays", "rss", "atom", "json-feed", "opml", "syndication"]
+dependencies = []
+
+[project.scripts]
+pg-essay-feeds = "paul_graham_essay_feeds.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/wyattowalsh/paul-graham-essay-feeds"
+Source = "https://github.com/wyattowalsh/paul-graham-essay-feeds"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "ruff>=0.12",
+  "ty>=0.0.1a1",
+]
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/paul_graham_essay_feeds"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers -m 'not integration'"
+testpaths = ["tests"]
+markers = [
+  "integration: live network tests (disabled by default)",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["src", "tests"]
+extend-exclude = ["reference"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.src]
+exclude = ["notebooks/**", "reference/**"]

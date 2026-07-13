@@ -1,0 +1,90 @@
+name: Update feeds
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: feed-update
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: paul-graham-essay-feeds
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+
+      - name: Sync
+        run: uv sync --locked --all-groups
+
+      - name: Update feeds
+        run: |
+          uv run pg-essay-feeds update \
+            --public-base-url https://paul-graham-essay-feeds.vercel.app/
+
+      - name: Validate feeds
+        run: |
+          uv run pg-essay-feeds check \
+            --public-base-url https://paul-graham-essay-feeds.vercel.app/
+
+      - name: Open or update automation PR
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # RV-016: lease expect comes from origin/branch; content base is current HEAD
+          # (preserve dirty tree from the update step). Never checkout origin/branch.
+          if git diff --quiet -- paul-graham-essay-feeds/feeds \
+            paul-graham-essay-feeds/data \
+            paul-graham-essay-feeds/reports \
+            paul-graham-essay-feeds/SHA256SUMS; then
+            echo "No feed changes."
+            exit 0
+          fi
+          branch="automation/feed-update"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$branch" 2>/dev/null || true
+          if git rev-parse --verify "refs/remotes/origin/$branch" >/dev/null 2>&1; then
+            expect="$(git rev-parse "refs/remotes/origin/$branch")"
+          else
+            expect=""
+          fi
+          git checkout -B "$branch"
+          git add paul-graham-essay-feeds/feeds \
+            paul-graham-essay-feeds/data \
+            paul-graham-essay-feeds/reports \
+            paul-graham-essay-feeds/SHA256SUMS
+          if git diff --cached --quiet; then
+            echo "Nothing staged."
+            exit 0
+          fi
+          git commit -m "chore: refresh Paul Graham essay feeds"
+          if [ -n "$expect" ]; then
+            git push origin "HEAD:refs/heads/$branch" \
+              --force-with-lease="refs/heads/$branch:${expect}"
+          else
+            git push -u origin "HEAD:refs/heads/$branch"
+          fi
+          if gh pr list --head "$branch" --json number --jq 'length' | grep -qx 0; then
+            gh pr create \
+              --title "chore: refresh Paul Graham essay feeds" \
+              --body "Automated feed update from the official essays index. Artifacts were validated by \`pg-essay-feeds update\` and \`pg-essay-feeds check\` in this workflow before the PR was opened." \
+              --base main \
+              --head "$branch"
+          else
+            echo "PR already open for $branch"
+          fi

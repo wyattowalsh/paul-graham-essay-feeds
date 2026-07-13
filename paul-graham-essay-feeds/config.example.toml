@@ -1,0 +1,40 @@
+[source]
+url = "https://paulgraham.com/articles.html"
+# Hosts allowed for the essays *index* URL after redirects (not item hosts).
+source_allowed_hosts = ["paulgraham.com"]
+# Hosts allowed on individual essay / chapter item links.
+allowed_hosts = ["paulgraham.com", "sep.turbifycdn.com"]
+minimum_items = 233
+max_response_bytes = 5242880
+retries = 3
+
+[feed]
+title = "Paul Graham: Essays"
+description = "Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index."
+author_name = "Paul Graham"
+author_url = "https://paulgraham.com/"
+language = "en"
+home_page_url = "https://paulgraham.com/articles.html"
+# Optional Atom feed id. Default is a historical tag URI; do not rotate lightly
+# (RFC 4287: atom:id must not change when a feed is relocated/migrated).
+# feed_id = "tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds"
+
+[deployment]
+# Production public site base (Vercel). Override with --public-base-url or
+# PG_ESSAY_FEEDS_PUBLIC_BASE_URL. Do not use placeholders in generated feeds.
+public_base_url = "https://paul-graham-essay-feeds.vercel.app/"
+
+[outputs]
+rss = "feeds/rss.xml"
+atom = "feeds/atom.xml"
+json_feed = "feeds/feed.json"
+opml = "feeds/subscriptions.opml"
+items = "data/essays.json"
+state = "data/state.json"
+validation = "reports/validation.json"
+checksums = "SHA256SUMS"
+
+[policy]
+allow_removals = false
+allow_nonprefix_additions = false
+backup_count = 3

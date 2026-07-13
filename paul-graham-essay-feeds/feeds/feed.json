@@ -1,0 +1,1414 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "Paul Graham: Essays",
+  "home_page_url": "https://paulgraham.com/articles.html",
+  "feed_url": "https://paul-graham-essay-feeds.vercel.app/feeds/feed.json",
+  "description": "Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.",
+  "language": "en",
+  "authors": [
+    {
+      "name": "Paul Graham",
+      "url": "https://paulgraham.com/"
+    }
+  ],
+  "items": [
+    {
+      "id": "https://paulgraham.com/earn.html",
+      "url": "https://paulgraham.com/earn.html",
+      "title": "How to Earn a Billion Dollars",
+      "content_text": "Read “How to Earn a Billion Dollars” by Paul Graham at the official source:\nhttps://paulgraham.com/earn.html"
+    },
+    {
+      "id": "https://paulgraham.com/winc.html",
+      "url": "https://paulgraham.com/winc.html",
+      "title": "How to Convert Between Wealth and Income Tax",
+      "content_text": "Read “How to Convert Between Wealth and Income Tax” by Paul Graham at the official source:\nhttps://paulgraham.com/winc.html"
+    },
+    {
+      "id": "https://paulgraham.com/brandage.html",
+      "url": "https://paulgraham.com/brandage.html",
+      "title": "The Brand Age",
+      "content_text": "Read “The Brand Age” by Paul Graham at the official source:\nhttps://paulgraham.com/brandage.html"
+    },
+    {
+      "id": "https://paulgraham.com/field.html",
+      "url": "https://paulgraham.com/field.html",
+      "title": "The Shape of the Essay Field",
+      "content_text": "Read “The Shape of the Essay Field” by Paul Graham at the official source:\nhttps://paulgraham.com/field.html"
+    },
+    {
+      "id": "https://paulgraham.com/goodwriting.html",
+      "url": "https://paulgraham.com/goodwriting.html",
+      "title": "Good Writing",
+      "content_text": "Read “Good Writing” by Paul Graham at the official source:\nhttps://paulgraham.com/goodwriting.html"
+    },
+    {
+      "id": "https://paulgraham.com/do.html",
+      "url": "https://paulgraham.com/do.html",
+      "title": "What to Do",
+      "content_text": "Read “What to Do” by Paul Graham at the official source:\nhttps://paulgraham.com/do.html"
+    },
+    {
+      "id": "https://paulgraham.com/woke.html",
+      "url": "https://paulgraham.com/woke.html",
+      "title": "The Origins of Wokeness",
+      "content_text": "Read “The Origins of Wokeness” by Paul Graham at the official source:\nhttps://paulgraham.com/woke.html"
+    },
+    {
+      "id": "https://paulgraham.com/writes.html",
+      "url": "https://paulgraham.com/writes.html",
+      "title": "Writes and Write-Nots",
+      "content_text": "Read “Writes and Write-Nots” by Paul Graham at the official source:\nhttps://paulgraham.com/writes.html"
+    },
+    {
+      "id": "https://paulgraham.com/when.html",
+      "url": "https://paulgraham.com/when.html",
+      "title": "When To Do What You Love",
+      "content_text": "Read “When To Do What You Love” by Paul Graham at the official source:\nhttps://paulgraham.com/when.html"
+    },
+    {
+      "id": "https://paulgraham.com/foundermode.html",
+      "url": "https://paulgraham.com/foundermode.html",
+      "title": "Founder Mode",
+      "content_text": "Read “Founder Mode” by Paul Graham at the official source:\nhttps://paulgraham.com/foundermode.html"
+    },
+    {
+      "id": "https://paulgraham.com/persistence.html",
+      "url": "https://paulgraham.com/persistence.html",
+      "title": "The Right Kind of Stubborn",
+      "content_text": "Read “The Right Kind of Stubborn” by Paul Graham at the official source:\nhttps://paulgraham.com/persistence.html"
+    },
+    {
+      "id": "https://paulgraham.com/reddits.html",
+      "url": "https://paulgraham.com/reddits.html",
+      "title": "The Reddits",
+      "content_text": "Read “The Reddits” by Paul Graham at the official source:\nhttps://paulgraham.com/reddits.html"
+    },
+    {
+      "id": "https://paulgraham.com/google.html",
+      "url": "https://paulgraham.com/google.html",
+      "title": "How to Start Google",
+      "content_text": "Read “How to Start Google” by Paul Graham at the official source:\nhttps://paulgraham.com/google.html"
+    },
+    {
+      "id": "https://paulgraham.com/best.html",
+      "url": "https://paulgraham.com/best.html",
+      "title": "The Best Essay",
+      "content_text": "Read “The Best Essay” by Paul Graham at the official source:\nhttps://paulgraham.com/best.html"
+    },
+    {
+      "id": "https://paulgraham.com/superlinear.html",
+      "url": "https://paulgraham.com/superlinear.html",
+      "title": "Superlinear Returns",
+      "content_text": "Read “Superlinear Returns” by Paul Graham at the official source:\nhttps://paulgraham.com/superlinear.html"
+    },
+    {
+      "id": "https://paulgraham.com/greatwork.html",
+      "url": "https://paulgraham.com/greatwork.html",
+      "title": "How to Do Great Work",
+      "content_text": "Read “How to Do Great Work” by Paul Graham at the official source:\nhttps://paulgraham.com/greatwork.html"
+    },
+    {
+      "id": "https://paulgraham.com/getideas.html",
+      "url": "https://paulgraham.com/getideas.html",
+      "title": "How to Get New Ideas",
+      "content_text": "Read “How to Get New Ideas” by Paul Graham at the official source:\nhttps://paulgraham.com/getideas.html"
+    },
+    {
+      "id": "https://paulgraham.com/read.html",
+      "url": "https://paulgraham.com/read.html",
+      "title": "The Need to Read",
+      "content_text": "Read “The Need to Read” by Paul Graham at the official source:\nhttps://paulgraham.com/read.html"
+    },
+    {
+      "id": "https://paulgraham.com/want.html",
+      "url": "https://paulgraham.com/want.html",
+      "title": "What You (Want to)* Want",
+      "content_text": "Read “What You (Want to)* Want” by Paul Graham at the official source:\nhttps://paulgraham.com/want.html"
+    },
+    {
+      "id": "https://paulgraham.com/alien.html",
+      "url": "https://paulgraham.com/alien.html",
+      "title": "Alien Truth",
+      "content_text": "Read “Alien Truth” by Paul Graham at the official source:\nhttps://paulgraham.com/alien.html"
+    },
+    {
+      "id": "https://paulgraham.com/users.html",
+      "url": "https://paulgraham.com/users.html",
+      "title": "What I've Learned from Users",
+      "content_text": "Read “What I've Learned from Users” by Paul Graham at the official source:\nhttps://paulgraham.com/users.html"
+    },
+    {
+      "id": "https://paulgraham.com/heresy.html",
+      "url": "https://paulgraham.com/heresy.html",
+      "title": "Heresy",
+      "content_text": "Read “Heresy” by Paul Graham at the official source:\nhttps://paulgraham.com/heresy.html"
+    },
+    {
+      "id": "https://paulgraham.com/words.html",
+      "url": "https://paulgraham.com/words.html",
+      "title": "Putting Ideas into Words",
+      "content_text": "Read “Putting Ideas into Words” by Paul Graham at the official source:\nhttps://paulgraham.com/words.html"
+    },
+    {
+      "id": "https://paulgraham.com/goodtaste.html",
+      "url": "https://paulgraham.com/goodtaste.html",
+      "title": "Is There Such a Thing as Good Taste?",
+      "content_text": "Read “Is There Such a Thing as Good Taste?” by Paul Graham at the official source:\nhttps://paulgraham.com/goodtaste.html"
+    },
+    {
+      "id": "https://paulgraham.com/smart.html",
+      "url": "https://paulgraham.com/smart.html",
+      "title": "Beyond Smart",
+      "content_text": "Read “Beyond Smart” by Paul Graham at the official source:\nhttps://paulgraham.com/smart.html"
+    },
+    {
+      "id": "https://paulgraham.com/weird.html",
+      "url": "https://paulgraham.com/weird.html",
+      "title": "Weird Languages",
+      "content_text": "Read “Weird Languages” by Paul Graham at the official source:\nhttps://paulgraham.com/weird.html"
+    },
+    {
+      "id": "https://paulgraham.com/hwh.html",
+      "url": "https://paulgraham.com/hwh.html",
+      "title": "How to Work Hard",
+      "content_text": "Read “How to Work Hard” by Paul Graham at the official source:\nhttps://paulgraham.com/hwh.html"
+    },
+    {
+      "id": "https://paulgraham.com/own.html",
+      "url": "https://paulgraham.com/own.html",
+      "title": "A Project of One's Own",
+      "content_text": "Read “A Project of One's Own” by Paul Graham at the official source:\nhttps://paulgraham.com/own.html"
+    },
+    {
+      "id": "https://paulgraham.com/fn.html",
+      "url": "https://paulgraham.com/fn.html",
+      "title": "Fierce Nerds",
+      "content_text": "Read “Fierce Nerds” by Paul Graham at the official source:\nhttps://paulgraham.com/fn.html"
+    },
+    {
+      "id": "https://paulgraham.com/newideas.html",
+      "url": "https://paulgraham.com/newideas.html",
+      "title": "Crazy New Ideas",
+      "content_text": "Read “Crazy New Ideas” by Paul Graham at the official source:\nhttps://paulgraham.com/newideas.html"
+    },
+    {
+      "id": "https://paulgraham.com/nft.html",
+      "url": "https://paulgraham.com/nft.html",
+      "title": "An NFT That Saves Lives",
+      "content_text": "Read “An NFT That Saves Lives” by Paul Graham at the official source:\nhttps://paulgraham.com/nft.html"
+    },
+    {
+      "id": "https://paulgraham.com/real.html",
+      "url": "https://paulgraham.com/real.html",
+      "title": "The Real Reason to End the Death Penalty",
+      "content_text": "Read “The Real Reason to End the Death Penalty” by Paul Graham at the official source:\nhttps://paulgraham.com/real.html"
+    },
+    {
+      "id": "https://paulgraham.com/richnow.html",
+      "url": "https://paulgraham.com/richnow.html",
+      "title": "How People Get Rich Now",
+      "content_text": "Read “How People Get Rich Now” by Paul Graham at the official source:\nhttps://paulgraham.com/richnow.html"
+    },
+    {
+      "id": "https://paulgraham.com/simply.html",
+      "url": "https://paulgraham.com/simply.html",
+      "title": "Write Simply",
+      "content_text": "Read “Write Simply” by Paul Graham at the official source:\nhttps://paulgraham.com/simply.html"
+    },
+    {
+      "id": "https://paulgraham.com/donate.html",
+      "url": "https://paulgraham.com/donate.html",
+      "title": "Donate Unrestricted",
+      "content_text": "Read “Donate Unrestricted” by Paul Graham at the official source:\nhttps://paulgraham.com/donate.html"
+    },
+    {
+      "id": "https://paulgraham.com/worked.html",
+      "url": "https://paulgraham.com/worked.html",
+      "title": "What I Worked On",
+      "content_text": "Read “What I Worked On” by Paul Graham at the official source:\nhttps://paulgraham.com/worked.html"
+    },
+    {
+      "id": "https://paulgraham.com/earnest.html",
+      "url": "https://paulgraham.com/earnest.html",
+      "title": "Earnestness",
+      "content_text": "Read “Earnestness” by Paul Graham at the official source:\nhttps://paulgraham.com/earnest.html"
+    },
+    {
+      "id": "https://paulgraham.com/ace.html",
+      "url": "https://paulgraham.com/ace.html",
+      "title": "Billionaires Build",
+      "content_text": "Read “Billionaires Build” by Paul Graham at the official source:\nhttps://paulgraham.com/ace.html"
+    },
+    {
+      "id": "https://paulgraham.com/airbnbs.html",
+      "url": "https://paulgraham.com/airbnbs.html",
+      "title": "The Airbnbs",
+      "content_text": "Read “The Airbnbs” by Paul Graham at the official source:\nhttps://paulgraham.com/airbnbs.html"
+    },
+    {
+      "id": "https://paulgraham.com/think.html",
+      "url": "https://paulgraham.com/think.html",
+      "title": "How to Think for Yourself",
+      "content_text": "Read “How to Think for Yourself” by Paul Graham at the official source:\nhttps://paulgraham.com/think.html"
+    },
+    {
+      "id": "https://paulgraham.com/early.html",
+      "url": "https://paulgraham.com/early.html",
+      "title": "Early Work",
+      "content_text": "Read “Early Work” by Paul Graham at the official source:\nhttps://paulgraham.com/early.html"
+    },
+    {
+      "id": "https://paulgraham.com/wtax.html",
+      "url": "https://paulgraham.com/wtax.html",
+      "title": "Modeling a Wealth Tax",
+      "content_text": "Read “Modeling a Wealth Tax” by Paul Graham at the official source:\nhttps://paulgraham.com/wtax.html"
+    },
+    {
+      "id": "https://paulgraham.com/conformism.html",
+      "url": "https://paulgraham.com/conformism.html",
+      "title": "The Four Quadrants of Conformism",
+      "content_text": "Read “The Four Quadrants of Conformism” by Paul Graham at the official source:\nhttps://paulgraham.com/conformism.html"
+    },
+    {
+      "id": "https://paulgraham.com/orth.html",
+      "url": "https://paulgraham.com/orth.html",
+      "title": "Orthodox Privilege",
+      "content_text": "Read “Orthodox Privilege” by Paul Graham at the official source:\nhttps://paulgraham.com/orth.html"
+    },
+    {
+      "id": "https://paulgraham.com/cred.html",
+      "url": "https://paulgraham.com/cred.html",
+      "title": "Coronavirus and Credibility",
+      "content_text": "Read “Coronavirus and Credibility” by Paul Graham at the official source:\nhttps://paulgraham.com/cred.html"
+    },
+    {
+      "id": "https://paulgraham.com/useful.html",
+      "url": "https://paulgraham.com/useful.html",
+      "title": "How to Write Usefully",
+      "content_text": "Read “How to Write Usefully” by Paul Graham at the official source:\nhttps://paulgraham.com/useful.html"
+    },
+    {
+      "id": "https://paulgraham.com/noob.html",
+      "url": "https://paulgraham.com/noob.html",
+      "title": "Being a Noob",
+      "content_text": "Read “Being a Noob” by Paul Graham at the official source:\nhttps://paulgraham.com/noob.html"
+    },
+    {
+      "id": "https://paulgraham.com/fh.html",
+      "url": "https://paulgraham.com/fh.html",
+      "title": "Haters",
+      "content_text": "Read “Haters” by Paul Graham at the official source:\nhttps://paulgraham.com/fh.html"
+    },
+    {
+      "id": "https://paulgraham.com/mod.html",
+      "url": "https://paulgraham.com/mod.html",
+      "title": "The Two Kinds of Moderate",
+      "content_text": "Read “The Two Kinds of Moderate” by Paul Graham at the official source:\nhttps://paulgraham.com/mod.html"
+    },
+    {
+      "id": "https://paulgraham.com/fp.html",
+      "url": "https://paulgraham.com/fp.html",
+      "title": "Fashionable Problems",
+      "content_text": "Read “Fashionable Problems” by Paul Graham at the official source:\nhttps://paulgraham.com/fp.html"
+    },
+    {
+      "id": "https://paulgraham.com/kids.html",
+      "url": "https://paulgraham.com/kids.html",
+      "title": "Having Kids",
+      "content_text": "Read “Having Kids” by Paul Graham at the official source:\nhttps://paulgraham.com/kids.html"
+    },
+    {
+      "id": "https://paulgraham.com/lesson.html",
+      "url": "https://paulgraham.com/lesson.html",
+      "title": "The Lesson to Unlearn",
+      "content_text": "Read “The Lesson to Unlearn” by Paul Graham at the official source:\nhttps://paulgraham.com/lesson.html"
+    },
+    {
+      "id": "https://paulgraham.com/nov.html",
+      "url": "https://paulgraham.com/nov.html",
+      "title": "Novelty and Heresy",
+      "content_text": "Read “Novelty and Heresy” by Paul Graham at the official source:\nhttps://paulgraham.com/nov.html"
+    },
+    {
+      "id": "https://paulgraham.com/genius.html",
+      "url": "https://paulgraham.com/genius.html",
+      "title": "The Bus Ticket Theory of Genius",
+      "content_text": "Read “The Bus Ticket Theory of Genius” by Paul Graham at the official source:\nhttps://paulgraham.com/genius.html"
+    },
+    {
+      "id": "https://paulgraham.com/sun.html",
+      "url": "https://paulgraham.com/sun.html",
+      "title": "General and Surprising",
+      "content_text": "Read “General and Surprising” by Paul Graham at the official source:\nhttps://paulgraham.com/sun.html"
+    },
+    {
+      "id": "https://paulgraham.com/pow.html",
+      "url": "https://paulgraham.com/pow.html",
+      "title": "Charisma / Power",
+      "content_text": "Read “Charisma / Power” by Paul Graham at the official source:\nhttps://paulgraham.com/pow.html"
+    },
+    {
+      "id": "https://paulgraham.com/disc.html",
+      "url": "https://paulgraham.com/disc.html",
+      "title": "The Risk of Discovery",
+      "content_text": "Read “The Risk of Discovery” by Paul Graham at the official source:\nhttps://paulgraham.com/disc.html"
+    },
+    {
+      "id": "https://paulgraham.com/pgh.html",
+      "url": "https://paulgraham.com/pgh.html",
+      "title": "How to Make Pittsburgh a Startup Hub",
+      "content_text": "Read “How to Make Pittsburgh a Startup Hub” by Paul Graham at the official source:\nhttps://paulgraham.com/pgh.html"
+    },
+    {
+      "id": "https://paulgraham.com/vb.html",
+      "url": "https://paulgraham.com/vb.html",
+      "title": "Life is Short",
+      "content_text": "Read “Life is Short” by Paul Graham at the official source:\nhttps://paulgraham.com/vb.html"
+    },
+    {
+      "id": "https://paulgraham.com/ineq.html",
+      "url": "https://paulgraham.com/ineq.html",
+      "title": "Economic Inequality",
+      "content_text": "Read “Economic Inequality” by Paul Graham at the official source:\nhttps://paulgraham.com/ineq.html"
+    },
+    {
+      "id": "https://paulgraham.com/re.html",
+      "url": "https://paulgraham.com/re.html",
+      "title": "The Refragmentation",
+      "content_text": "Read “The Refragmentation” by Paul Graham at the official source:\nhttps://paulgraham.com/re.html"
+    },
+    {
+      "id": "https://paulgraham.com/jessica.html",
+      "url": "https://paulgraham.com/jessica.html",
+      "title": "Jessica Livingston",
+      "content_text": "Read “Jessica Livingston” by Paul Graham at the official source:\nhttps://paulgraham.com/jessica.html"
+    },
+    {
+      "id": "https://paulgraham.com/bias.html",
+      "url": "https://paulgraham.com/bias.html",
+      "title": "A Way to Detect Bias",
+      "content_text": "Read “A Way to Detect Bias” by Paul Graham at the official source:\nhttps://paulgraham.com/bias.html"
+    },
+    {
+      "id": "https://paulgraham.com/talk.html",
+      "url": "https://paulgraham.com/talk.html",
+      "title": "Write Like You Talk",
+      "content_text": "Read “Write Like You Talk” by Paul Graham at the official source:\nhttps://paulgraham.com/talk.html"
+    },
+    {
+      "id": "https://paulgraham.com/aord.html",
+      "url": "https://paulgraham.com/aord.html",
+      "title": "Default Alive or Default Dead?",
+      "content_text": "Read “Default Alive or Default Dead?” by Paul Graham at the official source:\nhttps://paulgraham.com/aord.html"
+    },
+    {
+      "id": "https://paulgraham.com/safe.html",
+      "url": "https://paulgraham.com/safe.html",
+      "title": "Why It's Safe for Founders to Be Nice",
+      "content_text": "Read “Why It's Safe for Founders to Be Nice” by Paul Graham at the official source:\nhttps://paulgraham.com/safe.html"
+    },
+    {
+      "id": "https://paulgraham.com/name.html",
+      "url": "https://paulgraham.com/name.html",
+      "title": "Change Your Name",
+      "content_text": "Read “Change Your Name” by Paul Graham at the official source:\nhttps://paulgraham.com/name.html"
+    },
+    {
+      "id": "https://paulgraham.com/altair.html",
+      "url": "https://paulgraham.com/altair.html",
+      "title": "What Microsoft Is this the Altair Basic of?",
+      "content_text": "Read “What Microsoft Is this the Altair Basic of?” by Paul Graham at the official source:\nhttps://paulgraham.com/altair.html"
+    },
+    {
+      "id": "https://paulgraham.com/ronco.html",
+      "url": "https://paulgraham.com/ronco.html",
+      "title": "The Ronco Principle",
+      "content_text": "Read “The Ronco Principle” by Paul Graham at the official source:\nhttps://paulgraham.com/ronco.html"
+    },
+    {
+      "id": "https://paulgraham.com/work.html",
+      "url": "https://paulgraham.com/work.html",
+      "title": "What Doesn't Seem Like Work?",
+      "content_text": "Read “What Doesn't Seem Like Work?” by Paul Graham at the official source:\nhttps://paulgraham.com/work.html"
+    },
+    {
+      "id": "https://paulgraham.com/corpdev.html",
+      "url": "https://paulgraham.com/corpdev.html",
+      "title": "Don't Talk to Corp Dev",
+      "content_text": "Read “Don't Talk to Corp Dev” by Paul Graham at the official source:\nhttps://paulgraham.com/corpdev.html"
+    },
+    {
+      "id": "https://paulgraham.com/95.html",
+      "url": "https://paulgraham.com/95.html",
+      "title": "Let the Other 95% of Great Programmers In",
+      "content_text": "Read “Let the Other 95% of Great Programmers In” by Paul Graham at the official source:\nhttps://paulgraham.com/95.html"
+    },
+    {
+      "id": "https://paulgraham.com/ecw.html",
+      "url": "https://paulgraham.com/ecw.html",
+      "title": "How to Be an Expert in a Changing World",
+      "content_text": "Read “How to Be an Expert in a Changing World” by Paul Graham at the official source:\nhttps://paulgraham.com/ecw.html"
+    },
+    {
+      "id": "https://paulgraham.com/know.html",
+      "url": "https://paulgraham.com/know.html",
+      "title": "How You Know",
+      "content_text": "Read “How You Know” by Paul Graham at the official source:\nhttps://paulgraham.com/know.html"
+    },
+    {
+      "id": "https://paulgraham.com/pinch.html",
+      "url": "https://paulgraham.com/pinch.html",
+      "title": "The Fatal Pinch",
+      "content_text": "Read “The Fatal Pinch” by Paul Graham at the official source:\nhttps://paulgraham.com/pinch.html"
+    },
+    {
+      "id": "https://paulgraham.com/mean.html",
+      "url": "https://paulgraham.com/mean.html",
+      "title": "Mean People Fail",
+      "content_text": "Read “Mean People Fail” by Paul Graham at the official source:\nhttps://paulgraham.com/mean.html"
+    },
+    {
+      "id": "https://paulgraham.com/before.html",
+      "url": "https://paulgraham.com/before.html",
+      "title": "Before the Startup",
+      "content_text": "Read “Before the Startup” by Paul Graham at the official source:\nhttps://paulgraham.com/before.html"
+    },
+    {
+      "id": "https://paulgraham.com/fr.html",
+      "url": "https://paulgraham.com/fr.html",
+      "title": "How to Raise Money",
+      "content_text": "Read “How to Raise Money” by Paul Graham at the official source:\nhttps://paulgraham.com/fr.html"
+    },
+    {
+      "id": "https://paulgraham.com/herd.html",
+      "url": "https://paulgraham.com/herd.html",
+      "title": "Investor Herd Dynamics",
+      "content_text": "Read “Investor Herd Dynamics” by Paul Graham at the official source:\nhttps://paulgraham.com/herd.html"
+    },
+    {
+      "id": "https://paulgraham.com/convince.html",
+      "url": "https://paulgraham.com/convince.html",
+      "title": "How to Convince Investors",
+      "content_text": "Read “How to Convince Investors” by Paul Graham at the official source:\nhttps://paulgraham.com/convince.html"
+    },
+    {
+      "id": "https://paulgraham.com/ds.html",
+      "url": "https://paulgraham.com/ds.html",
+      "title": "Do Things that Don't Scale",
+      "content_text": "Read “Do Things that Don't Scale” by Paul Graham at the official source:\nhttps://paulgraham.com/ds.html"
+    },
+    {
+      "id": "https://paulgraham.com/invtrend.html",
+      "url": "https://paulgraham.com/invtrend.html",
+      "title": "Startup Investing Trends",
+      "content_text": "Read “Startup Investing Trends” by Paul Graham at the official source:\nhttps://paulgraham.com/invtrend.html"
+    },
+    {
+      "id": "https://paulgraham.com/startupideas.html",
+      "url": "https://paulgraham.com/startupideas.html",
+      "title": "How to Get Startup Ideas",
+      "content_text": "Read “How to Get Startup Ideas” by Paul Graham at the official source:\nhttps://paulgraham.com/startupideas.html"
+    },
+    {
+      "id": "https://paulgraham.com/hw.html",
+      "url": "https://paulgraham.com/hw.html",
+      "title": "The Hardware Renaissance",
+      "content_text": "Read “The Hardware Renaissance” by Paul Graham at the official source:\nhttps://paulgraham.com/hw.html"
+    },
+    {
+      "id": "https://paulgraham.com/growth.html",
+      "url": "https://paulgraham.com/growth.html",
+      "title": "Startup = Growth",
+      "content_text": "Read “Startup = Growth” by Paul Graham at the official source:\nhttps://paulgraham.com/growth.html"
+    },
+    {
+      "id": "https://paulgraham.com/swan.html",
+      "url": "https://paulgraham.com/swan.html",
+      "title": "Black Swan Farming",
+      "content_text": "Read “Black Swan Farming” by Paul Graham at the official source:\nhttps://paulgraham.com/swan.html"
+    },
+    {
+      "id": "https://paulgraham.com/todo.html",
+      "url": "https://paulgraham.com/todo.html",
+      "title": "The Top of My Todo List",
+      "content_text": "Read “The Top of My Todo List” by Paul Graham at the official source:\nhttps://paulgraham.com/todo.html"
+    },
+    {
+      "id": "https://paulgraham.com/speak.html",
+      "url": "https://paulgraham.com/speak.html",
+      "title": "Writing and Speaking",
+      "content_text": "Read “Writing and Speaking” by Paul Graham at the official source:\nhttps://paulgraham.com/speak.html"
+    },
+    {
+      "id": "https://paulgraham.com/ycstart.html",
+      "url": "https://paulgraham.com/ycstart.html",
+      "title": "How Y Combinator Started",
+      "content_text": "Read “How Y Combinator Started” by Paul Graham at the official source:\nhttps://paulgraham.com/ycstart.html"
+    },
+    {
+      "id": "https://paulgraham.com/property.html",
+      "url": "https://paulgraham.com/property.html",
+      "title": "Defining Property",
+      "content_text": "Read “Defining Property” by Paul Graham at the official source:\nhttps://paulgraham.com/property.html"
+    },
+    {
+      "id": "https://paulgraham.com/ambitious.html",
+      "url": "https://paulgraham.com/ambitious.html",
+      "title": "Frighteningly Ambitious Startup Ideas",
+      "content_text": "Read “Frighteningly Ambitious Startup Ideas” by Paul Graham at the official source:\nhttps://paulgraham.com/ambitious.html"
+    },
+    {
+      "id": "https://paulgraham.com/word.html",
+      "url": "https://paulgraham.com/word.html",
+      "title": "A Word to the Resourceful",
+      "content_text": "Read “A Word to the Resourceful” by Paul Graham at the official source:\nhttps://paulgraham.com/word.html"
+    },
+    {
+      "id": "https://paulgraham.com/schlep.html",
+      "url": "https://paulgraham.com/schlep.html",
+      "title": "Schlep Blindness",
+      "content_text": "Read “Schlep Blindness” by Paul Graham at the official source:\nhttps://paulgraham.com/schlep.html"
+    },
+    {
+      "id": "https://paulgraham.com/vw.html",
+      "url": "https://paulgraham.com/vw.html",
+      "title": "Snapshot: Viaweb, June 1998",
+      "content_text": "Read “Snapshot: Viaweb, June 1998” by Paul Graham at the official source:\nhttps://paulgraham.com/vw.html"
+    },
+    {
+      "id": "https://paulgraham.com/hubs.html",
+      "url": "https://paulgraham.com/hubs.html",
+      "title": "Why Startup Hubs Work",
+      "content_text": "Read “Why Startup Hubs Work” by Paul Graham at the official source:\nhttps://paulgraham.com/hubs.html"
+    },
+    {
+      "id": "https://paulgraham.com/patentpledge.html",
+      "url": "https://paulgraham.com/patentpledge.html",
+      "title": "The Patent Pledge",
+      "content_text": "Read “The Patent Pledge” by Paul Graham at the official source:\nhttps://paulgraham.com/patentpledge.html"
+    },
+    {
+      "id": "https://paulgraham.com/airbnb.html",
+      "url": "https://paulgraham.com/airbnb.html",
+      "title": "Subject: Airbnb",
+      "content_text": "Read “Subject: Airbnb” by Paul Graham at the official source:\nhttps://paulgraham.com/airbnb.html"
+    },
+    {
+      "id": "https://paulgraham.com/control.html",
+      "url": "https://paulgraham.com/control.html",
+      "title": "Founder Control",
+      "content_text": "Read “Founder Control” by Paul Graham at the official source:\nhttps://paulgraham.com/control.html"
+    },
+    {
+      "id": "https://paulgraham.com/tablets.html",
+      "url": "https://paulgraham.com/tablets.html",
+      "title": "Tablets",
+      "content_text": "Read “Tablets” by Paul Graham at the official source:\nhttps://paulgraham.com/tablets.html"
+    },
+    {
+      "id": "https://paulgraham.com/founders.html",
+      "url": "https://paulgraham.com/founders.html",
+      "title": "What We Look for in Founders",
+      "content_text": "Read “What We Look for in Founders” by Paul Graham at the official source:\nhttps://paulgraham.com/founders.html"
+    },
+    {
+      "id": "https://paulgraham.com/superangels.html",
+      "url": "https://paulgraham.com/superangels.html",
+      "title": "The New Funding Landscape",
+      "content_text": "Read “The New Funding Landscape” by Paul Graham at the official source:\nhttps://paulgraham.com/superangels.html"
+    },
+    {
+      "id": "https://paulgraham.com/seesv.html",
+      "url": "https://paulgraham.com/seesv.html",
+      "title": "Where to See Silicon Valley",
+      "content_text": "Read “Where to See Silicon Valley” by Paul Graham at the official source:\nhttps://paulgraham.com/seesv.html"
+    },
+    {
+      "id": "https://paulgraham.com/hiresfund.html",
+      "url": "https://paulgraham.com/hiresfund.html",
+      "title": "High Resolution Fundraising",
+      "content_text": "Read “High Resolution Fundraising” by Paul Graham at the official source:\nhttps://paulgraham.com/hiresfund.html"
+    },
+    {
+      "id": "https://paulgraham.com/yahoo.html",
+      "url": "https://paulgraham.com/yahoo.html",
+      "title": "What Happened to Yahoo",
+      "content_text": "Read “What Happened to Yahoo” by Paul Graham at the official source:\nhttps://paulgraham.com/yahoo.html"
+    },
+    {
+      "id": "https://paulgraham.com/future.html",
+      "url": "https://paulgraham.com/future.html",
+      "title": "The Future of Startup Funding",
+      "content_text": "Read “The Future of Startup Funding” by Paul Graham at the official source:\nhttps://paulgraham.com/future.html"
+    },
+    {
+      "id": "https://paulgraham.com/addiction.html",
+      "url": "https://paulgraham.com/addiction.html",
+      "title": "The Acceleration of Addictiveness",
+      "content_text": "Read “The Acceleration of Addictiveness” by Paul Graham at the official source:\nhttps://paulgraham.com/addiction.html"
+    },
+    {
+      "id": "https://paulgraham.com/top.html",
+      "url": "https://paulgraham.com/top.html",
+      "title": "The Top Idea in Your Mind",
+      "content_text": "Read “The Top Idea in Your Mind” by Paul Graham at the official source:\nhttps://paulgraham.com/top.html"
+    },
+    {
+      "id": "https://paulgraham.com/selfindulgence.html",
+      "url": "https://paulgraham.com/selfindulgence.html",
+      "title": "How to Lose Time and Money",
+      "content_text": "Read “How to Lose Time and Money” by Paul Graham at the official source:\nhttps://paulgraham.com/selfindulgence.html"
+    },
+    {
+      "id": "https://paulgraham.com/organic.html",
+      "url": "https://paulgraham.com/organic.html",
+      "title": "Organic Startup Ideas",
+      "content_text": "Read “Organic Startup Ideas” by Paul Graham at the official source:\nhttps://paulgraham.com/organic.html"
+    },
+    {
+      "id": "https://paulgraham.com/apple.html",
+      "url": "https://paulgraham.com/apple.html",
+      "title": "Apple's Mistake",
+      "content_text": "Read “Apple's Mistake” by Paul Graham at the official source:\nhttps://paulgraham.com/apple.html"
+    },
+    {
+      "id": "https://paulgraham.com/really.html",
+      "url": "https://paulgraham.com/really.html",
+      "title": "What Startups Are Really Like",
+      "content_text": "Read “What Startups Are Really Like” by Paul Graham at the official source:\nhttps://paulgraham.com/really.html"
+    },
+    {
+      "id": "https://paulgraham.com/discover.html",
+      "url": "https://paulgraham.com/discover.html",
+      "title": "Persuade xor Discover",
+      "content_text": "Read “Persuade xor Discover” by Paul Graham at the official source:\nhttps://paulgraham.com/discover.html"
+    },
+    {
+      "id": "https://paulgraham.com/publishing.html",
+      "url": "https://paulgraham.com/publishing.html",
+      "title": "Post-Medium Publishing",
+      "content_text": "Read “Post-Medium Publishing” by Paul Graham at the official source:\nhttps://paulgraham.com/publishing.html"
+    },
+    {
+      "id": "https://paulgraham.com/nthings.html",
+      "url": "https://paulgraham.com/nthings.html",
+      "title": "The List of N Things",
+      "content_text": "Read “The List of N Things” by Paul Graham at the official source:\nhttps://paulgraham.com/nthings.html"
+    },
+    {
+      "id": "https://paulgraham.com/determination.html",
+      "url": "https://paulgraham.com/determination.html",
+      "title": "The Anatomy of Determination",
+      "content_text": "Read “The Anatomy of Determination” by Paul Graham at the official source:\nhttps://paulgraham.com/determination.html"
+    },
+    {
+      "id": "https://paulgraham.com/kate.html",
+      "url": "https://paulgraham.com/kate.html",
+      "title": "What Kate Saw in Silicon Valley",
+      "content_text": "Read “What Kate Saw in Silicon Valley” by Paul Graham at the official source:\nhttps://paulgraham.com/kate.html"
+    },
+    {
+      "id": "https://paulgraham.com/segway.html",
+      "url": "https://paulgraham.com/segway.html",
+      "title": "The Trouble with the Segway",
+      "content_text": "Read “The Trouble with the Segway” by Paul Graham at the official source:\nhttps://paulgraham.com/segway.html"
+    },
+    {
+      "id": "https://paulgraham.com/ramenprofitable.html",
+      "url": "https://paulgraham.com/ramenprofitable.html",
+      "title": "Ramen Profitable",
+      "content_text": "Read “Ramen Profitable” by Paul Graham at the official source:\nhttps://paulgraham.com/ramenprofitable.html"
+    },
+    {
+      "id": "https://paulgraham.com/makersschedule.html",
+      "url": "https://paulgraham.com/makersschedule.html",
+      "title": "Maker's Schedule, Manager's Schedule",
+      "content_text": "Read “Maker's Schedule, Manager's Schedule” by Paul Graham at the official source:\nhttps://paulgraham.com/makersschedule.html"
+    },
+    {
+      "id": "https://paulgraham.com/revolution.html",
+      "url": "https://paulgraham.com/revolution.html",
+      "title": "A Local Revolution?",
+      "content_text": "Read “A Local Revolution?” by Paul Graham at the official source:\nhttps://paulgraham.com/revolution.html"
+    },
+    {
+      "id": "https://paulgraham.com/twitter.html",
+      "url": "https://paulgraham.com/twitter.html",
+      "title": "Why Twitter is a Big Deal",
+      "content_text": "Read “Why Twitter is a Big Deal” by Paul Graham at the official source:\nhttps://paulgraham.com/twitter.html"
+    },
+    {
+      "id": "https://paulgraham.com/foundervisa.html",
+      "url": "https://paulgraham.com/foundervisa.html",
+      "title": "The Founder Visa",
+      "content_text": "Read “The Founder Visa” by Paul Graham at the official source:\nhttps://paulgraham.com/foundervisa.html"
+    },
+    {
+      "id": "https://paulgraham.com/5founders.html",
+      "url": "https://paulgraham.com/5founders.html",
+      "title": "Five Founders",
+      "content_text": "Read “Five Founders” by Paul Graham at the official source:\nhttps://paulgraham.com/5founders.html"
+    },
+    {
+      "id": "https://paulgraham.com/relres.html",
+      "url": "https://paulgraham.com/relres.html",
+      "title": "Relentlessly Resourceful",
+      "content_text": "Read “Relentlessly Resourceful” by Paul Graham at the official source:\nhttps://paulgraham.com/relres.html"
+    },
+    {
+      "id": "https://paulgraham.com/angelinvesting.html",
+      "url": "https://paulgraham.com/angelinvesting.html",
+      "title": "How to Be an Angel Investor",
+      "content_text": "Read “How to Be an Angel Investor” by Paul Graham at the official source:\nhttps://paulgraham.com/angelinvesting.html"
+    },
+    {
+      "id": "https://paulgraham.com/convergence.html",
+      "url": "https://paulgraham.com/convergence.html",
+      "title": "Why TV Lost",
+      "content_text": "Read “Why TV Lost” by Paul Graham at the official source:\nhttps://paulgraham.com/convergence.html"
+    },
+    {
+      "id": "https://paulgraham.com/maybe.html",
+      "url": "https://paulgraham.com/maybe.html",
+      "title": "Can You Buy a Silicon Valley? Maybe.",
+      "content_text": "Read “Can You Buy a Silicon Valley? Maybe.” by Paul Graham at the official source:\nhttps://paulgraham.com/maybe.html"
+    },
+    {
+      "id": "https://paulgraham.com/hackernews.html",
+      "url": "https://paulgraham.com/hackernews.html",
+      "title": "What I've Learned from Hacker News",
+      "content_text": "Read “What I've Learned from Hacker News” by Paul Graham at the official source:\nhttps://paulgraham.com/hackernews.html"
+    },
+    {
+      "id": "https://paulgraham.com/13sentences.html",
+      "url": "https://paulgraham.com/13sentences.html",
+      "title": "Startups in 13 Sentences",
+      "content_text": "Read “Startups in 13 Sentences” by Paul Graham at the official source:\nhttps://paulgraham.com/13sentences.html"
+    },
+    {
+      "id": "https://paulgraham.com/identity.html",
+      "url": "https://paulgraham.com/identity.html",
+      "title": "Keep Your Identity Small",
+      "content_text": "Read “Keep Your Identity Small” by Paul Graham at the official source:\nhttps://paulgraham.com/identity.html"
+    },
+    {
+      "id": "https://paulgraham.com/credentials.html",
+      "url": "https://paulgraham.com/credentials.html",
+      "title": "After Credentials",
+      "content_text": "Read “After Credentials” by Paul Graham at the official source:\nhttps://paulgraham.com/credentials.html"
+    },
+    {
+      "id": "https://paulgraham.com/divergence.html",
+      "url": "https://paulgraham.com/divergence.html",
+      "title": "Could VC be a Casualty of the Recession?",
+      "content_text": "Read “Could VC be a Casualty of the Recession?” by Paul Graham at the official source:\nhttps://paulgraham.com/divergence.html"
+    },
+    {
+      "id": "https://paulgraham.com/highres.html",
+      "url": "https://paulgraham.com/highres.html",
+      "title": "The High-Res Society",
+      "content_text": "Read “The High-Res Society” by Paul Graham at the official source:\nhttps://paulgraham.com/highres.html"
+    },
+    {
+      "id": "https://paulgraham.com/artistsship.html",
+      "url": "https://paulgraham.com/artistsship.html",
+      "title": "The Other Half of \"Artists Ship\"",
+      "content_text": "Read “The Other Half of \"Artists Ship\"” by Paul Graham at the official source:\nhttps://paulgraham.com/artistsship.html"
+    },
+    {
+      "id": "https://paulgraham.com/badeconomy.html",
+      "url": "https://paulgraham.com/badeconomy.html",
+      "title": "Why to Start a Startup in a Bad Economy",
+      "content_text": "Read “Why to Start a Startup in a Bad Economy” by Paul Graham at the official source:\nhttps://paulgraham.com/badeconomy.html"
+    },
+    {
+      "id": "https://paulgraham.com/fundraising.html",
+      "url": "https://paulgraham.com/fundraising.html",
+      "title": "A Fundraising Survival Guide",
+      "content_text": "Read “A Fundraising Survival Guide” by Paul Graham at the official source:\nhttps://paulgraham.com/fundraising.html"
+    },
+    {
+      "id": "https://paulgraham.com/prcmc.html",
+      "url": "https://paulgraham.com/prcmc.html",
+      "title": "The Pooled-Risk Company Management Company",
+      "content_text": "Read “The Pooled-Risk Company Management Company” by Paul Graham at the official source:\nhttps://paulgraham.com/prcmc.html"
+    },
+    {
+      "id": "https://paulgraham.com/cities.html",
+      "url": "https://paulgraham.com/cities.html",
+      "title": "Cities and Ambition",
+      "content_text": "Read “Cities and Ambition” by Paul Graham at the official source:\nhttps://paulgraham.com/cities.html"
+    },
+    {
+      "id": "https://paulgraham.com/distraction.html",
+      "url": "https://paulgraham.com/distraction.html",
+      "title": "Disconnecting Distraction",
+      "content_text": "Read “Disconnecting Distraction” by Paul Graham at the official source:\nhttps://paulgraham.com/distraction.html"
+    },
+    {
+      "id": "https://paulgraham.com/lies.html",
+      "url": "https://paulgraham.com/lies.html",
+      "title": "Lies We Tell Kids",
+      "content_text": "Read “Lies We Tell Kids” by Paul Graham at the official source:\nhttps://paulgraham.com/lies.html"
+    },
+    {
+      "id": "https://paulgraham.com/good.html",
+      "url": "https://paulgraham.com/good.html",
+      "title": "Be Good",
+      "content_text": "Read “Be Good” by Paul Graham at the official source:\nhttps://paulgraham.com/good.html"
+    },
+    {
+      "id": "https://paulgraham.com/googles.html",
+      "url": "https://paulgraham.com/googles.html",
+      "title": "Why There Aren't More Googles",
+      "content_text": "Read “Why There Aren't More Googles” by Paul Graham at the official source:\nhttps://paulgraham.com/googles.html"
+    },
+    {
+      "id": "https://paulgraham.com/heroes.html",
+      "url": "https://paulgraham.com/heroes.html",
+      "title": "Some Heroes",
+      "content_text": "Read “Some Heroes” by Paul Graham at the official source:\nhttps://paulgraham.com/heroes.html"
+    },
+    {
+      "id": "https://paulgraham.com/disagree.html",
+      "url": "https://paulgraham.com/disagree.html",
+      "title": "How to Disagree",
+      "content_text": "Read “How to Disagree” by Paul Graham at the official source:\nhttps://paulgraham.com/disagree.html"
+    },
+    {
+      "id": "https://paulgraham.com/boss.html",
+      "url": "https://paulgraham.com/boss.html",
+      "title": "You Weren't Meant to Have a Boss",
+      "content_text": "Read “You Weren't Meant to Have a Boss” by Paul Graham at the official source:\nhttps://paulgraham.com/boss.html"
+    },
+    {
+      "id": "https://paulgraham.com/ycombinator.html",
+      "url": "https://paulgraham.com/ycombinator.html",
+      "title": "A New Venture Animal",
+      "content_text": "Read “A New Venture Animal” by Paul Graham at the official source:\nhttps://paulgraham.com/ycombinator.html"
+    },
+    {
+      "id": "https://paulgraham.com/trolls.html",
+      "url": "https://paulgraham.com/trolls.html",
+      "title": "Trolls",
+      "content_text": "Read “Trolls” by Paul Graham at the official source:\nhttps://paulgraham.com/trolls.html"
+    },
+    {
+      "id": "https://paulgraham.com/newthings.html",
+      "url": "https://paulgraham.com/newthings.html",
+      "title": "Six Principles for Making New Things",
+      "content_text": "Read “Six Principles for Making New Things” by Paul Graham at the official source:\nhttps://paulgraham.com/newthings.html"
+    },
+    {
+      "id": "https://paulgraham.com/startuphubs.html",
+      "url": "https://paulgraham.com/startuphubs.html",
+      "title": "Why to Move to a Startup Hub",
+      "content_text": "Read “Why to Move to a Startup Hub” by Paul Graham at the official source:\nhttps://paulgraham.com/startuphubs.html"
+    },
+    {
+      "id": "https://paulgraham.com/webstartups.html",
+      "url": "https://paulgraham.com/webstartups.html",
+      "title": "The Future of Web Startups",
+      "content_text": "Read “The Future of Web Startups” by Paul Graham at the official source:\nhttps://paulgraham.com/webstartups.html"
+    },
+    {
+      "id": "https://paulgraham.com/philosophy.html",
+      "url": "https://paulgraham.com/philosophy.html",
+      "title": "How to Do Philosophy",
+      "content_text": "Read “How to Do Philosophy” by Paul Graham at the official source:\nhttps://paulgraham.com/philosophy.html"
+    },
+    {
+      "id": "https://paulgraham.com/colleges.html",
+      "url": "https://paulgraham.com/colleges.html",
+      "title": "News from the Front",
+      "content_text": "Read “News from the Front” by Paul Graham at the official source:\nhttps://paulgraham.com/colleges.html"
+    },
+    {
+      "id": "https://paulgraham.com/die.html",
+      "url": "https://paulgraham.com/die.html",
+      "title": "How Not to Die",
+      "content_text": "Read “How Not to Die” by Paul Graham at the official source:\nhttps://paulgraham.com/die.html"
+    },
+    {
+      "id": "https://paulgraham.com/head.html",
+      "url": "https://paulgraham.com/head.html",
+      "title": "Holding a Program in One's Head",
+      "content_text": "Read “Holding a Program in One's Head” by Paul Graham at the official source:\nhttps://paulgraham.com/head.html"
+    },
+    {
+      "id": "https://paulgraham.com/stuff.html",
+      "url": "https://paulgraham.com/stuff.html",
+      "title": "Stuff",
+      "content_text": "Read “Stuff” by Paul Graham at the official source:\nhttps://paulgraham.com/stuff.html"
+    },
+    {
+      "id": "https://paulgraham.com/equity.html",
+      "url": "https://paulgraham.com/equity.html",
+      "title": "The Equity Equation",
+      "content_text": "Read “The Equity Equation” by Paul Graham at the official source:\nhttps://paulgraham.com/equity.html"
+    },
+    {
+      "id": "https://paulgraham.com/unions.html",
+      "url": "https://paulgraham.com/unions.html",
+      "title": "An Alternative Theory of Unions",
+      "content_text": "Read “An Alternative Theory of Unions” by Paul Graham at the official source:\nhttps://paulgraham.com/unions.html"
+    },
+    {
+      "id": "https://paulgraham.com/guidetoinvestors.html",
+      "url": "https://paulgraham.com/guidetoinvestors.html",
+      "title": "The Hacker's Guide to Investors",
+      "content_text": "Read “The Hacker's Guide to Investors” by Paul Graham at the official source:\nhttps://paulgraham.com/guidetoinvestors.html"
+    },
+    {
+      "id": "https://paulgraham.com/judgement.html",
+      "url": "https://paulgraham.com/judgement.html",
+      "title": "Two Kinds of Judgement",
+      "content_text": "Read “Two Kinds of Judgement” by Paul Graham at the official source:\nhttps://paulgraham.com/judgement.html"
+    },
+    {
+      "id": "https://paulgraham.com/microsoft.html",
+      "url": "https://paulgraham.com/microsoft.html",
+      "title": "Microsoft is Dead",
+      "content_text": "Read “Microsoft is Dead” by Paul Graham at the official source:\nhttps://paulgraham.com/microsoft.html"
+    },
+    {
+      "id": "https://paulgraham.com/notnot.html",
+      "url": "https://paulgraham.com/notnot.html",
+      "title": "Why to Not Not Start a Startup",
+      "content_text": "Read “Why to Not Not Start a Startup” by Paul Graham at the official source:\nhttps://paulgraham.com/notnot.html"
+    },
+    {
+      "id": "https://paulgraham.com/wisdom.html",
+      "url": "https://paulgraham.com/wisdom.html",
+      "title": "Is It Worth Being Wise?",
+      "content_text": "Read “Is It Worth Being Wise?” by Paul Graham at the official source:\nhttps://paulgraham.com/wisdom.html"
+    },
+    {
+      "id": "https://paulgraham.com/foundersatwork.html",
+      "url": "https://paulgraham.com/foundersatwork.html",
+      "title": "Learning from Founders",
+      "content_text": "Read “Learning from Founders” by Paul Graham at the official source:\nhttps://paulgraham.com/foundersatwork.html"
+    },
+    {
+      "id": "https://paulgraham.com/goodart.html",
+      "url": "https://paulgraham.com/goodart.html",
+      "title": "How Art Can Be Good",
+      "content_text": "Read “How Art Can Be Good” by Paul Graham at the official source:\nhttps://paulgraham.com/goodart.html"
+    },
+    {
+      "id": "https://paulgraham.com/startupmistakes.html",
+      "url": "https://paulgraham.com/startupmistakes.html",
+      "title": "The 18 Mistakes That Kill Startups",
+      "content_text": "Read “The 18 Mistakes That Kill Startups” by Paul Graham at the official source:\nhttps://paulgraham.com/startupmistakes.html"
+    },
+    {
+      "id": "https://paulgraham.com/mit.html",
+      "url": "https://paulgraham.com/mit.html",
+      "title": "A Student's Guide to Startups",
+      "content_text": "Read “A Student's Guide to Startups” by Paul Graham at the official source:\nhttps://paulgraham.com/mit.html"
+    },
+    {
+      "id": "https://paulgraham.com/investors.html",
+      "url": "https://paulgraham.com/investors.html",
+      "title": "How to Present to Investors",
+      "content_text": "Read “How to Present to Investors” by Paul Graham at the official source:\nhttps://paulgraham.com/investors.html"
+    },
+    {
+      "id": "https://paulgraham.com/copy.html",
+      "url": "https://paulgraham.com/copy.html",
+      "title": "Copy What You Like",
+      "content_text": "Read “Copy What You Like” by Paul Graham at the official source:\nhttps://paulgraham.com/copy.html"
+    },
+    {
+      "id": "https://paulgraham.com/island.html",
+      "url": "https://paulgraham.com/island.html",
+      "title": "The Island Test",
+      "content_text": "Read “The Island Test” by Paul Graham at the official source:\nhttps://paulgraham.com/island.html"
+    },
+    {
+      "id": "https://paulgraham.com/marginal.html",
+      "url": "https://paulgraham.com/marginal.html",
+      "title": "The Power of the Marginal",
+      "content_text": "Read “The Power of the Marginal” by Paul Graham at the official source:\nhttps://paulgraham.com/marginal.html"
+    },
+    {
+      "id": "https://paulgraham.com/america.html",
+      "url": "https://paulgraham.com/america.html",
+      "title": "Why Startups Condense in America",
+      "content_text": "Read “Why Startups Condense in America” by Paul Graham at the official source:\nhttps://paulgraham.com/america.html"
+    },
+    {
+      "id": "https://paulgraham.com/siliconvalley.html",
+      "url": "https://paulgraham.com/siliconvalley.html",
+      "title": "How to Be Silicon Valley",
+      "content_text": "Read “How to Be Silicon Valley” by Paul Graham at the official source:\nhttps://paulgraham.com/siliconvalley.html"
+    },
+    {
+      "id": "https://paulgraham.com/startuplessons.html",
+      "url": "https://paulgraham.com/startuplessons.html",
+      "title": "The Hardest Lessons for Startups to Learn",
+      "content_text": "Read “The Hardest Lessons for Startups to Learn” by Paul Graham at the official source:\nhttps://paulgraham.com/startuplessons.html"
+    },
+    {
+      "id": "https://paulgraham.com/randomness.html",
+      "url": "https://paulgraham.com/randomness.html",
+      "title": "See Randomness",
+      "content_text": "Read “See Randomness” by Paul Graham at the official source:\nhttps://paulgraham.com/randomness.html"
+    },
+    {
+      "id": "https://paulgraham.com/softwarepatents.html",
+      "url": "https://paulgraham.com/softwarepatents.html",
+      "title": "Are Software Patents Evil?",
+      "content_text": "Read “Are Software Patents Evil?” by Paul Graham at the official source:\nhttps://paulgraham.com/softwarepatents.html"
+    },
+    {
+      "id": "https://paulgraham.com/6631327.html",
+      "url": "https://paulgraham.com/6631327.html",
+      "title": "6,631,372",
+      "content_text": "Read “6,631,372” by Paul Graham at the official source:\nhttps://paulgraham.com/6631327.html"
+    },
+    {
+      "id": "https://paulgraham.com/whyyc.html",
+      "url": "https://paulgraham.com/whyyc.html",
+      "title": "Why YC",
+      "content_text": "Read “Why YC” by Paul Graham at the official source:\nhttps://paulgraham.com/whyyc.html"
+    },
+    {
+      "id": "https://paulgraham.com/love.html",
+      "url": "https://paulgraham.com/love.html",
+      "title": "How to Do What You Love",
+      "content_text": "Read “How to Do What You Love” by Paul Graham at the official source:\nhttps://paulgraham.com/love.html"
+    },
+    {
+      "id": "https://paulgraham.com/procrastination.html",
+      "url": "https://paulgraham.com/procrastination.html",
+      "title": "Good and Bad Procrastination",
+      "content_text": "Read “Good and Bad Procrastination” by Paul Graham at the official source:\nhttps://paulgraham.com/procrastination.html"
+    },
+    {
+      "id": "https://paulgraham.com/web20.html",
+      "url": "https://paulgraham.com/web20.html",
+      "title": "Web 2.0",
+      "content_text": "Read “Web 2.0” by Paul Graham at the official source:\nhttps://paulgraham.com/web20.html"
+    },
+    {
+      "id": "https://paulgraham.com/startupfunding.html",
+      "url": "https://paulgraham.com/startupfunding.html",
+      "title": "How to Fund a Startup",
+      "content_text": "Read “How to Fund a Startup” by Paul Graham at the official source:\nhttps://paulgraham.com/startupfunding.html"
+    },
+    {
+      "id": "https://paulgraham.com/vcsqueeze.html",
+      "url": "https://paulgraham.com/vcsqueeze.html",
+      "title": "The Venture Capital Squeeze",
+      "content_text": "Read “The Venture Capital Squeeze” by Paul Graham at the official source:\nhttps://paulgraham.com/vcsqueeze.html"
+    },
+    {
+      "id": "https://paulgraham.com/ideas.html",
+      "url": "https://paulgraham.com/ideas.html",
+      "title": "Ideas for Startups",
+      "content_text": "Read “Ideas for Startups” by Paul Graham at the official source:\nhttps://paulgraham.com/ideas.html"
+    },
+    {
+      "id": "https://paulgraham.com/sfp.html",
+      "url": "https://paulgraham.com/sfp.html",
+      "title": "What I Did this Summer",
+      "content_text": "Read “What I Did this Summer” by Paul Graham at the official source:\nhttps://paulgraham.com/sfp.html"
+    },
+    {
+      "id": "https://paulgraham.com/inequality.html",
+      "url": "https://paulgraham.com/inequality.html",
+      "title": "Inequality and Risk",
+      "content_text": "Read “Inequality and Risk” by Paul Graham at the official source:\nhttps://paulgraham.com/inequality.html"
+    },
+    {
+      "id": "https://paulgraham.com/ladder.html",
+      "url": "https://paulgraham.com/ladder.html",
+      "title": "After the Ladder",
+      "content_text": "Read “After the Ladder” by Paul Graham at the official source:\nhttps://paulgraham.com/ladder.html"
+    },
+    {
+      "id": "https://paulgraham.com/opensource.html",
+      "url": "https://paulgraham.com/opensource.html",
+      "title": "What Business Can Learn from Open Source",
+      "content_text": "Read “What Business Can Learn from Open Source” by Paul Graham at the official source:\nhttps://paulgraham.com/opensource.html"
+    },
+    {
+      "id": "https://paulgraham.com/hiring.html",
+      "url": "https://paulgraham.com/hiring.html",
+      "title": "Hiring is Obsolete",
+      "content_text": "Read “Hiring is Obsolete” by Paul Graham at the official source:\nhttps://paulgraham.com/hiring.html"
+    },
+    {
+      "id": "https://paulgraham.com/submarine.html",
+      "url": "https://paulgraham.com/submarine.html",
+      "title": "The Submarine",
+      "content_text": "Read “The Submarine” by Paul Graham at the official source:\nhttps://paulgraham.com/submarine.html"
+    },
+    {
+      "id": "https://paulgraham.com/bronze.html",
+      "url": "https://paulgraham.com/bronze.html",
+      "title": "Why Smart People Have Bad Ideas",
+      "content_text": "Read “Why Smart People Have Bad Ideas” by Paul Graham at the official source:\nhttps://paulgraham.com/bronze.html"
+    },
+    {
+      "id": "https://paulgraham.com/mac.html",
+      "url": "https://paulgraham.com/mac.html",
+      "title": "Return of the Mac",
+      "content_text": "Read “Return of the Mac” by Paul Graham at the official source:\nhttps://paulgraham.com/mac.html"
+    },
+    {
+      "id": "https://paulgraham.com/writing44.html",
+      "url": "https://paulgraham.com/writing44.html",
+      "title": "Writing, Briefly",
+      "content_text": "Read “Writing, Briefly” by Paul Graham at the official source:\nhttps://paulgraham.com/writing44.html"
+    },
+    {
+      "id": "https://paulgraham.com/college.html",
+      "url": "https://paulgraham.com/college.html",
+      "title": "Undergraduation",
+      "content_text": "Read “Undergraduation” by Paul Graham at the official source:\nhttps://paulgraham.com/college.html"
+    },
+    {
+      "id": "https://paulgraham.com/venturecapital.html",
+      "url": "https://paulgraham.com/venturecapital.html",
+      "title": "A Unified Theory of VC Suckage",
+      "content_text": "Read “A Unified Theory of VC Suckage” by Paul Graham at the official source:\nhttps://paulgraham.com/venturecapital.html"
+    },
+    {
+      "id": "https://paulgraham.com/start.html",
+      "url": "https://paulgraham.com/start.html",
+      "title": "How to Start a Startup",
+      "content_text": "Read “How to Start a Startup” by Paul Graham at the official source:\nhttps://paulgraham.com/start.html"
+    },
+    {
+      "id": "https://paulgraham.com/hs.html",
+      "url": "https://paulgraham.com/hs.html",
+      "title": "What You'll Wish You'd Known",
+      "content_text": "Read “What You'll Wish You'd Known” by Paul Graham at the official source:\nhttps://paulgraham.com/hs.html"
+    },
+    {
+      "id": "https://paulgraham.com/usa.html",
+      "url": "https://paulgraham.com/usa.html",
+      "title": "Made in USA",
+      "content_text": "Read “Made in USA” by Paul Graham at the official source:\nhttps://paulgraham.com/usa.html"
+    },
+    {
+      "id": "https://paulgraham.com/charisma.html",
+      "url": "https://paulgraham.com/charisma.html",
+      "title": "It's Charisma, Stupid",
+      "content_text": "Read “It's Charisma, Stupid” by Paul Graham at the official source:\nhttps://paulgraham.com/charisma.html"
+    },
+    {
+      "id": "https://paulgraham.com/polls.html",
+      "url": "https://paulgraham.com/polls.html",
+      "title": "Bradley's Ghost",
+      "content_text": "Read “Bradley's Ghost” by Paul Graham at the official source:\nhttps://paulgraham.com/polls.html"
+    },
+    {
+      "id": "https://paulgraham.com/laundry.html",
+      "url": "https://paulgraham.com/laundry.html",
+      "title": "A Version 1.0",
+      "content_text": "Read “A Version 1.0” by Paul Graham at the official source:\nhttps://paulgraham.com/laundry.html"
+    },
+    {
+      "id": "https://paulgraham.com/bubble.html",
+      "url": "https://paulgraham.com/bubble.html",
+      "title": "What the Bubble Got Right",
+      "content_text": "Read “What the Bubble Got Right” by Paul Graham at the official source:\nhttps://paulgraham.com/bubble.html"
+    },
+    {
+      "id": "https://paulgraham.com/essay.html",
+      "url": "https://paulgraham.com/essay.html",
+      "title": "The Age of the Essay",
+      "content_text": "Read “The Age of the Essay” by Paul Graham at the official source:\nhttps://paulgraham.com/essay.html"
+    },
+    {
+      "id": "https://paulgraham.com/pypar.html",
+      "url": "https://paulgraham.com/pypar.html",
+      "title": "The Python Paradox",
+      "content_text": "Read “The Python Paradox” by Paul Graham at the official source:\nhttps://paulgraham.com/pypar.html"
+    },
+    {
+      "id": "https://paulgraham.com/gh.html",
+      "url": "https://paulgraham.com/gh.html",
+      "title": "Great Hackers",
+      "content_text": "Read “Great Hackers” by Paul Graham at the official source:\nhttps://paulgraham.com/gh.html"
+    },
+    {
+      "id": "https://paulgraham.com/gap.html",
+      "url": "https://paulgraham.com/gap.html",
+      "title": "Mind the Gap",
+      "content_text": "Read “Mind the Gap” by Paul Graham at the official source:\nhttps://paulgraham.com/gap.html"
+    },
+    {
+      "id": "https://paulgraham.com/wealth.html",
+      "url": "https://paulgraham.com/wealth.html",
+      "title": "How to Make Wealth",
+      "content_text": "Read “How to Make Wealth” by Paul Graham at the official source:\nhttps://paulgraham.com/wealth.html"
+    },
+    {
+      "id": "https://paulgraham.com/gba.html",
+      "url": "https://paulgraham.com/gba.html",
+      "title": "The Word \"Hacker\"",
+      "content_text": "Read “The Word \"Hacker\"” by Paul Graham at the official source:\nhttps://paulgraham.com/gba.html"
+    },
+    {
+      "id": "https://paulgraham.com/say.html",
+      "url": "https://paulgraham.com/say.html",
+      "title": "What You Can't Say",
+      "content_text": "Read “What You Can't Say” by Paul Graham at the official source:\nhttps://paulgraham.com/say.html"
+    },
+    {
+      "id": "https://paulgraham.com/ffb.html",
+      "url": "https://paulgraham.com/ffb.html",
+      "title": "Filters that Fight Back",
+      "content_text": "Read “Filters that Fight Back” by Paul Graham at the official source:\nhttps://paulgraham.com/ffb.html"
+    },
+    {
+      "id": "https://paulgraham.com/hp.html",
+      "url": "https://paulgraham.com/hp.html",
+      "title": "Hackers and Painters",
+      "content_text": "Read “Hackers and Painters” by Paul Graham at the official source:\nhttps://paulgraham.com/hp.html"
+    },
+    {
+      "id": "https://paulgraham.com/iflisp.html",
+      "url": "https://paulgraham.com/iflisp.html",
+      "title": "If Lisp is So Great",
+      "content_text": "Read “If Lisp is So Great” by Paul Graham at the official source:\nhttps://paulgraham.com/iflisp.html"
+    },
+    {
+      "id": "https://paulgraham.com/hundred.html",
+      "url": "https://paulgraham.com/hundred.html",
+      "title": "The Hundred-Year Language",
+      "content_text": "Read “The Hundred-Year Language” by Paul Graham at the official source:\nhttps://paulgraham.com/hundred.html"
+    },
+    {
+      "id": "https://paulgraham.com/nerds.html",
+      "url": "https://paulgraham.com/nerds.html",
+      "title": "Why Nerds are Unpopular",
+      "content_text": "Read “Why Nerds are Unpopular” by Paul Graham at the official source:\nhttps://paulgraham.com/nerds.html"
+    },
+    {
+      "id": "https://paulgraham.com/better.html",
+      "url": "https://paulgraham.com/better.html",
+      "title": "Better Bayesian Filtering",
+      "content_text": "Read “Better Bayesian Filtering” by Paul Graham at the official source:\nhttps://paulgraham.com/better.html"
+    },
+    {
+      "id": "https://paulgraham.com/desres.html",
+      "url": "https://paulgraham.com/desres.html",
+      "title": "Design and Research",
+      "content_text": "Read “Design and Research” by Paul Graham at the official source:\nhttps://paulgraham.com/desres.html"
+    },
+    {
+      "id": "https://paulgraham.com/spam.html",
+      "url": "https://paulgraham.com/spam.html",
+      "title": "A Plan for Spam",
+      "content_text": "Read “A Plan for Spam” by Paul Graham at the official source:\nhttps://paulgraham.com/spam.html"
+    },
+    {
+      "id": "https://paulgraham.com/icad.html",
+      "url": "https://paulgraham.com/icad.html",
+      "title": "Revenge of the Nerds",
+      "content_text": "Read “Revenge of the Nerds” by Paul Graham at the official source:\nhttps://paulgraham.com/icad.html"
+    },
+    {
+      "id": "https://paulgraham.com/power.html",
+      "url": "https://paulgraham.com/power.html",
+      "title": "Succinctness is Power",
+      "content_text": "Read “Succinctness is Power” by Paul Graham at the official source:\nhttps://paulgraham.com/power.html"
+    },
+    {
+      "id": "https://paulgraham.com/fix.html",
+      "url": "https://paulgraham.com/fix.html",
+      "title": "What Languages Fix",
+      "content_text": "Read “What Languages Fix” by Paul Graham at the official source:\nhttps://paulgraham.com/fix.html"
+    },
+    {
+      "id": "https://paulgraham.com/taste.html",
+      "url": "https://paulgraham.com/taste.html",
+      "title": "Taste for Makers",
+      "content_text": "Read “Taste for Makers” by Paul Graham at the official source:\nhttps://paulgraham.com/taste.html"
+    },
+    {
+      "id": "https://paulgraham.com/noop.html",
+      "url": "https://paulgraham.com/noop.html",
+      "title": "Why Arc Isn't Especially Object-Oriented",
+      "content_text": "Read “Why Arc Isn't Especially Object-Oriented” by Paul Graham at the official source:\nhttps://paulgraham.com/noop.html"
+    },
+    {
+      "id": "https://paulgraham.com/diff.html",
+      "url": "https://paulgraham.com/diff.html",
+      "title": "What Made Lisp Different",
+      "content_text": "Read “What Made Lisp Different” by Paul Graham at the official source:\nhttps://paulgraham.com/diff.html"
+    },
+    {
+      "id": "https://paulgraham.com/road.html",
+      "url": "https://paulgraham.com/road.html",
+      "title": "The Other Road Ahead",
+      "content_text": "Read “The Other Road Ahead” by Paul Graham at the official source:\nhttps://paulgraham.com/road.html"
+    },
+    {
+      "id": "https://paulgraham.com/rootsoflisp.html",
+      "url": "https://paulgraham.com/rootsoflisp.html",
+      "title": "The Roots of Lisp",
+      "content_text": "Read “The Roots of Lisp” by Paul Graham at the official source:\nhttps://paulgraham.com/rootsoflisp.html"
+    },
+    {
+      "id": "https://paulgraham.com/langdes.html",
+      "url": "https://paulgraham.com/langdes.html",
+      "title": "Five Questions about Language Design",
+      "content_text": "Read “Five Questions about Language Design” by Paul Graham at the official source:\nhttps://paulgraham.com/langdes.html"
+    },
+    {
+      "id": "https://paulgraham.com/popular.html",
+      "url": "https://paulgraham.com/popular.html",
+      "title": "Being Popular",
+      "content_text": "Read “Being Popular” by Paul Graham at the official source:\nhttps://paulgraham.com/popular.html"
+    },
+    {
+      "id": "https://paulgraham.com/javacover.html",
+      "url": "https://paulgraham.com/javacover.html",
+      "title": "Java's Cover",
+      "content_text": "Read “Java's Cover” by Paul Graham at the official source:\nhttps://paulgraham.com/javacover.html"
+    },
+    {
+      "id": "https://paulgraham.com/avg.html",
+      "url": "https://paulgraham.com/avg.html",
+      "title": "Beating the Averages",
+      "content_text": "Read “Beating the Averages” by Paul Graham at the official source:\nhttps://paulgraham.com/avg.html"
+    },
+    {
+      "id": "https://paulgraham.com/lwba.html",
+      "url": "https://paulgraham.com/lwba.html",
+      "title": "Lisp for Web-Based Applications",
+      "content_text": "Read “Lisp for Web-Based Applications” by Paul Graham at the official source:\nhttps://paulgraham.com/lwba.html"
+    },
+    {
+      "id": "urn:uuid:77a51534-f696-5417-aa1a-564e98a6901a",
+      "url": "https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt?t=1782253924",
+      "title": "Chapter 1 of Ansi Common Lisp",
+      "content_text": "Read “Chapter 1 of Ansi Common Lisp” by Paul Graham at the official source:\nhttps://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt?t=1782253924"
+    },
+    {
+      "id": "urn:uuid:054911bb-a08d-5f02-9bd2-0db708539fbc",
+      "url": "https://sep.turbifycdn.com/ty/cdn/paulgraham/acl2.txt?t=1782253924",
+      "title": "Chapter 2 of Ansi Common Lisp",
+      "content_text": "Read “Chapter 2 of Ansi Common Lisp” by Paul Graham at the official source:\nhttps://sep.turbifycdn.com/ty/cdn/paulgraham/acl2.txt?t=1782253924"
+    },
+    {
+      "id": "https://paulgraham.com/progbot.html",
+      "url": "https://paulgraham.com/progbot.html",
+      "title": "Programming Bottom-Up",
+      "content_text": "Read “Programming Bottom-Up” by Paul Graham at the official source:\nhttps://paulgraham.com/progbot.html"
+    },
+    {
+      "id": "https://paulgraham.com/prop62.html",
+      "url": "https://paulgraham.com/prop62.html",
+      "title": "This Year We Can End the Death Penalty in California",
+      "content_text": "Read “This Year We Can End the Death Penalty in California” by Paul Graham at the official source:\nhttps://paulgraham.com/prop62.html"
+    }
+  ]
+}

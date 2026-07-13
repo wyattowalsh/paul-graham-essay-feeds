@@ -1,0 +1,1650 @@
+{
+  "schema_version": 2,
+  "source_url": "https://paulgraham.com/articles.html",
+  "channel_url": "https://paulgraham.com/articles.html",
+  "self_url": null,
+  "generator": "pg-essays-rss/2.0.0",
+  "updated_at": "2026-07-11T07:24:19+00:00",
+  "source_sha256": "5b4ebf98aded493fa5e0e77ab48da10eca366f041d1c4b9d3038e431b2760148",
+  "extraction": {
+    "mode": "essay-row-marker",
+    "anchor_count": 238,
+    "marked_anchor_count": 233,
+    "duplicate_count": 0
+  },
+  "item_count": 233,
+  "items": [
+    {
+      "position": 1,
+      "title": "How to Earn a Billion Dollars",
+      "url": "https://paulgraham.com/earn.html",
+      "guid": "https://paulgraham.com/earn.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 2,
+      "title": "How to Convert Between Wealth and Income Tax",
+      "url": "https://paulgraham.com/winc.html",
+      "guid": "https://paulgraham.com/winc.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 3,
+      "title": "The Brand Age",
+      "url": "https://paulgraham.com/brandage.html",
+      "guid": "https://paulgraham.com/brandage.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 4,
+      "title": "The Shape of the Essay Field",
+      "url": "https://paulgraham.com/field.html",
+      "guid": "https://paulgraham.com/field.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 5,
+      "title": "Good Writing",
+      "url": "https://paulgraham.com/goodwriting.html",
+      "guid": "https://paulgraham.com/goodwriting.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 6,
+      "title": "What to Do",
+      "url": "https://paulgraham.com/do.html",
+      "guid": "https://paulgraham.com/do.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 7,
+      "title": "The Origins of Wokeness",
+      "url": "https://paulgraham.com/woke.html",
+      "guid": "https://paulgraham.com/woke.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 8,
+      "title": "Writes and Write-Nots",
+      "url": "https://paulgraham.com/writes.html",
+      "guid": "https://paulgraham.com/writes.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 9,
+      "title": "When To Do What You Love",
+      "url": "https://paulgraham.com/when.html",
+      "guid": "https://paulgraham.com/when.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 10,
+      "title": "Founder Mode",
+      "url": "https://paulgraham.com/foundermode.html",
+      "guid": "https://paulgraham.com/foundermode.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 11,
+      "title": "The Right Kind of Stubborn",
+      "url": "https://paulgraham.com/persistence.html",
+      "guid": "https://paulgraham.com/persistence.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 12,
+      "title": "The Reddits",
+      "url": "https://paulgraham.com/reddits.html",
+      "guid": "https://paulgraham.com/reddits.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 13,
+      "title": "How to Start Google",
+      "url": "https://paulgraham.com/google.html",
+      "guid": "https://paulgraham.com/google.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 14,
+      "title": "The Best Essay",
+      "url": "https://paulgraham.com/best.html",
+      "guid": "https://paulgraham.com/best.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 15,
+      "title": "Superlinear Returns",
+      "url": "https://paulgraham.com/superlinear.html",
+      "guid": "https://paulgraham.com/superlinear.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 16,
+      "title": "How to Do Great Work",
+      "url": "https://paulgraham.com/greatwork.html",
+      "guid": "https://paulgraham.com/greatwork.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 17,
+      "title": "How to Get New Ideas",
+      "url": "https://paulgraham.com/getideas.html",
+      "guid": "https://paulgraham.com/getideas.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 18,
+      "title": "The Need to Read",
+      "url": "https://paulgraham.com/read.html",
+      "guid": "https://paulgraham.com/read.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 19,
+      "title": "What You (Want to)* Want",
+      "url": "https://paulgraham.com/want.html",
+      "guid": "https://paulgraham.com/want.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 20,
+      "title": "Alien Truth",
+      "url": "https://paulgraham.com/alien.html",
+      "guid": "https://paulgraham.com/alien.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 21,
+      "title": "What I've Learned from Users",
+      "url": "https://paulgraham.com/users.html",
+      "guid": "https://paulgraham.com/users.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 22,
+      "title": "Heresy",
+      "url": "https://paulgraham.com/heresy.html",
+      "guid": "https://paulgraham.com/heresy.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 23,
+      "title": "Putting Ideas into Words",
+      "url": "https://paulgraham.com/words.html",
+      "guid": "https://paulgraham.com/words.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 24,
+      "title": "Is There Such a Thing as Good Taste?",
+      "url": "https://paulgraham.com/goodtaste.html",
+      "guid": "https://paulgraham.com/goodtaste.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 25,
+      "title": "Beyond Smart",
+      "url": "https://paulgraham.com/smart.html",
+      "guid": "https://paulgraham.com/smart.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 26,
+      "title": "Weird Languages",
+      "url": "https://paulgraham.com/weird.html",
+      "guid": "https://paulgraham.com/weird.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 27,
+      "title": "How to Work Hard",
+      "url": "https://paulgraham.com/hwh.html",
+      "guid": "https://paulgraham.com/hwh.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 28,
+      "title": "A Project of One's Own",
+      "url": "https://paulgraham.com/own.html",
+      "guid": "https://paulgraham.com/own.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 29,
+      "title": "Fierce Nerds",
+      "url": "https://paulgraham.com/fn.html",
+      "guid": "https://paulgraham.com/fn.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 30,
+      "title": "Crazy New Ideas",
+      "url": "https://paulgraham.com/newideas.html",
+      "guid": "https://paulgraham.com/newideas.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 31,
+      "title": "An NFT That Saves Lives",
+      "url": "https://paulgraham.com/nft.html",
+      "guid": "https://paulgraham.com/nft.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 32,
+      "title": "The Real Reason to End the Death Penalty",
+      "url": "https://paulgraham.com/real.html",
+      "guid": "https://paulgraham.com/real.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 33,
+      "title": "How People Get Rich Now",
+      "url": "https://paulgraham.com/richnow.html",
+      "guid": "https://paulgraham.com/richnow.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 34,
+      "title": "Write Simply",
+      "url": "https://paulgraham.com/simply.html",
+      "guid": "https://paulgraham.com/simply.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 35,
+      "title": "Donate Unrestricted",
+      "url": "https://paulgraham.com/donate.html",
+      "guid": "https://paulgraham.com/donate.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 36,
+      "title": "What I Worked On",
+      "url": "https://paulgraham.com/worked.html",
+      "guid": "https://paulgraham.com/worked.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 37,
+      "title": "Earnestness",
+      "url": "https://paulgraham.com/earnest.html",
+      "guid": "https://paulgraham.com/earnest.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 38,
+      "title": "Billionaires Build",
+      "url": "https://paulgraham.com/ace.html",
+      "guid": "https://paulgraham.com/ace.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 39,
+      "title": "The Airbnbs",
+      "url": "https://paulgraham.com/airbnbs.html",
+      "guid": "https://paulgraham.com/airbnbs.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 40,
+      "title": "How to Think for Yourself",
+      "url": "https://paulgraham.com/think.html",
+      "guid": "https://paulgraham.com/think.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 41,
+      "title": "Early Work",
+      "url": "https://paulgraham.com/early.html",
+      "guid": "https://paulgraham.com/early.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 42,
+      "title": "Modeling a Wealth Tax",
+      "url": "https://paulgraham.com/wtax.html",
+      "guid": "https://paulgraham.com/wtax.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 43,
+      "title": "The Four Quadrants of Conformism",
+      "url": "https://paulgraham.com/conformism.html",
+      "guid": "https://paulgraham.com/conformism.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 44,
+      "title": "Orthodox Privilege",
+      "url": "https://paulgraham.com/orth.html",
+      "guid": "https://paulgraham.com/orth.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 45,
+      "title": "Coronavirus and Credibility",
+      "url": "https://paulgraham.com/cred.html",
+      "guid": "https://paulgraham.com/cred.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 46,
+      "title": "How to Write Usefully",
+      "url": "https://paulgraham.com/useful.html",
+      "guid": "https://paulgraham.com/useful.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 47,
+      "title": "Being a Noob",
+      "url": "https://paulgraham.com/noob.html",
+      "guid": "https://paulgraham.com/noob.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 48,
+      "title": "Haters",
+      "url": "https://paulgraham.com/fh.html",
+      "guid": "https://paulgraham.com/fh.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 49,
+      "title": "The Two Kinds of Moderate",
+      "url": "https://paulgraham.com/mod.html",
+      "guid": "https://paulgraham.com/mod.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 50,
+      "title": "Fashionable Problems",
+      "url": "https://paulgraham.com/fp.html",
+      "guid": "https://paulgraham.com/fp.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 51,
+      "title": "Having Kids",
+      "url": "https://paulgraham.com/kids.html",
+      "guid": "https://paulgraham.com/kids.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 52,
+      "title": "The Lesson to Unlearn",
+      "url": "https://paulgraham.com/lesson.html",
+      "guid": "https://paulgraham.com/lesson.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 53,
+      "title": "Novelty and Heresy",
+      "url": "https://paulgraham.com/nov.html",
+      "guid": "https://paulgraham.com/nov.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 54,
+      "title": "The Bus Ticket Theory of Genius",
+      "url": "https://paulgraham.com/genius.html",
+      "guid": "https://paulgraham.com/genius.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 55,
+      "title": "General and Surprising",
+      "url": "https://paulgraham.com/sun.html",
+      "guid": "https://paulgraham.com/sun.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 56,
+      "title": "Charisma / Power",
+      "url": "https://paulgraham.com/pow.html",
+      "guid": "https://paulgraham.com/pow.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 57,
+      "title": "The Risk of Discovery",
+      "url": "https://paulgraham.com/disc.html",
+      "guid": "https://paulgraham.com/disc.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 58,
+      "title": "How to Make Pittsburgh a Startup Hub",
+      "url": "https://paulgraham.com/pgh.html",
+      "guid": "https://paulgraham.com/pgh.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 59,
+      "title": "Life is Short",
+      "url": "https://paulgraham.com/vb.html",
+      "guid": "https://paulgraham.com/vb.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 60,
+      "title": "Economic Inequality",
+      "url": "https://paulgraham.com/ineq.html",
+      "guid": "https://paulgraham.com/ineq.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 61,
+      "title": "The Refragmentation",
+      "url": "https://paulgraham.com/re.html",
+      "guid": "https://paulgraham.com/re.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 62,
+      "title": "Jessica Livingston",
+      "url": "https://paulgraham.com/jessica.html",
+      "guid": "https://paulgraham.com/jessica.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 63,
+      "title": "A Way to Detect Bias",
+      "url": "https://paulgraham.com/bias.html",
+      "guid": "https://paulgraham.com/bias.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 64,
+      "title": "Write Like You Talk",
+      "url": "https://paulgraham.com/talk.html",
+      "guid": "https://paulgraham.com/talk.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 65,
+      "title": "Default Alive or Default Dead?",
+      "url": "https://paulgraham.com/aord.html",
+      "guid": "https://paulgraham.com/aord.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 66,
+      "title": "Why It's Safe for Founders to Be Nice",
+      "url": "https://paulgraham.com/safe.html",
+      "guid": "https://paulgraham.com/safe.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 67,
+      "title": "Change Your Name",
+      "url": "https://paulgraham.com/name.html",
+      "guid": "https://paulgraham.com/name.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 68,
+      "title": "What Microsoft Is this the Altair Basic of?",
+      "url": "https://paulgraham.com/altair.html",
+      "guid": "https://paulgraham.com/altair.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 69,
+      "title": "The Ronco Principle",
+      "url": "https://paulgraham.com/ronco.html",
+      "guid": "https://paulgraham.com/ronco.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 70,
+      "title": "What Doesn't Seem Like Work?",
+      "url": "https://paulgraham.com/work.html",
+      "guid": "https://paulgraham.com/work.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 71,
+      "title": "Don't Talk to Corp Dev",
+      "url": "https://paulgraham.com/corpdev.html",
+      "guid": "https://paulgraham.com/corpdev.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 72,
+      "title": "Let the Other 95% of Great Programmers In",
+      "url": "https://paulgraham.com/95.html",
+      "guid": "https://paulgraham.com/95.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 73,
+      "title": "How to Be an Expert in a Changing World",
+      "url": "https://paulgraham.com/ecw.html",
+      "guid": "https://paulgraham.com/ecw.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 74,
+      "title": "How You Know",
+      "url": "https://paulgraham.com/know.html",
+      "guid": "https://paulgraham.com/know.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 75,
+      "title": "The Fatal Pinch",
+      "url": "https://paulgraham.com/pinch.html",
+      "guid": "https://paulgraham.com/pinch.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 76,
+      "title": "Mean People Fail",
+      "url": "https://paulgraham.com/mean.html",
+      "guid": "https://paulgraham.com/mean.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 77,
+      "title": "Before the Startup",
+      "url": "https://paulgraham.com/before.html",
+      "guid": "https://paulgraham.com/before.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 78,
+      "title": "How to Raise Money",
+      "url": "https://paulgraham.com/fr.html",
+      "guid": "https://paulgraham.com/fr.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 79,
+      "title": "Investor Herd Dynamics",
+      "url": "https://paulgraham.com/herd.html",
+      "guid": "https://paulgraham.com/herd.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 80,
+      "title": "How to Convince Investors",
+      "url": "https://paulgraham.com/convince.html",
+      "guid": "https://paulgraham.com/convince.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 81,
+      "title": "Do Things that Don't Scale",
+      "url": "https://paulgraham.com/ds.html",
+      "guid": "https://paulgraham.com/ds.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 82,
+      "title": "Startup Investing Trends",
+      "url": "https://paulgraham.com/invtrend.html",
+      "guid": "https://paulgraham.com/invtrend.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 83,
+      "title": "How to Get Startup Ideas",
+      "url": "https://paulgraham.com/startupideas.html",
+      "guid": "https://paulgraham.com/startupideas.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 84,
+      "title": "The Hardware Renaissance",
+      "url": "https://paulgraham.com/hw.html",
+      "guid": "https://paulgraham.com/hw.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 85,
+      "title": "Startup = Growth",
+      "url": "https://paulgraham.com/growth.html",
+      "guid": "https://paulgraham.com/growth.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 86,
+      "title": "Black Swan Farming",
+      "url": "https://paulgraham.com/swan.html",
+      "guid": "https://paulgraham.com/swan.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 87,
+      "title": "The Top of My Todo List",
+      "url": "https://paulgraham.com/todo.html",
+      "guid": "https://paulgraham.com/todo.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 88,
+      "title": "Writing and Speaking",
+      "url": "https://paulgraham.com/speak.html",
+      "guid": "https://paulgraham.com/speak.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 89,
+      "title": "How Y Combinator Started",
+      "url": "https://paulgraham.com/ycstart.html",
+      "guid": "https://paulgraham.com/ycstart.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 90,
+      "title": "Defining Property",
+      "url": "https://paulgraham.com/property.html",
+      "guid": "https://paulgraham.com/property.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 91,
+      "title": "Frighteningly Ambitious Startup Ideas",
+      "url": "https://paulgraham.com/ambitious.html",
+      "guid": "https://paulgraham.com/ambitious.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 92,
+      "title": "A Word to the Resourceful",
+      "url": "https://paulgraham.com/word.html",
+      "guid": "https://paulgraham.com/word.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 93,
+      "title": "Schlep Blindness",
+      "url": "https://paulgraham.com/schlep.html",
+      "guid": "https://paulgraham.com/schlep.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 94,
+      "title": "Snapshot: Viaweb, June 1998",
+      "url": "https://paulgraham.com/vw.html",
+      "guid": "https://paulgraham.com/vw.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 95,
+      "title": "Why Startup Hubs Work",
+      "url": "https://paulgraham.com/hubs.html",
+      "guid": "https://paulgraham.com/hubs.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 96,
+      "title": "The Patent Pledge",
+      "url": "https://paulgraham.com/patentpledge.html",
+      "guid": "https://paulgraham.com/patentpledge.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 97,
+      "title": "Subject: Airbnb",
+      "url": "https://paulgraham.com/airbnb.html",
+      "guid": "https://paulgraham.com/airbnb.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 98,
+      "title": "Founder Control",
+      "url": "https://paulgraham.com/control.html",
+      "guid": "https://paulgraham.com/control.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 99,
+      "title": "Tablets",
+      "url": "https://paulgraham.com/tablets.html",
+      "guid": "https://paulgraham.com/tablets.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 100,
+      "title": "What We Look for in Founders",
+      "url": "https://paulgraham.com/founders.html",
+      "guid": "https://paulgraham.com/founders.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 101,
+      "title": "The New Funding Landscape",
+      "url": "https://paulgraham.com/superangels.html",
+      "guid": "https://paulgraham.com/superangels.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 102,
+      "title": "Where to See Silicon Valley",
+      "url": "https://paulgraham.com/seesv.html",
+      "guid": "https://paulgraham.com/seesv.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 103,
+      "title": "High Resolution Fundraising",
+      "url": "https://paulgraham.com/hiresfund.html",
+      "guid": "https://paulgraham.com/hiresfund.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 104,
+      "title": "What Happened to Yahoo",
+      "url": "https://paulgraham.com/yahoo.html",
+      "guid": "https://paulgraham.com/yahoo.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 105,
+      "title": "The Future of Startup Funding",
+      "url": "https://paulgraham.com/future.html",
+      "guid": "https://paulgraham.com/future.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 106,
+      "title": "The Acceleration of Addictiveness",
+      "url": "https://paulgraham.com/addiction.html",
+      "guid": "https://paulgraham.com/addiction.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 107,
+      "title": "The Top Idea in Your Mind",
+      "url": "https://paulgraham.com/top.html",
+      "guid": "https://paulgraham.com/top.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 108,
+      "title": "How to Lose Time and Money",
+      "url": "https://paulgraham.com/selfindulgence.html",
+      "guid": "https://paulgraham.com/selfindulgence.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 109,
+      "title": "Organic Startup Ideas",
+      "url": "https://paulgraham.com/organic.html",
+      "guid": "https://paulgraham.com/organic.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 110,
+      "title": "Apple's Mistake",
+      "url": "https://paulgraham.com/apple.html",
+      "guid": "https://paulgraham.com/apple.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 111,
+      "title": "What Startups Are Really Like",
+      "url": "https://paulgraham.com/really.html",
+      "guid": "https://paulgraham.com/really.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 112,
+      "title": "Persuade xor Discover",
+      "url": "https://paulgraham.com/discover.html",
+      "guid": "https://paulgraham.com/discover.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 113,
+      "title": "Post-Medium Publishing",
+      "url": "https://paulgraham.com/publishing.html",
+      "guid": "https://paulgraham.com/publishing.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 114,
+      "title": "The List of N Things",
+      "url": "https://paulgraham.com/nthings.html",
+      "guid": "https://paulgraham.com/nthings.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 115,
+      "title": "The Anatomy of Determination",
+      "url": "https://paulgraham.com/determination.html",
+      "guid": "https://paulgraham.com/determination.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 116,
+      "title": "What Kate Saw in Silicon Valley",
+      "url": "https://paulgraham.com/kate.html",
+      "guid": "https://paulgraham.com/kate.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 117,
+      "title": "The Trouble with the Segway",
+      "url": "https://paulgraham.com/segway.html",
+      "guid": "https://paulgraham.com/segway.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 118,
+      "title": "Ramen Profitable",
+      "url": "https://paulgraham.com/ramenprofitable.html",
+      "guid": "https://paulgraham.com/ramenprofitable.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 119,
+      "title": "Maker's Schedule, Manager's Schedule",
+      "url": "https://paulgraham.com/makersschedule.html",
+      "guid": "https://paulgraham.com/makersschedule.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 120,
+      "title": "A Local Revolution?",
+      "url": "https://paulgraham.com/revolution.html",
+      "guid": "https://paulgraham.com/revolution.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 121,
+      "title": "Why Twitter is a Big Deal",
+      "url": "https://paulgraham.com/twitter.html",
+      "guid": "https://paulgraham.com/twitter.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 122,
+      "title": "The Founder Visa",
+      "url": "https://paulgraham.com/foundervisa.html",
+      "guid": "https://paulgraham.com/foundervisa.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 123,
+      "title": "Five Founders",
+      "url": "https://paulgraham.com/5founders.html",
+      "guid": "https://paulgraham.com/5founders.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 124,
+      "title": "Relentlessly Resourceful",
+      "url": "https://paulgraham.com/relres.html",
+      "guid": "https://paulgraham.com/relres.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 125,
+      "title": "How to Be an Angel Investor",
+      "url": "https://paulgraham.com/angelinvesting.html",
+      "guid": "https://paulgraham.com/angelinvesting.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 126,
+      "title": "Why TV Lost",
+      "url": "https://paulgraham.com/convergence.html",
+      "guid": "https://paulgraham.com/convergence.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 127,
+      "title": "Can You Buy a Silicon Valley? Maybe.",
+      "url": "https://paulgraham.com/maybe.html",
+      "guid": "https://paulgraham.com/maybe.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 128,
+      "title": "What I've Learned from Hacker News",
+      "url": "https://paulgraham.com/hackernews.html",
+      "guid": "https://paulgraham.com/hackernews.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 129,
+      "title": "Startups in 13 Sentences",
+      "url": "https://paulgraham.com/13sentences.html",
+      "guid": "https://paulgraham.com/13sentences.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 130,
+      "title": "Keep Your Identity Small",
+      "url": "https://paulgraham.com/identity.html",
+      "guid": "https://paulgraham.com/identity.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 131,
+      "title": "After Credentials",
+      "url": "https://paulgraham.com/credentials.html",
+      "guid": "https://paulgraham.com/credentials.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 132,
+      "title": "Could VC be a Casualty of the Recession?",
+      "url": "https://paulgraham.com/divergence.html",
+      "guid": "https://paulgraham.com/divergence.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 133,
+      "title": "The High-Res Society",
+      "url": "https://paulgraham.com/highres.html",
+      "guid": "https://paulgraham.com/highres.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 134,
+      "title": "The Other Half of \"Artists Ship\"",
+      "url": "https://paulgraham.com/artistsship.html",
+      "guid": "https://paulgraham.com/artistsship.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 135,
+      "title": "Why to Start a Startup in a Bad Economy",
+      "url": "https://paulgraham.com/badeconomy.html",
+      "guid": "https://paulgraham.com/badeconomy.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 136,
+      "title": "A Fundraising Survival Guide",
+      "url": "https://paulgraham.com/fundraising.html",
+      "guid": "https://paulgraham.com/fundraising.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 137,
+      "title": "The Pooled-Risk Company Management Company",
+      "url": "https://paulgraham.com/prcmc.html",
+      "guid": "https://paulgraham.com/prcmc.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 138,
+      "title": "Cities and Ambition",
+      "url": "https://paulgraham.com/cities.html",
+      "guid": "https://paulgraham.com/cities.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 139,
+      "title": "Disconnecting Distraction",
+      "url": "https://paulgraham.com/distraction.html",
+      "guid": "https://paulgraham.com/distraction.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 140,
+      "title": "Lies We Tell Kids",
+      "url": "https://paulgraham.com/lies.html",
+      "guid": "https://paulgraham.com/lies.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 141,
+      "title": "Be Good",
+      "url": "https://paulgraham.com/good.html",
+      "guid": "https://paulgraham.com/good.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 142,
+      "title": "Why There Aren't More Googles",
+      "url": "https://paulgraham.com/googles.html",
+      "guid": "https://paulgraham.com/googles.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 143,
+      "title": "Some Heroes",
+      "url": "https://paulgraham.com/heroes.html",
+      "guid": "https://paulgraham.com/heroes.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 144,
+      "title": "How to Disagree",
+      "url": "https://paulgraham.com/disagree.html",
+      "guid": "https://paulgraham.com/disagree.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 145,
+      "title": "You Weren't Meant to Have a Boss",
+      "url": "https://paulgraham.com/boss.html",
+      "guid": "https://paulgraham.com/boss.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 146,
+      "title": "A New Venture Animal",
+      "url": "https://paulgraham.com/ycombinator.html",
+      "guid": "https://paulgraham.com/ycombinator.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 147,
+      "title": "Trolls",
+      "url": "https://paulgraham.com/trolls.html",
+      "guid": "https://paulgraham.com/trolls.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 148,
+      "title": "Six Principles for Making New Things",
+      "url": "https://paulgraham.com/newthings.html",
+      "guid": "https://paulgraham.com/newthings.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 149,
+      "title": "Why to Move to a Startup Hub",
+      "url": "https://paulgraham.com/startuphubs.html",
+      "guid": "https://paulgraham.com/startuphubs.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 150,
+      "title": "The Future of Web Startups",
+      "url": "https://paulgraham.com/webstartups.html",
+      "guid": "https://paulgraham.com/webstartups.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 151,
+      "title": "How to Do Philosophy",
+      "url": "https://paulgraham.com/philosophy.html",
+      "guid": "https://paulgraham.com/philosophy.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 152,
+      "title": "News from the Front",
+      "url": "https://paulgraham.com/colleges.html",
+      "guid": "https://paulgraham.com/colleges.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 153,
+      "title": "How Not to Die",
+      "url": "https://paulgraham.com/die.html",
+      "guid": "https://paulgraham.com/die.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 154,
+      "title": "Holding a Program in One's Head",
+      "url": "https://paulgraham.com/head.html",
+      "guid": "https://paulgraham.com/head.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 155,
+      "title": "Stuff",
+      "url": "https://paulgraham.com/stuff.html",
+      "guid": "https://paulgraham.com/stuff.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 156,
+      "title": "The Equity Equation",
+      "url": "https://paulgraham.com/equity.html",
+      "guid": "https://paulgraham.com/equity.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 157,
+      "title": "An Alternative Theory of Unions",
+      "url": "https://paulgraham.com/unions.html",
+      "guid": "https://paulgraham.com/unions.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 158,
+      "title": "The Hacker's Guide to Investors",
+      "url": "https://paulgraham.com/guidetoinvestors.html",
+      "guid": "https://paulgraham.com/guidetoinvestors.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 159,
+      "title": "Two Kinds of Judgement",
+      "url": "https://paulgraham.com/judgement.html",
+      "guid": "https://paulgraham.com/judgement.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 160,
+      "title": "Microsoft is Dead",
+      "url": "https://paulgraham.com/microsoft.html",
+      "guid": "https://paulgraham.com/microsoft.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 161,
+      "title": "Why to Not Not Start a Startup",
+      "url": "https://paulgraham.com/notnot.html",
+      "guid": "https://paulgraham.com/notnot.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 162,
+      "title": "Is It Worth Being Wise?",
+      "url": "https://paulgraham.com/wisdom.html",
+      "guid": "https://paulgraham.com/wisdom.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 163,
+      "title": "Learning from Founders",
+      "url": "https://paulgraham.com/foundersatwork.html",
+      "guid": "https://paulgraham.com/foundersatwork.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 164,
+      "title": "How Art Can Be Good",
+      "url": "https://paulgraham.com/goodart.html",
+      "guid": "https://paulgraham.com/goodart.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 165,
+      "title": "The 18 Mistakes That Kill Startups",
+      "url": "https://paulgraham.com/startupmistakes.html",
+      "guid": "https://paulgraham.com/startupmistakes.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 166,
+      "title": "A Student's Guide to Startups",
+      "url": "https://paulgraham.com/mit.html",
+      "guid": "https://paulgraham.com/mit.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 167,
+      "title": "How to Present to Investors",
+      "url": "https://paulgraham.com/investors.html",
+      "guid": "https://paulgraham.com/investors.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 168,
+      "title": "Copy What You Like",
+      "url": "https://paulgraham.com/copy.html",
+      "guid": "https://paulgraham.com/copy.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 169,
+      "title": "The Island Test",
+      "url": "https://paulgraham.com/island.html",
+      "guid": "https://paulgraham.com/island.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 170,
+      "title": "The Power of the Marginal",
+      "url": "https://paulgraham.com/marginal.html",
+      "guid": "https://paulgraham.com/marginal.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 171,
+      "title": "Why Startups Condense in America",
+      "url": "https://paulgraham.com/america.html",
+      "guid": "https://paulgraham.com/america.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 172,
+      "title": "How to Be Silicon Valley",
+      "url": "https://paulgraham.com/siliconvalley.html",
+      "guid": "https://paulgraham.com/siliconvalley.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 173,
+      "title": "The Hardest Lessons for Startups to Learn",
+      "url": "https://paulgraham.com/startuplessons.html",
+      "guid": "https://paulgraham.com/startuplessons.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 174,
+      "title": "See Randomness",
+      "url": "https://paulgraham.com/randomness.html",
+      "guid": "https://paulgraham.com/randomness.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 175,
+      "title": "Are Software Patents Evil?",
+      "url": "https://paulgraham.com/softwarepatents.html",
+      "guid": "https://paulgraham.com/softwarepatents.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 176,
+      "title": "6,631,372",
+      "url": "https://paulgraham.com/6631327.html",
+      "guid": "https://paulgraham.com/6631327.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 177,
+      "title": "Why YC",
+      "url": "https://paulgraham.com/whyyc.html",
+      "guid": "https://paulgraham.com/whyyc.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 178,
+      "title": "How to Do What You Love",
+      "url": "https://paulgraham.com/love.html",
+      "guid": "https://paulgraham.com/love.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 179,
+      "title": "Good and Bad Procrastination",
+      "url": "https://paulgraham.com/procrastination.html",
+      "guid": "https://paulgraham.com/procrastination.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 180,
+      "title": "Web 2.0",
+      "url": "https://paulgraham.com/web20.html",
+      "guid": "https://paulgraham.com/web20.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 181,
+      "title": "How to Fund a Startup",
+      "url": "https://paulgraham.com/startupfunding.html",
+      "guid": "https://paulgraham.com/startupfunding.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 182,
+      "title": "The Venture Capital Squeeze",
+      "url": "https://paulgraham.com/vcsqueeze.html",
+      "guid": "https://paulgraham.com/vcsqueeze.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 183,
+      "title": "Ideas for Startups",
+      "url": "https://paulgraham.com/ideas.html",
+      "guid": "https://paulgraham.com/ideas.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 184,
+      "title": "What I Did this Summer",
+      "url": "https://paulgraham.com/sfp.html",
+      "guid": "https://paulgraham.com/sfp.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 185,
+      "title": "Inequality and Risk",
+      "url": "https://paulgraham.com/inequality.html",
+      "guid": "https://paulgraham.com/inequality.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 186,
+      "title": "After the Ladder",
+      "url": "https://paulgraham.com/ladder.html",
+      "guid": "https://paulgraham.com/ladder.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 187,
+      "title": "What Business Can Learn from Open Source",
+      "url": "https://paulgraham.com/opensource.html",
+      "guid": "https://paulgraham.com/opensource.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 188,
+      "title": "Hiring is Obsolete",
+      "url": "https://paulgraham.com/hiring.html",
+      "guid": "https://paulgraham.com/hiring.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 189,
+      "title": "The Submarine",
+      "url": "https://paulgraham.com/submarine.html",
+      "guid": "https://paulgraham.com/submarine.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 190,
+      "title": "Why Smart People Have Bad Ideas",
+      "url": "https://paulgraham.com/bronze.html",
+      "guid": "https://paulgraham.com/bronze.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 191,
+      "title": "Return of the Mac",
+      "url": "https://paulgraham.com/mac.html",
+      "guid": "https://paulgraham.com/mac.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 192,
+      "title": "Writing, Briefly",
+      "url": "https://paulgraham.com/writing44.html",
+      "guid": "https://paulgraham.com/writing44.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 193,
+      "title": "Undergraduation",
+      "url": "https://paulgraham.com/college.html",
+      "guid": "https://paulgraham.com/college.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 194,
+      "title": "A Unified Theory of VC Suckage",
+      "url": "https://paulgraham.com/venturecapital.html",
+      "guid": "https://paulgraham.com/venturecapital.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 195,
+      "title": "How to Start a Startup",
+      "url": "https://paulgraham.com/start.html",
+      "guid": "https://paulgraham.com/start.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 196,
+      "title": "What You'll Wish You'd Known",
+      "url": "https://paulgraham.com/hs.html",
+      "guid": "https://paulgraham.com/hs.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 197,
+      "title": "Made in USA",
+      "url": "https://paulgraham.com/usa.html",
+      "guid": "https://paulgraham.com/usa.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 198,
+      "title": "It's Charisma, Stupid",
+      "url": "https://paulgraham.com/charisma.html",
+      "guid": "https://paulgraham.com/charisma.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 199,
+      "title": "Bradley's Ghost",
+      "url": "https://paulgraham.com/polls.html",
+      "guid": "https://paulgraham.com/polls.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 200,
+      "title": "A Version 1.0",
+      "url": "https://paulgraham.com/laundry.html",
+      "guid": "https://paulgraham.com/laundry.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 201,
+      "title": "What the Bubble Got Right",
+      "url": "https://paulgraham.com/bubble.html",
+      "guid": "https://paulgraham.com/bubble.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 202,
+      "title": "The Age of the Essay",
+      "url": "https://paulgraham.com/essay.html",
+      "guid": "https://paulgraham.com/essay.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 203,
+      "title": "The Python Paradox",
+      "url": "https://paulgraham.com/pypar.html",
+      "guid": "https://paulgraham.com/pypar.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 204,
+      "title": "Great Hackers",
+      "url": "https://paulgraham.com/gh.html",
+      "guid": "https://paulgraham.com/gh.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 205,
+      "title": "Mind the Gap",
+      "url": "https://paulgraham.com/gap.html",
+      "guid": "https://paulgraham.com/gap.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 206,
+      "title": "How to Make Wealth",
+      "url": "https://paulgraham.com/wealth.html",
+      "guid": "https://paulgraham.com/wealth.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 207,
+      "title": "The Word \"Hacker\"",
+      "url": "https://paulgraham.com/gba.html",
+      "guid": "https://paulgraham.com/gba.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 208,
+      "title": "What You Can't Say",
+      "url": "https://paulgraham.com/say.html",
+      "guid": "https://paulgraham.com/say.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 209,
+      "title": "Filters that Fight Back",
+      "url": "https://paulgraham.com/ffb.html",
+      "guid": "https://paulgraham.com/ffb.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 210,
+      "title": "Hackers and Painters",
+      "url": "https://paulgraham.com/hp.html",
+      "guid": "https://paulgraham.com/hp.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 211,
+      "title": "If Lisp is So Great",
+      "url": "https://paulgraham.com/iflisp.html",
+      "guid": "https://paulgraham.com/iflisp.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 212,
+      "title": "The Hundred-Year Language",
+      "url": "https://paulgraham.com/hundred.html",
+      "guid": "https://paulgraham.com/hundred.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 213,
+      "title": "Why Nerds are Unpopular",
+      "url": "https://paulgraham.com/nerds.html",
+      "guid": "https://paulgraham.com/nerds.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 214,
+      "title": "Better Bayesian Filtering",
+      "url": "https://paulgraham.com/better.html",
+      "guid": "https://paulgraham.com/better.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 215,
+      "title": "Design and Research",
+      "url": "https://paulgraham.com/desres.html",
+      "guid": "https://paulgraham.com/desres.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 216,
+      "title": "A Plan for Spam",
+      "url": "https://paulgraham.com/spam.html",
+      "guid": "https://paulgraham.com/spam.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 217,
+      "title": "Revenge of the Nerds",
+      "url": "https://paulgraham.com/icad.html",
+      "guid": "https://paulgraham.com/icad.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 218,
+      "title": "Succinctness is Power",
+      "url": "https://paulgraham.com/power.html",
+      "guid": "https://paulgraham.com/power.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 219,
+      "title": "What Languages Fix",
+      "url": "https://paulgraham.com/fix.html",
+      "guid": "https://paulgraham.com/fix.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 220,
+      "title": "Taste for Makers",
+      "url": "https://paulgraham.com/taste.html",
+      "guid": "https://paulgraham.com/taste.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 221,
+      "title": "Why Arc Isn't Especially Object-Oriented",
+      "url": "https://paulgraham.com/noop.html",
+      "guid": "https://paulgraham.com/noop.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 222,
+      "title": "What Made Lisp Different",
+      "url": "https://paulgraham.com/diff.html",
+      "guid": "https://paulgraham.com/diff.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 223,
+      "title": "The Other Road Ahead",
+      "url": "https://paulgraham.com/road.html",
+      "guid": "https://paulgraham.com/road.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 224,
+      "title": "The Roots of Lisp",
+      "url": "https://paulgraham.com/rootsoflisp.html",
+      "guid": "https://paulgraham.com/rootsoflisp.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 225,
+      "title": "Five Questions about Language Design",
+      "url": "https://paulgraham.com/langdes.html",
+      "guid": "https://paulgraham.com/langdes.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 226,
+      "title": "Being Popular",
+      "url": "https://paulgraham.com/popular.html",
+      "guid": "https://paulgraham.com/popular.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 227,
+      "title": "Java's Cover",
+      "url": "https://paulgraham.com/javacover.html",
+      "guid": "https://paulgraham.com/javacover.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 228,
+      "title": "Beating the Averages",
+      "url": "https://paulgraham.com/avg.html",
+      "guid": "https://paulgraham.com/avg.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 229,
+      "title": "Lisp for Web-Based Applications",
+      "url": "https://paulgraham.com/lwba.html",
+      "guid": "https://paulgraham.com/lwba.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 230,
+      "title": "Chapter 1 of Ansi Common Lisp",
+      "url": "https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt?t=1782253924",
+      "guid": "urn:uuid:77a51534-f696-5417-aa1a-564e98a6901a",
+      "guid_is_permalink": false
+    },
+    {
+      "position": 231,
+      "title": "Chapter 2 of Ansi Common Lisp",
+      "url": "https://sep.turbifycdn.com/ty/cdn/paulgraham/acl2.txt?t=1782253924",
+      "guid": "urn:uuid:054911bb-a08d-5f02-9bd2-0db708539fbc",
+      "guid_is_permalink": false
+    },
+    {
+      "position": 232,
+      "title": "Programming Bottom-Up",
+      "url": "https://paulgraham.com/progbot.html",
+      "guid": "https://paulgraham.com/progbot.html",
+      "guid_is_permalink": true
+    },
+    {
+      "position": 233,
+      "title": "This Year We Can End the Death Penalty in California",
+      "url": "https://paulgraham.com/prop62.html",
+      "guid": "https://paulgraham.com/prop62.html",
+      "guid_is_permalink": true
+    }
+  ],
+  "logical_signature_sha256": "1b5ce0909905cc90763d8c93d1a5c8c348df254ecdbeffa4a2331c71755c464e"
+}

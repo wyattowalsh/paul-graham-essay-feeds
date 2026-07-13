@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "source_url": "https://paulgraham.com/articles.html",
+  "etag": null,
+  "last_modified": null,
+  "source_sha256": "5b4ebf98aded493fa5e0e77ab48da10eca366f041d1c4b9d3038e431b2760148",
+  "min_items_floor": 233,
+  "public_base_url": "https://paul-graham-essay-feeds.vercel.app/",
+  "logical_signature_sha256": "1b856a014da31175f6125f76eae0aca62509eeba0449746d1a75a3bb87f5a52d",
+  "last_checked_at": "2026-07-13T04:01:20+00:00",
+  "last_status": "unchanged",
+  "last_built_at": "2026-07-13T04:01:15+00:00"
+}
