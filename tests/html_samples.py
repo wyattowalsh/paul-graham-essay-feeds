@@ -9,10 +9,7 @@ def synthetic_index_html(*, essay_count: int = 231) -> str:
     """Build minimal essay-row HTML (markers + essays + protected Turbify chapters)."""
     rows: list[str] = []
     for index in range(essay_count):
-        rows.append(
-            f'<img src="{MARKER}">'
-            f'<a href="essay-{index}.html">Essay {index}</a>'
-        )
+        rows.append(f'<img src="{MARKER}"><a href="essay-{index}.html">Essay {index}</a>')
     rows.append(
         f'<img src="{MARKER}">'
         '<a href="https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt?t=1">'

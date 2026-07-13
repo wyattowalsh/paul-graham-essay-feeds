@@ -10,6 +10,7 @@
 - README status badges (CI, license, Python/uv/Ruff/pytest, live feed links).
 - Vercel `buildCommand` copies `feeds/` into `public/feeds/`.
 - Dropped committed HTML snapshot under `fixtures/`; tests/CI use synthetic index HTML.
+- Colab notebook renamed/moved to top-level `colab.ipynb`; `Makefile` → `justfile`.
 - **Denested layout** at repository root; uvx-friendly cwd defaults and default
   Vercel `public_base_url`.
 

@@ -62,14 +62,24 @@ uv run pg-essay-feeds --help
 - Stdlib HTTP only; host allowlists; no-op updates preserve feed bytes and mtimes.
 - No essay bodies; no fabricated publication dates.
 
+## Colab
+
+Open [`colab.ipynb`](./colab.ipynb) in
+[Google Colab](https://colab.research.google.com/) (File → Upload notebook),
+then **Runtime → Run all** to regenerate and download feed artifacts.
+
 ## Develop
 
 ```bash
-uv run ruff format --check .
-uv run ruff check .
-uv run ty check
-uv run pytest
+just sync    # uv sync --all-groups
+just lint
+just type
+just test
+just check
+just all     # lint + type + test + check
 ```
+
+Or the same commands via `uv run …` directly.
 
 ## Deploy
 
