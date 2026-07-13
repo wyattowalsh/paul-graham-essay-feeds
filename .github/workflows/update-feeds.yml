@@ -27,21 +27,16 @@ jobs:
         run: uv sync --locked --all-groups
 
       - name: Update feeds
-        run: |
-          uv run pg-essay-feeds update \
-            --public-base-url https://paul-graham-essay-feeds.vercel.app/
+        run: uv run pg-essay-feeds update
 
       - name: Validate feeds
-        run: |
-          uv run pg-essay-feeds check \
-            --public-base-url https://paul-graham-essay-feeds.vercel.app/
+        run: uv run pg-essay-feeds check
 
       - name: Open or update automation PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Lease expect from origin/branch; content base is current HEAD (preserve dirty tree).
-          if git diff --quiet -- feeds data reports SHA256SUMS; then
+          if git diff --quiet -- feeds; then
             echo "No feed changes."
             exit 0
           fi
@@ -55,7 +50,7 @@ jobs:
             expect=""
           fi
           git checkout -B "$branch"
-          git add feeds data reports SHA256SUMS
+          git add feeds
           if git diff --cached --quiet; then
             echo "Nothing staged."
             exit 0
@@ -70,7 +65,7 @@ jobs:
           if gh pr list --head "$branch" --json number --jq 'length' | grep -qx 0; then
             gh pr create \
               --title "chore: refresh Paul Graham essay feeds" \
-              --body "Automated feed update from the official essays index. Artifacts were validated by \`pg-essay-feeds update\` and \`pg-essay-feeds check\` in this workflow before the PR was opened." \
+              --body "Automated feed update from the official essays index. Validated by \`pg-essay-feeds check\` before opening this PR." \
               --base main \
               --head "$branch"
           else

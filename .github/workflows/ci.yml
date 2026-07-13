@@ -37,8 +37,7 @@ jobs:
         run: |
           uv run pg-essay-feeds update \
             --source-file fixtures/articles-2026-07-11.fragment.html \
-            --public-base-url https://paul-graham-essay-feeds.vercel.app/ \
             --force
-          uv run pg-essay-feeds check \
-            --public-base-url https://paul-graham-essay-feeds.vercel.app/
-          bash scripts/assemble_public.sh
+          uv run pg-essay-feeds check
+          mkdir -p public/feeds
+          cp feeds/rss.xml feeds/atom.xml feeds/feed.json feeds/subscriptions.opml public/feeds/

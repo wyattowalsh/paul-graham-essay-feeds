@@ -1,5 +1,5 @@
-# Test target
+# Tests
 
-Codex should replace this file with a complete pytest suite following
-`docs/acceptance-criteria.md`. Preserve the existing standard-library tests in
-`reference/rss2-baseline/` as a separate regression oracle.
+Offline unit and integration tests (local HTTP server for fetch). Run with
+`uv run pytest`. Live network tests are marked `integration` and disabled by
+default.

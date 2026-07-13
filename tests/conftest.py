@@ -11,7 +11,6 @@ from paul_graham_essay_feeds.domain import EssayItem, PublicUrls, make_stable_id
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_HTML = ROOT / "fixtures" / "articles-2026-07-11.fragment.html"
-BASELINE_ITEMS = ROOT / "data" / "baseline-items.json"
 
 
 @pytest.fixture
@@ -22,11 +21,6 @@ def repo_root() -> Path:
 @pytest.fixture
 def fixture_html() -> Path:
     return FIXTURE_HTML
-
-
-@pytest.fixture
-def baseline_items_path() -> Path:
-    return BASELINE_ITEMS
 
 
 @pytest.fixture

@@ -5,9 +5,7 @@ on:
     branches: [main]
     paths:
       - "feeds/**"
-      - "site/**"
       - "vercel.json"
-      - "scripts/assemble_public.sh"
       - ".github/workflows/deploy-vercel.yml"
   workflow_dispatch:
 
@@ -17,17 +15,11 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Deploy model:
-    # - Preferred: Vercel Git integration (Root Directory = repository root).
-    # - This workflow (Mode B): vercel CLI --prod; local assemble is fail-fast smoke.
-    # - Not using --prebuilt (Mode C / future).
+    # Preferred: Vercel Git integration (Root Directory = repo root).
     # Secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Assemble public/ (fail-fast smoke)
-        run: bash scripts/assemble_public.sh
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@16e87c0a08142b0d0d33b76aeaf20823c381b9b9 # v25

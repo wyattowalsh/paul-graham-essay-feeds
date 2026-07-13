@@ -11,13 +11,16 @@ htmlcov/
 dist/
 build/
 *.egg-info/
-.update-state.json
-data/.update.lock
 config.toml
 *.bak
 *.bak.*
-_site/
+
+# Generated runtime artifacts (produce via `pg-essay-feeds update`)
+data/
+reports/
+SHA256SUMS
 public/
+.update-state.json
 **/.staging-*/
 .publish-staging-*/
 **/.publish-staging-*/

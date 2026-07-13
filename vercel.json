@@ -1,5 +1,5 @@
 {
-  "buildCommand": "bash scripts/assemble_public.sh",
+  "buildCommand": "mkdir -p public/feeds && cp feeds/rss.xml feeds/atom.xml feeds/feed.json feeds/subscriptions.opml public/feeds/",
   "outputDirectory": "public",
   "cleanUrls": true,
   "headers": [

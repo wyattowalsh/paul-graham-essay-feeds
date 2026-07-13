@@ -4,16 +4,12 @@
 
 ### Changed
 
-- **Denested layout:** package lives at the repository root (no nested
-  `paul-graham-essay-feeds/paul-graham-essay-feeds/`). Workflows and Vercel Root
-  Directory use the repo root.
-- Removed planning kickoff cruft (`CODEX_KICKOFF_PROMPT`, `START_CODEX.*`,
-  `planning-manifest.json`, `bundle-validation.json`, `scripts/verify_bundle.py`).
-- **uvx-friendly defaults:** installed tools write into the current working
-  directory (not site-packages); default `public_base_url` is the Vercel
-  production base so
-  `uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds pg-essay-feeds update`
-  produces feeds with no extra flags.
+- **Slim repo:** drop `docs/`, `reference/`, `site/`, `scripts/`, `ROADMAP.md`,
+  committed `data/*`, `reports/*`, and `SHA256SUMS`. Only **`feeds/`** is the
+  committed publishable surface; runtime state/report/checksums are gitignored.
+- Vercel `buildCommand` copies `feeds/` into `public/feeds/` (no static site).
+- **Denested layout** at repository root; uvx-friendly cwd defaults and default
+  Vercel `public_base_url`.
 
 ### Fixed / hardened (review RV-010, RV-016–RV-018)
 
