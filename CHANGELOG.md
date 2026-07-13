@@ -9,6 +9,7 @@
   are gitignored; committed publishables are **`feeds/`** only (no site).
 - README status badges (CI, license, Python/uv/Ruff/pytest, live feed links).
 - Vercel `buildCommand` copies `feeds/` into `public/feeds/`.
+- Dropped committed HTML snapshot under `fixtures/`; tests/CI use synthetic index HTML.
 - **Denested layout** at repository root; uvx-friendly cwd defaults and default
   Vercel `public_base_url`.
 

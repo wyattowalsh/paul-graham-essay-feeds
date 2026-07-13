@@ -1,14 +1,14 @@
-.PHONY: help sync lint type test check fixture-build all
+.PHONY: help sync lint type test check smoke all
 
 help:
 	@printf '%s\n' \
-	  'make sync           uv sync --all-groups' \
-	  'make lint           ruff format --check + ruff check' \
-	  'make type           ty check' \
-	  'make test           pytest' \
-	  'make check          pg-essay-feeds check' \
-	  'make fixture-build  update from offline HTML fixture' \
-	  'make all            lint type test check'
+	  'make sync    uv sync --all-groups' \
+	  'make lint    ruff format --check + ruff check' \
+	  'make type    ty check' \
+	  'make test    pytest' \
+	  'make check   pg-essay-feeds check' \
+	  'make smoke   offline synthetic update + check' \
+	  'make all     lint type test check'
 
 sync:
 	uv sync --all-groups
@@ -26,9 +26,9 @@ test:
 check:
 	uv run pg-essay-feeds check
 
-fixture-build:
-	uv run pg-essay-feeds update \
-	  --source-file fixtures/articles-2026-07-11.fragment.html \
-	  --force
+smoke:
+	uv run python -c "from pathlib import Path; from tests.html_samples import synthetic_index_html; Path('articles.html').write_text(synthetic_index_html(), encoding='utf-8')"
+	uv run pg-essay-feeds update --source-file articles.html --force
+	uv run pg-essay-feeds check
 
 all: lint type test check

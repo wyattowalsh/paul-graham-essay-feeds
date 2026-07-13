@@ -55,14 +55,6 @@ uv run pg-essay-feeds check
 uv run pg-essay-feeds --help
 ```
 
-Offline / CI fixture:
-
-```bash
-uv run pg-essay-feeds update \
-  --source-file fixtures/articles-2026-07-11.fragment.html \
-  --force
-```
-
 ## Safety
 
 - Newest-prefix additions accepted automatically.

@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 
 from paul_graham_essay_feeds.domain import EssayItem, PublicUrls, make_stable_id
+from tests.html_samples import synthetic_index_html
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURE_HTML = ROOT / "fixtures" / "articles-2026-07-11.fragment.html"
 
 
 @pytest.fixture
@@ -19,8 +19,11 @@ def repo_root() -> Path:
 
 
 @pytest.fixture
-def fixture_html() -> Path:
-    return FIXTURE_HTML
+def fixture_html(tmp_path: Path) -> Path:
+    """Offline index HTML for update/build tests (no repo fixtures/ tree)."""
+    path = tmp_path / "articles.html"
+    path.write_text(synthetic_index_html(), encoding="utf-8")
+    return path
 
 
 @pytest.fixture
@@ -58,7 +61,6 @@ def tmp_repo(tmp_path: Path, public_base: str) -> Path:
     (tmp_path / "data").mkdir()
     (tmp_path / "feeds").mkdir()
     (tmp_path / "reports").mkdir()
-    (tmp_path / "fixtures").mkdir()
     config = f'''
 [source]
 url = "https://paulgraham.com/articles.html"

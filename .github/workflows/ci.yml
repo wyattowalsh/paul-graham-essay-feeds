@@ -33,11 +33,14 @@ jobs:
       - name: Tests
         run: uv run pytest
 
-      - name: Fixture build + check
+      - name: Offline pipeline smoke
         run: |
-          uv run pg-essay-feeds update \
-            --source-file fixtures/articles-2026-07-11.fragment.html \
-            --force
+          python - <<'PY'
+          from pathlib import Path
+          from tests.html_samples import synthetic_index_html
+          Path("articles.html").write_text(synthetic_index_html(), encoding="utf-8")
+          PY
+          uv run pg-essay-feeds update --source-file articles.html --force
           uv run pg-essay-feeds check
           mkdir -p public/feeds
           cp feeds/rss.xml feeds/atom.xml feeds/feed.json feeds/subscriptions.opml public/feeds/
