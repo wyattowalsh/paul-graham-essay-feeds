@@ -27,7 +27,7 @@
 
 ## Deployment
 
-- [ ] Vercel project linked (Root Directory = `paul-graham-essay-feeds`).
+- [ ] Vercel project linked (Root Directory = repository root).
 - [ ] Public base URL configured (`deployment.public_base_url` / env / CLI).
 - [ ] Optional GHA deploy secrets set if using Mode B (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`).
 - [ ] Feed self URLs match deployed URLs.

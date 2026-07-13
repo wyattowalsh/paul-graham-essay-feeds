@@ -1,30 +1,30 @@
 {
   "valid": true,
   "status": "checked",
-  "validated_at": "2026-07-13T04:01:20+00:00",
+  "validated_at": "2026-07-13T04:42:44+00:00",
   "source_url": "https://paulgraham.com/articles.html",
-  "source_sha256": "5b4ebf98aded493fa5e0e77ab48da10eca366f041d1c4b9d3038e431b2760148",
+  "source_sha256": null,
   "extraction": null,
   "changes": null,
   "item_count": 233,
   "formats": {
     "rss": {
-      "path": "/Users/ww/dev/projects/paul-graham-essay-feeds/paul-graham-essay-feeds/feeds/rss.xml",
+      "path": "/Users/ww/dev/projects/paul-graham-essay-feeds/feeds/rss.xml",
       "sha256": "7b88767f97bce238e8450b5898861860ea80a38cc9835e355f058a0f71eaa769",
       "ok": true
     },
     "atom": {
-      "path": "/Users/ww/dev/projects/paul-graham-essay-feeds/paul-graham-essay-feeds/feeds/atom.xml",
+      "path": "/Users/ww/dev/projects/paul-graham-essay-feeds/feeds/atom.xml",
       "sha256": "bac84829c11489bc42f5acbe2278ff4be2616854abd583dc494b79b66e48bae1",
       "ok": true
     },
     "json_feed": {
-      "path": "/Users/ww/dev/projects/paul-graham-essay-feeds/paul-graham-essay-feeds/feeds/feed.json",
+      "path": "/Users/ww/dev/projects/paul-graham-essay-feeds/feeds/feed.json",
       "sha256": "3656615f7f0b9d9f77c9ff7d55a70c690a0d439fea053b4beaf979b062b0d452",
       "ok": true
     },
     "opml": {
-      "path": "/Users/ww/dev/projects/paul-graham-essay-feeds/paul-graham-essay-feeds/feeds/subscriptions.opml",
+      "path": "/Users/ww/dev/projects/paul-graham-essay-feeds/feeds/subscriptions.opml",
       "sha256": "e3c83bce323fa5c534747284470a6ae91837ef85301318bb053cf834dc002536",
       "ok": true
     }

@@ -8,10 +8,6 @@ on:
 permissions:
   contents: read
 
-defaults:
-  run:
-    working-directory: paul-graham-essay-feeds
-
 jobs:
   quality:
     runs-on: ubuntu-latest

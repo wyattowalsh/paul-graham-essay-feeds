@@ -10,8 +10,8 @@ architecture.
 ## Required context
 
 Before substantial work, read `docs/index.md` and the documents it links for the
-relevant area. The first implementation task is fully specified in
-`CODEX_KICKOFF_PROMPT.md`.
+relevant area. The package lives at the **repository root** (no nested package
+directory).
 
 ## Engineering defaults
 

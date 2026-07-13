@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Changed
+
+- **Denested layout:** package lives at the repository root (no nested
+  `paul-graham-essay-feeds/paul-graham-essay-feeds/`). Workflows and Vercel Root
+  Directory use the repo root.
+- Removed planning kickoff cruft (`CODEX_KICKOFF_PROMPT`, `START_CODEX.*`,
+  `planning-manifest.json`, `bundle-validation.json`, `scripts/verify_bundle.py`).
+
 ### Fixed / hardened (review RV-010, RV-016–RV-018)
 
 - Automation PR step branches from current HEAD (preserves update artifacts) and

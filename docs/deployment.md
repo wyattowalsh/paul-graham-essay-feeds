@@ -28,7 +28,7 @@ Derive self/feed/catalog links from `deployment.public_base_url` (or
 ### Vercel project settings
 
 1. Import the GitHub repository into Vercel.
-2. Set **Root Directory** to `paul-graham-essay-feeds` (nested package).
+2. Leave **Root Directory** at the repository root (package is top-level).
 3. Framework: Other; use `vercel.json` `buildCommand` + `outputDirectory`.
 4. Optional: custom domain.
 
@@ -47,9 +47,9 @@ Configured in `vercel.json` for RSS, Atom, JSON Feed, and OPML.
 `site/index.html` lists formats, relative feed links, source index, and the
 unofficial-project disclaimer.
 
-## Workflows (git root)
+## Workflows
 
-GitHub Actions live at the **repository root** (not inside the package):
+GitHub Actions at `.github/workflows/` (same root as the package):
 
 | Workflow | Purpose |
 |---|---|
@@ -57,13 +57,11 @@ GitHub Actions live at the **repository root** (not inside the package):
 | `.github/workflows/update-feeds.yml` | Scheduled/manual update → automation PR |
 | `.github/workflows/deploy-vercel.yml` | Optional CLI deploy using Vercel secrets |
 
-All use `defaults.run.working-directory: paul-graham-essay-feeds`.
-
 ### Deploy modes
 
 | Mode | When | Behavior |
 |---|---|---|
-| **A. Vercel Git integration** | Preferred production | Root Directory = `paul-graham-essay-feeds`; platform runs `vercel.json` `buildCommand` → `public/` |
+| **A. Vercel Git integration** | Preferred production | Root Directory = repo root; platform runs `vercel.json` `buildCommand` → `public/` |
 | **B. GHA `deploy-vercel.yml`** | Secrets configured | Local `assemble_public` is fail-fast smoke; `vercel --prod` deploys (not `--prebuilt`) |
 | **C. Prebuilt (future)** | Optional | `vercel pull` → `vercel build` → `deploy --prebuilt` — not wired yet |
 

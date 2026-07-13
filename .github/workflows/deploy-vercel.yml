@@ -4,27 +4,22 @@ on:
   push:
     branches: [main]
     paths:
-      - "paul-graham-essay-feeds/feeds/**"
-      - "paul-graham-essay-feeds/site/**"
-      - "paul-graham-essay-feeds/vercel.json"
-      - "paul-graham-essay-feeds/scripts/assemble_public.sh"
+      - "feeds/**"
+      - "site/**"
+      - "vercel.json"
+      - "scripts/assemble_public.sh"
       - ".github/workflows/deploy-vercel.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
-defaults:
-  run:
-    working-directory: paul-graham-essay-feeds
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     # Deploy model:
-    # - Preferred: Vercel Git integration (Root Directory = paul-graham-essay-feeds).
-    # - This workflow (Mode B): vercel CLI --prod uses remote project settings /
-    #   vercel.json buildCommand. Local assemble_public is a fail-fast smoke only.
+    # - Preferred: Vercel Git integration (Root Directory = repository root).
+    # - This workflow (Mode B): vercel CLI --prod; local assemble is fail-fast smoke.
     # - Not using --prebuilt (Mode C / future).
     # Secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
     steps:
@@ -40,5 +35,4 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: paul-graham-essay-feeds
           vercel-args: "--prod"

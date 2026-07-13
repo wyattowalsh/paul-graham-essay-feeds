@@ -51,7 +51,7 @@ and silent destructive source changes.
 ## CI and GitHub Actions
 
 - Workflows live at the **git root** with
-  `working-directory: paul-graham-essay-feeds`.
+  repository root (package is top-level).
 - Use least-privilege `permissions` blocks.
 - Avoid untrusted pull-request code with write tokens.
 - Pin third-party actions to **full commit SHAs**.
