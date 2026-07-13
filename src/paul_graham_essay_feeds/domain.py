@@ -72,6 +72,7 @@ RETRYABLE_HTTP_CODES: Final = frozenset({408, 425, 429, 500, 502, 503, 504})
 ESSAYS_SCHEMA_VERSION: Final = 1
 STATE_SCHEMA_VERSION: Final = 1
 DEFAULT_FEED_ID: Final = "tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds"
+DEFAULT_PUBLIC_BASE_URL: Final = "https://paul-graham-essay-feeds.vercel.app/"
 DEFAULT_CATEGORY: Final = "Essays"
 BASELINE_IMPORT_AT: Final = "2026-07-11T07:24:19+00:00"
 

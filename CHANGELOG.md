@@ -9,6 +9,11 @@
   Directory use the repo root.
 - Removed planning kickoff cruft (`CODEX_KICKOFF_PROMPT`, `START_CODEX.*`,
   `planning-manifest.json`, `bundle-validation.json`, `scripts/verify_bundle.py`).
+- **uvx-friendly defaults:** installed tools write into the current working
+  directory (not site-packages); default `public_base_url` is the Vercel
+  production base so
+  `uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds pg-essay-feeds update`
+  produces feeds with no extra flags.
 
 ### Fixed / hardened (review RV-010, RV-016–RV-018)
 

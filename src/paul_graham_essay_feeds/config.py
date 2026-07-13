@@ -13,6 +13,7 @@ from paul_graham_essay_feeds import __version__
 from paul_graham_essay_feeds.domain import (
     DEFAULT_CATEGORY,
     DEFAULT_FEED_ID,
+    DEFAULT_PUBLIC_BASE_URL,
     MAX_SOURCE_BYTES,
     MIN_BASELINE_ITEMS,
     SOURCE_URL,
@@ -127,12 +128,21 @@ class AppConfig:
 
 
 def _default_root() -> Path:
-    """Detect package repo root (directory containing pyproject.toml)."""
+    """Resolve the working root for outputs and config files.
+
+    * Editable/dev checkout: directory containing ``pyproject.toml`` above this
+      package source.
+    * Installed tool (``uvx``, pip, wheel): always the **current working
+      directory** so feeds write into the caller's folder, not site-packages.
+    """
     here = Path(__file__).resolve()
+    # Never treat an installed wheel/site-packages tree as the project root.
+    if any(part in {"site-packages", "dist-packages"} for part in here.parts):
+        return Path.cwd().resolve()
     for parent in here.parents:
         if (parent / "pyproject.toml").is_file():
             return parent
-    return Path.cwd()
+    return Path.cwd().resolve()
 
 
 def _read_toml(path: Path) -> dict[str, Any]:
@@ -206,7 +216,10 @@ def load_config(
     if isinstance(public, str) and public.strip():
         public_base: str | None = canonicalize_public_url(public.strip(), field="public_base_url")
     else:
-        public_base = None
+        # Sensible default so `uvx ... pg-essay-feeds update` works with no flags.
+        public_base = canonicalize_public_url(
+            DEFAULT_PUBLIC_BASE_URL, field="default public_base_url"
+        )
 
     env_public = os.environ.get("PG_ESSAY_FEEDS_PUBLIC_BASE_URL")
     if env_public and env_public.strip():

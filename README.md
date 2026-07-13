@@ -37,13 +37,40 @@ feeds/subscriptions.opml
 
 Requires Python 3.13+ and [uv](https://docs.astral.sh/uv/).
 
+### One-shot with `uvx` (no clone)
+
+Generate feeds into the **current directory** from this GitHub repo:
+
 ```bash
-uv sync --all-groups
+mkdir pg-feeds && cd pg-feeds
+uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds \
+  pg-essay-feeds update
 ```
 
-Console entry point:
+That writes:
+
+```text
+feeds/rss.xml  feeds/atom.xml  feeds/feed.json  feeds/subscriptions.opml
+data/essays.json  data/state.json
+reports/validation.json
+SHA256SUMS
+```
+
+Defaults use the Vercel public base
+(`https://paul-graham-essay-feeds.vercel.app/`). Override with
+`--public-base-url` or `PG_ESSAY_FEEDS_PUBLIC_BASE_URL`.
+
+Help / version without generating:
 
 ```bash
+uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds \
+  pg-essay-feeds --help
+```
+
+### Local checkout
+
+```bash
+uv sync --all-groups
 uv run pg-essay-feeds --help
 ```
 
