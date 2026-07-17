@@ -78,7 +78,7 @@ jobs:
             gh pr create \
               --title "chore: refresh Paul Graham essay feeds" \
               --body "$(printf '%s\n' \
-                'Automated feed snapshot update from the official essays index (local files under `feeds/` only; `data/` is not staged).' \
+                'Automated feed snapshot update from the official essays index (local files under `feeds/` only).' \
                 '' \
                 'Validated by `pg-essay-feeds check` (structure + item floor) before opening this PR.' \
                 '' \

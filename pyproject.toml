@@ -4,9 +4,23 @@ dynamic = ["version"]
 description = "Unofficial multi-format metadata feeds for Paul Graham's essays"
 readme = "README.md"
 requires-python = ">=3.13"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Wyatt" }]
 keywords = ["paul-graham", "essays", "rss", "atom", "json-feed", "syndication"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Communications",
+    "Typing :: Typed",
+]
 dependencies = [
     "httpx>=0.28.1",
     "loguru>=0.7.3",
@@ -24,6 +38,7 @@ pg-essay-feeds = "paul_graham_essay_feeds.cli:main"
 [project.urls]
 Homepage = "https://github.com/wyattowalsh/paul-graham-essay-feeds"
 Source = "https://github.com/wyattowalsh/paul-graham-essay-feeds"
+Issues = "https://github.com/wyattowalsh/paul-graham-essay-feeds/issues"
 
 [build-system]
 requires = ["hatchling"]
@@ -46,6 +61,16 @@ path = "src/paul_graham_essay_feeds/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/paul_graham_essay_feeds"]
+
+# Sdist omits generated feeds + CI/venv/build dirs. git+uvx still clones the
+# full repo (feeds present for local use); installed packages write feeds/ at runtime.
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/feeds",
+  "/.github",
+  "/.venv",
+  "/dist",
+]
 
 [tool.pytest.ini_options]
 # Default: offline unit + integration + e2e + smoke. Opt in: pytest -m live

@@ -1,19 +1,45 @@
+<div align="center">
+
 # Paul Graham Essay Feeds
 
-Unofficial **RSS 2.0**, **Atom 1.0**, and **JSON Feed 1.1** files for
-[paulgraham.com/articles.html](https://paulgraham.com/articles.html) — correct
-`https` links, short descriptions, guids, and clean Turbify chapter URLs.
+Unofficial **RSS 2.0**, **Atom 1.0**, and **JSON Feed 1.1** for
+[paulgraham.com/articles.html](https://paulgraham.com/articles.html) —
+correct `https` links, short descriptions, guids, and clean Turbify chapter URLs.
 
 <!-- BADGES:START -->
 
-[![CI](https://github.com/wyattowalsh/paul-graham-essay-feeds/actions/workflows/ci.yml/badge.svg)](https://github.com/wyattowalsh/paul-graham-essay-feeds/actions/workflows/ci.yml)
+[![CI](https://github.com/wyattowalsh/paul-graham-essay-feeds/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/wyattowalsh/paul-graham-essay-feeds/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](./LICENSE)
 [![Python](https://img.shields.io/badge/python-3.13%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
 <!-- BADGES:END -->
 
-## Quick start
+<br />
+
+### Try without installing
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)
+
+**Open in Colab → Runtime → Run all → download `feeds.zip`.**
+
+No local Python, no `uv`, no clone. Live-generates RSS / Atom / JSON on Colab.
+
+</div>
+
+---
+
+## Paths
+
+| Path | When |
+| :--- | :--- |
+| **[Open in Colab](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)** | Try now — zero install |
+| Local `uvx` below | Keep feeds on disk / automate |
+| [DOCS.md](./DOCS.md) | Architecture, tests, CI |
+
+---
+
+## Local quick start
 
 ```bash
 mkdir pg-feeds && cd pg-feeds
@@ -21,28 +47,34 @@ uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds \
   pg-essay-feeds update
 ```
 
-Writes `feeds/` (and `data/essays.json`) into the current directory. Point a
-feed reader at the local files.
+Writes `feeds/` into the current directory. Point a feed reader at the local files.
 
-Default `update` enriches each essay (~1 HTTP GET per page, ~233 today). Use
-`--no-enrich` (or `PG_ESSAY_FEEDS_ENRICH=false`) for a fast index-only run.
+> [!TIP]
+> Default `update` enriches each essay (~1 HTTP GET per page) with **4** enrich
+> workers (polite to paulgraham.com). Use `--no-enrich` (or
+> `PG_ESSAY_FEEDS_ENRICH=false`) for a fast index-only run.
+
+---
 
 ## What you get
 
 | File | Format | Contents |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | `feeds/rss.xml` | RSS 2.0 | title, link, guid, short description |
 | `feeds/atom.xml` | Atom 1.0 | same, Atom shape |
 | `feeds/feed.json` | JSON Feed 1.1 | same + short `summary` / `content_text` |
-| `feeds/.manifest.json` | integrity | SHA-256 + sizes for the three feeds |
-| `data/essays.json` | catalog | structured items (gitignored; not in manifest) |
 
-**Not included:** full essay bodies, OPML, or a hosted site.
+> [!IMPORTANT]
+> **Not included:** full essay bodies, OPML, or a hosted site. Index skip state
+> lives in `feed.json` under `_pg_essay_feeds` — there is no
+> `feeds/.manifest.json` and no `data/essays.json`.
+
+---
 
 ## Why not a bare scrape?
 
 | Concern | Typical scrapes | This project |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | Scheme | often `http://` | **`https://`** |
 | Turbify chapters | `paulgraham.com/https://sep…` breakage | clean CDN URLs |
 | Description | none | short summary (optional enrich) |
@@ -50,17 +82,26 @@ Default `update` enriches each essay (~1 HTTP GET per page, ~233 today). Use
 | Dates | invented day-1 | month+year → hint only; no feed date unless a real full day exists |
 | Formats | RSS-ish only | **RSS + Atom + JSON** |
 
+---
+
 ## Notebook (Colab / Jupyter)
 
 [`notebook.ipynb`](./notebook.ipynb) — form UI + hidden code. **Run all** to
 live-generate feeds (`uvx` fetch → parse → validate → write) and download
-`feeds.zip`. Does **not** copy committed feed files from the repo.
+`feeds.zip`.
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)
 
 1. Open the notebook in Colab  
 2. Set options (output dir, enrich, link probes)  
-3. **Runtime → Run all** → save `feeds.zip`  
+3. **Runtime → Run all** → save `feeds.zip`
+
+> [!NOTE]
+> Generate uses `uvx --from git+…` on the default branch (`main`). For
+> reproducible runs, pin a **release tag** or **commit SHA** in the notebook
+> `PKG` line — do not assume a fixed `@v0.1.0` until you choose one.
+
+---
 
 ## CLI
 
@@ -74,36 +115,83 @@ pg-essay-feeds update --source-file articles.html --no-enrich
 # force rewrite even when index hash is unchanged
 pg-essay-feeds update --force
 
-# structural check
+# verify feeds (parity + content_text)
 pg-essay-feeds check
 
 # optional live HEAD/GET of every essay URL
 pg-essay-feeds update --validate-links -v
 ```
 
-CLI flags override env Settings only when explicitly passed. Full precedence:
-[DOCS.md](./DOCS.md#cli-reference).
+> [!NOTE]
+> CLI flags override env Settings **only when explicitly passed**. Full
+> precedence and flag tables: [DOCS.md → CLI reference](./DOCS.md#cli-reference).
+
+<details>
+<summary><strong>Extended CLI examples</strong></summary>
+
+```bash
+# custom output root
+pg-essay-feeds update --repo-root /tmp/pg-feeds --no-enrich
+
+# override extract/check floor (default: Settings.min_items / MIN_ITEMS)
+pg-essay-feeds update --min-items 10
+
+# quieter / noisier logs
+pg-essay-feeds update -q
+pg-essay-feeds update -v
+
+# verify a specific tree
+pg-essay-feeds check --repo-root /tmp/pg-feeds
+```
+
+</details>
+
+---
 
 ## Configuration
 
-Environment prefix: `PG_ESSAY_FEEDS_` (pydantic-settings).
+Environment prefix: `PG_ESSAY_FEEDS_` ([pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/)).
 
 | Env var | Default |
-| --- | --- |
+| :--- | :--- |
 | `PG_ESSAY_FEEDS_SOURCE_URL` | official `articles.html` |
 | `PG_ESSAY_FEEDS_REPO_ROOT` | cwd |
-| `PG_ESSAY_FEEDS_MIN_ITEMS` | `233` |
+| `PG_ESSAY_FEEDS_MIN_ITEMS` | safety floor (see Settings) |
 | `PG_ESSAY_FEEDS_TIMEOUT` | `30` |
 | `PG_ESSAY_FEEDS_ENRICH` | `true` |
 | `PG_ESSAY_FEEDS_VALIDATE_LINKS` | `false` |
-| `PG_ESSAY_FEEDS_LINK_WORKERS` | `8` |
+| `PG_ESSAY_FEEDS_LINK_WORKERS` | `4` |
+| `PG_ESSAY_FEEDS_ENRICH_WORKERS` | `4` |
 
 ```bash
-export PG_ESSAY_FEEDS_MIN_ITEMS=233
 export PG_ESSAY_FEEDS_ENRICH=false   # optional: skip per-page scrapes
 ```
 
-Full list (retries, workers, timeouts): [DOCS.md](./DOCS.md#configuration).
+<details>
+<summary><strong>Full env table</strong> (retries, workers, timeouts)</summary>
+
+| Env var | Default | Notes |
+| :--- | :--- | :--- |
+| `PG_ESSAY_FEEDS_SOURCE_URL` | official articles.html | Index URL |
+| `PG_ESSAY_FEEDS_REPO_ROOT` | cwd | Resolved absolute path |
+| `PG_ESSAY_FEEDS_MIN_ITEMS` | safety floor | Fail if fewer index items |
+| `PG_ESSAY_FEEDS_TIMEOUT` | `30` | Index fetch timeout |
+| `PG_ESSAY_FEEDS_RETRIES` | `3` | Tenacity attempts = retries+1 |
+| `PG_ESSAY_FEEDS_MAX_BYTES` | 5 MiB | Response size cap |
+| `PG_ESSAY_FEEDS_VALIDATE_LINKS` | `false` | Live probes |
+| `PG_ESSAY_FEEDS_LINK_TIMEOUT` | `10` | Per-probe timeout |
+| `PG_ESSAY_FEEDS_LINK_WORKERS` | `4` | Live-probe thread pool (not enrich) |
+| `PG_ESSAY_FEEDS_ENRICH` | `true` | Per-page short summary scrape |
+| `PG_ESSAY_FEEDS_ENRICH_WORKERS` | `4` | Enrich thread pool |
+| `PG_ESSAY_FEEDS_ENRICH_TIMEOUT` | `15` | Per-page timeout |
+| `PG_ESSAY_FEEDS_FORCE` | `false` | Bypass hash skip when index unchanged |
+| `PG_ESSAY_FEEDS_QUIET` / `PG_ESSAY_FEEDS_VERBOSE` | `false` | Log levels |
+
+See also: [DOCS.md → Configuration](./DOCS.md#configuration).
+
+</details>
+
+---
 
 ## Develop
 
@@ -114,11 +202,30 @@ uv sync --all-groups
 just all    # lint + types + tests (≥90% cov) + check
 ```
 
+| Doc | Audience |
+| :--- | :--- |
+| [README.md](./README.md) | Users |
+| [DOCS.md](./DOCS.md) | Developers |
+| [AGENTS.md](./AGENTS.md) | Coding agents |
+| [notebook.ipynb](./notebook.ipynb) | Colab / Jupyter |
+
+---
+
 ## Notes
 
-- Unofficial — not affiliated with or endorsed by Paul Graham.  
-- No full essay bodies in feeds; short `description` / `summary` / JSON `content_text` only (same short `feed_summary()`, not the essay body). Copyright on essay text remains with the author.  
-- Stable ids from URLs; Turbify chapters use a UUID derived from the path.  
+> [!WARNING]
+> Unofficial — not affiliated with or endorsed by Paul Graham.
+
+- No full essay bodies in feeds; short `description` / `summary` / JSON
+  `content_text` only (same short `feed_summary()`, not the essay body).
+  Copyright on essay text remains with the author.
+- Month+year on a page is a hint only — it does **not** become `pubDate` /
+  `published` / `date_published`.
+- Stable ids from URLs; Turbify chapters use a UUID derived from the path.
+- Unchanged index → skip enrich/write when `feed.json` `_pg_essay_feeds`
+  `index_hash` + fingerprint match (unless `--force`).
+
+---
 
 ## License
 
