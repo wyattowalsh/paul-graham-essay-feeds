@@ -1,4 +1,4 @@
-"""Unit tests for validate_links."""
+"""Unit tests for validate.py."""
 
 from __future__ import annotations
 
@@ -116,6 +116,43 @@ def test_live_probe_max_bytes_on_get_fallback() -> None:
     )
     with pytest.raises(FeedError, match="link probe"):
         validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
+
+
+@respx.mock
+def test_live_probe_head_content_length_over_max_bytes() -> None:
+    """HEAD Content-Length over max_bytes fails closed (same budget as GET)."""
+    respx.head("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(
+            200,
+            content=b"tiny",
+            headers={"Content-Length": "99999"},
+        )
+    )
+    with pytest.raises(FeedError, match="link probe"):
+        validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
+
+
+@respx.mock
+def test_live_probe_head_body_over_max_bytes() -> None:
+    """HEAD response body over max_bytes fails closed."""
+    respx.head("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(200, content=b"x" * 200)
+    )
+    with pytest.raises(FeedError, match="link probe"):
+        validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
+
+
+@respx.mock
+def test_live_probe_redirect_to_loopback_rejected() -> None:
+    """Non-loopback essay URL must not bypass when Location is loopback."""
+    respx.head("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(
+            302,
+            headers={"Location": "http://127.0.0.1/secret"},
+        )
+    )
+    with pytest.raises(FeedError, match="link probe"):
+        validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0)
 
 
 @respx.mock

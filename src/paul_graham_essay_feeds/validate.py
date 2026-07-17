@@ -19,7 +19,6 @@ from paul_graham_essay_feeds.model import (
     validate_essay_link,
 )
 
-_LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1"})
 _USER_AGENT = user_agent(" link-check")
 
 
@@ -32,12 +31,14 @@ def validate_essays_structural(essays: list[Essay]) -> None:
 
 def _probe_once(client: httpx.Client, essay: Essay, *, max_bytes: int) -> None:
     """Single probe attempt; raises httpx errors for tenacity."""
+    # allow_loopback=None → hop_safe derives from start URL (essay.url) host.
     response = hop_safe_request(
         client,
         "HEAD",
         essay.url,
         allowed_hosts=ALLOWED_HOSTS,
-        max_bytes=None,
+        max_bytes=max_bytes,
+        allow_loopback=None,
     )
     if response.status_code in {405, 501}:
         response = hop_safe_get(
@@ -45,6 +46,7 @@ def _probe_once(client: httpx.Client, essay: Essay, *, max_bytes: int) -> None:
             essay.url,
             allowed_hosts=ALLOWED_HOSTS,
             max_bytes=max_bytes,
+            allow_loopback=None,
         )
     if response.status_code >= 400:
         # Non-retryable client errors stay FeedError; 5xx becomes HTTPStatusError-like.
@@ -55,7 +57,7 @@ def _probe_once(client: httpx.Client, essay: Essay, *, max_bytes: int) -> None:
     host_l = host.lower()
     if host_l == "www.paulgraham.com":
         host_l = "paulgraham.com"
-    if host_l not in ALLOWED_HOSTS and host_l not in _LOOPBACK:
+    if host_l not in ALLOWED_HOSTS:
         raise FeedError(f"{essay.url} redirected to disallowed host {host!r}")
 
 
@@ -84,7 +86,7 @@ def validate_essays_live(
     essays: list[Essay],
     *,
     timeout: float = 10.0,
-    workers: int = 8,
+    workers: int = 4,
     retries: int = 2,
     max_bytes: int = MAX_BYTES,
 ) -> None:

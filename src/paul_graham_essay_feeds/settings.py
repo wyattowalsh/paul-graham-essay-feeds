@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     )
     repo_root: Path = Field(
         default_factory=Path.cwd,
-        description="Output root for feeds/ and data/ (resolved absolute path).",
+        description="Output root for feeds/ (resolved absolute path).",
     )
     min_items: int = Field(
         default=MIN_ITEMS,
@@ -58,7 +58,7 @@ class Settings(BaseSettings):
         description="Per-URL timeout seconds for live link probes.",
     )
     link_workers: int = Field(
-        default=8,
+        default=4,
         ge=1,
         le=64,
         description="Thread pool size for live link probes (not enrich).",
@@ -68,7 +68,7 @@ class Settings(BaseSettings):
         description="Scrape each essay page for a short summary (not full body).",
     )
     enrich_workers: int = Field(
-        default=12,
+        default=4,
         ge=1,
         le=64,
         description="Thread pool size for per-page enrichment GETs.",

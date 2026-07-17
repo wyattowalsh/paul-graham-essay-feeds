@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -156,7 +157,7 @@ def test_update_source_file_oversize(tmp_path: Path) -> None:
 
 
 def test_update_skips_when_index_hash_unchanged(repo_root: Path, sample_html_path: Path) -> None:
-    """Second update with same source skips rewrite when feeds+catalog exist."""
+    """Second update with same source skips rewrite when feeds exist with matching hash."""
     args = [
         "update",
         "--repo-root",
@@ -168,12 +169,13 @@ def test_update_skips_when_index_hash_unchanged(repo_root: Path, sample_html_pat
     ]
     first = runner.invoke(app, args)
     assert first.exit_code == 0, first.output
-    catalog = (repo_root / "data" / "essays.json").read_text(encoding="utf-8")
+    feed_json = (repo_root / "feeds" / "feed.json").read_text(encoding="utf-8")
     mtime = (repo_root / "feeds" / "rss.xml").stat().st_mtime_ns
     second = runner.invoke(app, args)
     assert second.exit_code == 0, second.output
-    assert (repo_root / "data" / "essays.json").read_text(encoding="utf-8") == catalog
+    assert (repo_root / "feeds" / "feed.json").read_text(encoding="utf-8") == feed_json
     assert (repo_root / "feeds" / "rss.xml").stat().st_mtime_ns == mtime
+    assert not (repo_root / "data" / "essays.json").exists()
 
 
 def test_update_force_rewrites(repo_root: Path, sample_html_path: Path) -> None:
@@ -207,7 +209,7 @@ def test_update_verbose(repo_root: Path, sample_html_path: Path) -> None:
     assert result.exit_code == 0, result.output
 
 
-def test_check_ok(repo_root: Path) -> None:
+def _write_one_essay(repo_root: Path) -> list[Essay]:
     essays = [
         Essay(
             position=1,
@@ -215,6 +217,7 @@ def test_check_ok(repo_root: Path) -> None:
             url="https://paulgraham.com/a.html",
             stable_id="https://paulgraham.com/a.html",
             is_permalink=True,
+            summary="Short summary for check tests.",
         ),
     ]
     now = utc_now()
@@ -222,14 +225,31 @@ def test_check_ok(repo_root: Path) -> None:
         repo_root,
         rss=render_rss(essays, built_at=now),
         atom=render_atom(essays, built_at=now),
-        json_feed=render_json(essays),
-        essays=essays,
+        json_feed=render_json(essays, built_at=now),
     )
+    return essays
+
+
+def test_check_ok(repo_root: Path) -> None:
+    _write_one_essay(repo_root)
     result = runner.invoke(
         app,
         ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
     )
     assert result.exit_code == 0
+
+
+def test_check_fails_wrong_content_text(repo_root: Path) -> None:
+    _write_one_essay(repo_root)
+    path = repo_root / "feeds" / "feed.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["items"][0]["content_text"] = "does not match summary"
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    result = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
+    )
+    assert result.exit_code == 1
 
 
 def test_env_enrich_false_without_flag(
@@ -312,7 +332,7 @@ def test_env_validate_links_true_without_flag(
     assert "retries" in kwargs
     assert "workers" in kwargs
     assert "max_bytes" in kwargs
-    assert kwargs["workers"] == 8
+    assert kwargs["workers"] == 4
 
 
 def test_quiet_preferred_when_both_set() -> None:

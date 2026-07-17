@@ -134,7 +134,10 @@ def hop_safe_request(
         if max_bytes is None:
             # Stream so redirect responses can be closed without buffering a body.
             req = client.build_request(method_u, current)
-            response = client.send(req, stream=True)
+            # Force no auto-follow even if the Client was constructed with
+            # follow_redirects=True — otherwise Location targets are fetched
+            # before the next-hop allowlist check (SSRF).
+            response = client.send(req, stream=True, follow_redirects=False)
             try:
                 if response.is_redirect:
                     location = response.headers.get("location")
@@ -155,7 +158,7 @@ def hop_safe_request(
         else:
             # Size-capped path: stream so oversize bodies fail without full buffer.
             req = client.build_request(method_u, current)
-            response = client.send(req, stream=True)
+            response = client.send(req, stream=True, follow_redirects=False)
             try:
                 if response.is_redirect:
                     location = response.headers.get("location")
@@ -166,9 +169,14 @@ def hop_safe_request(
                     current = str(httpx.URL(current).join(location))
                     continue
                 body = _read_body_capped(response, max_bytes=max_bytes)
+                # Body is already decoded by iter_bytes; drop encoding headers so
+                # a rebuilt Response does not try to decompress again.
+                headers = httpx.Headers(response.headers)
+                headers.pop("Content-Encoding", None)
+                headers.pop("Content-Length", None)
                 response = httpx.Response(
                     status_code=response.status_code,
-                    headers=response.headers,
+                    headers=headers,
                     content=body,
                     request=response.request,
                     extensions=response.extensions,

@@ -5,13 +5,13 @@ from __future__ import annotations
 import pytest
 
 from paul_graham_essay_feeds.extract import extract_essays
-from paul_graham_essay_feeds.model import FeedError
+from paul_graham_essay_feeds.model import MIN_ITEMS, FeedError
 from tests.html_samples import MARKER, synthetic_index_html
 
 
 def test_extract_meets_floor(sample_html: str) -> None:
-    essays = extract_essays(sample_html, min_items=233)
-    assert len(essays) == 233
+    essays = extract_essays(sample_html, min_items=MIN_ITEMS)
+    assert len(essays) >= MIN_ITEMS
     assert essays[0].position == 1
     assert essays[0].title == "Essay 0"
     assert essays[0].url.endswith("/essay-0.html")
@@ -19,7 +19,7 @@ def test_extract_meets_floor(sample_html: str) -> None:
 
 
 def test_extract_protected_chapters(sample_html: str) -> None:
-    essays = extract_essays(sample_html, min_items=233)
+    essays = extract_essays(sample_html, min_items=MIN_ITEMS)
     urls = {e.url for e in essays}
     assert "https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt" in urls
     assert "https://sep.turbifycdn.com/ty/cdn/paulgraham/acl2.txt" in urls
@@ -37,19 +37,20 @@ def test_extract_too_few_items() -> None:
 
 
 def test_extract_missing_protected_chapters() -> None:
-    rows = [f'<img src="{MARKER}"><a href="e{i}.html">E{i}</a>' for i in range(233)]
+    rows = [f'<img src="{MARKER}"><a href="e{i}.html">E{i}</a>' for i in range(MIN_ITEMS)]
     with pytest.raises(FeedError, match="protected"):
-        extract_essays("".join(rows), min_items=233)
+        extract_essays("".join(rows), min_items=MIN_ITEMS)
 
 
 def test_extract_fallback_when_markers_sparse() -> None:
-    html = synthetic_index_html(essay_count=231)
+    html = synthetic_index_html()
     plain = html.replace(
         f'src="{MARKER}"',
         'src="other.gif"',
     )
-    essays = extract_essays(plain, min_items=233)
-    assert len(essays) == 233
+    essays = extract_essays(plain, min_items=MIN_ITEMS)
+    assert len(essays) >= MIN_ITEMS
+    assert len(essays) == MIN_ITEMS  # synthetic default size; not live catalog
 
 
 def test_extract_dedupe_last_occurrence() -> None:

@@ -74,7 +74,8 @@ def test_cli_update_then_check(repo_root: Path, sample_html_path: Path) -> None:
     assert (feeds / "rss.xml").is_file()
     assert (feeds / "atom.xml").is_file()
     assert (feeds / "feed.json").is_file()
-    assert (repo_root / "data" / "essays.json").is_file()
+    assert not (repo_root / "data" / "essays.json").exists()
+    assert not (feeds / ".manifest.json").exists()
     check = runner.invoke(app, ["check", "--repo-root", str(repo_root), "--quiet"])
     assert check.exit_code == 0, check.output
 
@@ -146,8 +147,8 @@ def test_cli_update_enrich_with_mocked_pages(repo_root: Path) -> None:
         ],
     )
     assert result.exit_code == 0, result.output
-    catalog = (repo_root / "data" / "essays.json").read_text(encoding="utf-8")
-    assert "short summary for essay zero" in catalog
+    feed_json = (repo_root / "feeds" / "feed.json").read_text(encoding="utf-8")
+    assert "short summary for essay zero" in feed_json
     # Index + three essay pages.
     assert respx.calls.call_count >= 4
 

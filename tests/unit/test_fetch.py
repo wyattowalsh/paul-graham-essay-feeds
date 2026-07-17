@@ -354,3 +354,184 @@ def test_hop_safe_request_head() -> None:
             max_bytes=None,
         )
     assert response.status_code == 200
+
+
+@respx.mock
+def test_hop_safe_request_non_loopback_redirect_to_127_feed_error() -> None:
+    """F1: non-loopback start → mid-hop 127.0.0.1 is rejected (start-bound allow_loopback)."""
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(302, headers={"Location": "http://127.0.0.1:9/secret"})
+    )
+    with (
+        httpx.Client(follow_redirects=False, trust_env=False) as client,
+        pytest.raises(FeedError, match="not allowed"),
+    ):
+        hop_safe_request(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+
+
+@respx.mock
+def test_hop_safe_request_forces_no_auto_follow_on_misconfigured_client() -> None:
+    """client.send must not inherit Client(follow_redirects=True) — SSRF before allowlist."""
+    start = respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(302, headers={"Location": "https://evil.example/x"})
+    )
+    evil = respx.get("https://evil.example/x").mock(return_value=httpx.Response(200, text="nope"))
+    with (
+        httpx.Client(follow_redirects=True, trust_env=False) as client,
+        pytest.raises(FeedError, match="not allowed"),
+    ):
+        hop_safe_request(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+    assert start.called
+    assert not evil.called
+
+
+@respx.mock
+def test_hop_safe_request_non_loopback_redirect_to_localhost_feed_error() -> None:
+    """F1: non-loopback start → mid-hop localhost is rejected."""
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(302, headers={"Location": "http://localhost:9/secret"})
+    )
+    with (
+        httpx.Client(follow_redirects=False, trust_env=False) as client,
+        pytest.raises(FeedError, match="not allowed"),
+    ):
+        hop_safe_request(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+
+
+@respx.mock
+def test_hop_safe_request_redirect_close_without_read() -> None:
+    """F2: redirect bodies are not required to follow; large 3xx body is ignored."""
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(
+            302,
+            content=b"x" * 50_000,
+            headers={"Location": "https://paulgraham.com/b.html"},
+        )
+    )
+    respx.get("https://paulgraham.com/b.html").mock(
+        return_value=httpx.Response(200, text="<html>final</html>")
+    )
+    with httpx.Client(follow_redirects=False, trust_env=False) as client:
+        response = hop_safe_request(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+    assert "final" in response.text
+    # Final body is small; if the 50k redirect body were drained into the capped
+    # path, hop_safe_request would have raised FeedError for oversize.
+    assert len(response.content) < 1024
+
+
+@respx.mock
+def test_hop_safe_request_multi_hop_empty_redirect_bodies() -> None:
+    """F2: multi-hop redirects succeed with empty/minimal 3xx bodies."""
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(302, headers={"Location": "https://paulgraham.com/b.html"})
+    )
+    respx.get("https://paulgraham.com/b.html").mock(
+        return_value=httpx.Response(
+            302, content=b"", headers={"Location": "https://paulgraham.com/c.html"}
+        )
+    )
+    respx.get("https://paulgraham.com/c.html").mock(
+        return_value=httpx.Response(200, text="<html>ok</html>")
+    )
+    with httpx.Client(follow_redirects=False, trust_env=False) as client:
+        response = hop_safe_request(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+    assert "ok" in response.text
+
+
+@respx.mock
+def test_hop_safe_request_redirect_oversize_body_ignored() -> None:
+    """F2: oversize 3xx body/CL is not size-checked; only the final 200 is capped."""
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(
+            302,
+            content=b"x" * 10_000,
+            headers={
+                "Location": "https://paulgraham.com/b.html",
+                "Content-Length": "10000",
+            },
+        )
+    )
+    respx.get("https://paulgraham.com/b.html").mock(
+        return_value=httpx.Response(200, text="<html>final</html>")
+    )
+    with httpx.Client(follow_redirects=False, trust_env=False) as client:
+        response = hop_safe_request(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=100,
+        )
+    assert "final" in response.text
+
+
+@respx.mock
+def test_hop_safe_request_content_length_oversize_without_buffer() -> None:
+    """Content-Length > max_bytes → FeedError (declared size fails closed)."""
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(
+            200,
+            content=b"tiny",
+            headers={"Content-Length": "99999"},
+        )
+    )
+    with (
+        httpx.Client(follow_redirects=False, trust_env=False) as client,
+        pytest.raises(FeedError, match="over"),
+    ):
+        hop_safe_request(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=50,
+        )
+
+
+@respx.mock
+def test_hop_safe_request_stream_oversize() -> None:
+    """Streaming body that exceeds max_bytes raises FeedError."""
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(200, content=b"x" * 200)
+    )
+    with (
+        httpx.Client(follow_redirects=False, trust_env=False) as client,
+        pytest.raises(FeedError, match="over"),
+    ):
+        hop_safe_request(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=50,
+        )

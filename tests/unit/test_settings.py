@@ -44,13 +44,26 @@ def test_validate_links_env_true(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_link_workers_default_and_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """link_workers default 8; env override; reject out-of-range."""
-    assert Settings().link_workers == 8
+    """link_workers default 4; env override; reject out-of-range."""
+    assert Settings().link_workers == 4
     monkeypatch.setenv("PG_ESSAY_FEEDS_LINK_WORKERS", "16")
     assert Settings().link_workers == 16
     monkeypatch.setenv("PG_ESSAY_FEEDS_LINK_WORKERS", "0")
     with pytest.raises(ValidationError):
         Settings()
     monkeypatch.setenv("PG_ESSAY_FEEDS_LINK_WORKERS", "65")
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_enrich_workers_default_and_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """enrich_workers default 4; env override; reject out-of-range."""
+    assert Settings().enrich_workers == 4
+    monkeypatch.setenv("PG_ESSAY_FEEDS_ENRICH_WORKERS", "16")
+    assert Settings().enrich_workers == 16
+    monkeypatch.setenv("PG_ESSAY_FEEDS_ENRICH_WORKERS", "0")
+    with pytest.raises(ValidationError):
+        Settings()
+    monkeypatch.setenv("PG_ESSAY_FEEDS_ENRICH_WORKERS", "65")
     with pytest.raises(ValidationError):
         Settings()

@@ -16,16 +16,10 @@ config.toml
 *.bak.*
 .env
 .env.*
-.vercel/
 articles.html
 
-# Generated runtime artifacts (produce via `pg-essay-feeds update`)
-data/
-reports/
-SHA256SUMS
-public/
+# Leftover local state from older tooling (feeds/ is committed)
 .update-state.json
 **/.staging-*/
 .publish-staging-*/
 **/.publish-staging-*/
-

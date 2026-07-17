@@ -13,7 +13,7 @@ from paul_graham_essay_feeds.enrich import (
     enrich_essays,
     parse_page_metadata,
 )
-from paul_graham_essay_feeds.model import Essay
+from paul_graham_essay_feeds.model import Essay, content_sha256
 
 SAMPLE_HTML = """
 <html><head>
@@ -57,7 +57,7 @@ def test_parse_page_metadata_extracts_fields() -> None:
     assert meta["keywords"] == "startups, wealth"
     assert meta["canonical_url"] == "https://paulgraham.com/earn.html"
     assert meta["published_hint"] == "June 2026"
-    assert meta["published_at"] is not None
+    assert meta["published_at"] is None
     assert meta["content_text"] is None
 
 
@@ -192,6 +192,43 @@ def test_parse_page_metadata_relative_og_image_urljoin() -> None:
     assert meta["image_url"] == "https://paulgraham.com/img/rel.png"
 
 
+def test_parse_page_metadata_http_image_rejected() -> None:
+    """http: og/twitter image fails the https gate → image_url None."""
+    html = """
+    <html><head>
+    <title>T</title>
+    <meta property="og:image" content="http://paulgraham.com/img.png" />
+    </head><body>body</body></html>
+    """
+    meta = parse_page_metadata(html, page_url="https://paulgraham.com/t.html")
+    assert meta["image_url"] is None
+
+
+def test_parse_page_metadata_off_host_image_rejected() -> None:
+    """Allowlisted https only; off-host image → image_url None."""
+    html = """
+    <html><head>
+    <title>T</title>
+    <meta property="og:image" content="https://evil.example/img.png" />
+    </head><body>body</body></html>
+    """
+    meta = parse_page_metadata(html, page_url="https://paulgraham.com/t.html")
+    assert meta["image_url"] is None
+
+
+def test_parse_page_metadata_allowlisted_https_image_ok() -> None:
+    """Allowlisted https image (incl. turbify CDN) is kept."""
+    html = """
+    <html><head>
+    <title>T</title>
+    <meta property="og:image"
+          content="https://sep.turbifycdn.com/ty/cdn/paulgraham/img.png" />
+    </head><body>body</body></html>
+    """
+    meta = parse_page_metadata(html, page_url="https://paulgraham.com/t.html")
+    assert meta["image_url"] == "https://sep.turbifycdn.com/ty/cdn/paulgraham/img.png"
+
+
 @respx.mock
 def test_enrich_essays_fetches_and_merges() -> None:
     respx.get("https://paulgraham.com/earn.html").mock(
@@ -204,8 +241,10 @@ def test_enrich_essays_fetches_and_merges() -> None:
     assert e.summary and "billionaires" in e.summary
     assert e.content_text is None
     assert e.published_hint == "June 2026"
+    assert e.published_at is None
     assert e.image_url == "https://paulgraham.com/img.png"
     assert "billionaires" in e.feed_summary()
+    assert e.content_hash == content_sha256(SAMPLE_HTML)
 
 
 def test_enrich_essays_empty_list_early_return() -> None:

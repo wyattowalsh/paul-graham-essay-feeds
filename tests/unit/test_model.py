@@ -11,7 +11,6 @@ from paul_graham_essay_feeds.model import (
     GENERATOR,
     STABLE_UNPUBLISHED_UPDATED,
     Essay,
-    EssayCatalog,
     FeedError,
     blurb,
     canonicalize_url,
@@ -123,7 +122,7 @@ def test_feed_summary_helpers() -> None:
     long_sum = bare.model_copy(update={"summary": "S" * 2000})
     out = long_sum.feed_summary()
     assert out.endswith("…")
-    assert len(out) <= FEED_SUMMARY_CHARS + 1
+    assert len(out) <= FEED_SUMMARY_CHARS
 
 
 def test_truncate_text_word_boundary() -> None:
@@ -131,7 +130,11 @@ def test_truncate_text_word_boundary() -> None:
     long = "word " * 100
     out = truncate_text(long, 40)
     assert out.endswith("…")
-    assert len(out) <= 41
+    assert len(out) <= 40
+    # Space-less overflow must still fit verify's [1, max_chars] cap.
+    nospace = truncate_text("S" * 80, 40)
+    assert nospace.endswith("…")
+    assert len(nospace) == 40
 
 
 def test_content_sha256_stable() -> None:
@@ -140,7 +143,7 @@ def test_content_sha256_stable() -> None:
     assert len(content_sha256("x")) == 64
 
 
-def test_essay_catalog_index_fingerprint() -> None:
+def test_essay_index_fingerprint() -> None:
     e = Essay(
         position=1,
         title="T",
@@ -148,17 +151,16 @@ def test_essay_catalog_index_fingerprint() -> None:
         stable_id="https://paulgraham.com/t.html",
         is_permalink=True,
     )
-    cat = EssayCatalog(updated_at=utc_now(), count=1, index_hash="deadbeef", items=[e])
-    assert cat.index_fingerprint() == e.index_fingerprint()
-    assert cat.index_hash == "deadbeef"
+    assert (
+        e.index_fingerprint()
+        == "1\thttps://paulgraham.com/t.html\thttps://paulgraham.com/t.html\tT"
+    )
 
 
 def test_essay_fields_have_descriptions() -> None:
     """All public model fields carry Field descriptions (annotation contract)."""
     for name, field in Essay.model_fields.items():
         assert field.description, f"Essay.{name} missing description"
-    for name, field in EssayCatalog.model_fields.items():
-        assert field.description, f"EssayCatalog.{name} missing description"
 
 
 def test_stable_unpublished_updated_sentinel() -> None:

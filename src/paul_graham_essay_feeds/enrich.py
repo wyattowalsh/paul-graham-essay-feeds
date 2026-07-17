@@ -145,7 +145,7 @@ def parse_page_metadata(html: str, *, page_url: str) -> dict[str, str | None]:
     if summary:
         summary = truncate_text(summary, FEED_SUMMARY_CHARS)
 
-    # Never return long body text — feeds and catalog use summary only (RV-002).
+    # Never return long body text — feeds use summary only (RV-002).
     return {
         "page_title": page_title,
         "summary": summary,
@@ -176,13 +176,8 @@ def _enrich_one(
     *,
     max_bytes: int,
     attempts: int,
-    prior: Essay | None = None,
 ) -> Essay:
-    """Scrape one page; soft-fail to the original essay on network/parse errors.
-
-    When ``prior.content_hash`` matches the fetched page hash, reuse prior
-    enrichment fields (skip re-parse) while keeping current index title/url.
-    """
+    """Scrape one page; soft-fail to the original essay on network/parse errors."""
 
     def _load() -> str:
         return _fetch_page(client, essay.url, max_bytes=max_bytes)
@@ -194,28 +189,6 @@ def _enrich_one(
         return essay
 
     page_hash = content_sha256(html)
-    if (
-        prior is not None
-        and prior.content_hash
-        and prior.content_hash == page_hash
-        and (prior.summary or prior.page_title or prior.published_hint)
-    ):
-        logger.debug("Page unchanged (hash match); reuse enrich for {}", essay.url)
-        return essay.model_copy(
-            update={
-                "page_title": prior.page_title,
-                "summary": prior.summary,
-                "content_text": None,
-                "image_url": prior.image_url,
-                "keywords": prior.keywords,
-                "canonical_url": prior.canonical_url or essay.url,
-                "published_hint": prior.published_hint,
-                # Never revive catalog day-1 poison from prior.published_at.
-                "published_at": None,
-                "content_hash": prior.content_hash,
-            }
-        )
-
     meta = parse_page_metadata(html, page_url=essay.url)
 
     return essay.model_copy(
@@ -238,22 +211,19 @@ def enrich_essays(
     essays: list[Essay],
     *,
     timeout: float = 15.0,
-    workers: int = 12,
+    workers: int = 4,
     retries: int = 2,
     max_bytes: int = 2 * 1024 * 1024,
     quiet: bool = False,
-    prior_by_id: dict[str, Essay] | None = None,
 ) -> list[Essay]:
     """Fetch each essay page and attach short summaries (order preserved).
 
     Network-heavy: one GET per essay by default. Use ``--no-enrich`` for
     index-only generation. Does not store full essay bodies on ``Essay``.
-    When ``prior_by_id`` is provided, unchanged page hashes reuse prior metadata.
     """
     if not essays:
         return essays
     attempts = max(1, retries + 1)
-    priors = prior_by_id or {}
     out: dict[int, Essay] = {}
     with (
         httpx.Client(
@@ -271,7 +241,6 @@ def enrich_essays(
                 e,
                 max_bytes=max_bytes,
                 attempts=attempts,
-                prior=priors.get(e.stable_id),
             ): e.position
             for e in essays
         }

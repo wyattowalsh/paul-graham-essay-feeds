@@ -19,6 +19,7 @@ SOURCE_URL: Final = "https://paulgraham.com/articles.html"
 JSON_FEED_VERSION: Final = "https://jsonfeed.org/version/1.1"
 ATOM_NS: Final = "http://www.w3.org/2005/Atom"
 DC_NS: Final = "http://purl.org/dc/elements/1.1/"
+# Safety floor for extract/check — not the live catalog size (that grows over time).
 MIN_ITEMS: Final = 233
 MAX_BYTES: Final = 5 * 1024 * 1024
 ALLOWED_HOSTS: Final = frozenset({"paulgraham.com", "sep.turbifycdn.com"})
@@ -88,17 +89,17 @@ class Essay(BaseModel):
     content_text: str | None = Field(
         default=None,
         description=(
-            "Legacy catalog field only; enrich always leaves this None. "
+            "Unused by enrich (always None); kept for feed_summary fallback only. "
             "Feeds never emit full body text."
         ),
     )
     image_url: str | None = Field(
         default=None,
-        description="Optional og/twitter image absolute URL (catalog only).",
+        description="Optional og/twitter image absolute URL (enrich metadata; not in feeds).",
     )
     keywords: str | None = Field(
         default=None,
-        description="Optional meta keywords string (catalog only).",
+        description="Optional meta keywords string (enrich metadata; not in feeds).",
     )
     canonical_url: str | None = Field(
         default=None,
@@ -106,10 +107,7 @@ class Essay(BaseModel):
     )
     published_hint: str | None = Field(
         default=None,
-        description=(
-            "Month+year human hint from the page (e.g. \"June 2026\"); "
-            "not a feed date."
-        ),
+        description=('Month+year human hint from the page (e.g. "June 2026"); not a feed date.'),
     )
     published_at: datetime | None = Field(
         default=None,
@@ -120,10 +118,7 @@ class Essay(BaseModel):
     )
     content_hash: str | None = Field(
         default=None,
-        description=(
-            "SHA-256 hex of the essay page HTML used for enrichment. "
-            "When unchanged, enrich may skip re-parsing."
-        ),
+        description="SHA-256 hex of the essay page HTML used for enrichment.",
     )
 
     @field_validator("url")
@@ -142,9 +137,9 @@ class Essay(BaseModel):
     def _image_url(cls, value: str | None) -> str | None:
         """Keep None; coerce invalid absolute-https allowlisted URLs to None.
 
-        Invalid values become None so old catalogs with poisoned ``image_url``
-        data still load. Enrich should set None before constructing when the
-        scraped URL fails the same host/scheme policy.
+        Invalid values become None so poisoned ``image_url`` values do not
+        fail model construction. Enrich should set None before constructing
+        when the scraped URL fails the same host/scheme policy.
         """
         if value is None:
             return None
@@ -164,40 +159,11 @@ class Essay(BaseModel):
             return truncate_text(self.summary, FEED_SUMMARY_CHARS)
         if self.content_text:
             return truncate_text(self.content_text, FEED_SUMMARY_CHARS)
-        return blurb(self.title)
+        return truncate_text(blurb(self.title), FEED_SUMMARY_CHARS)
 
     def index_fingerprint(self) -> str:
         """Stable identity line for index-change detection (no enrichment)."""
         return f"{self.position}\t{self.stable_id}\t{self.url}\t{self.title}"
-
-
-class EssayCatalog(BaseModel):
-    """Persisted catalog written to ``data/essays.json``."""
-
-    model_config = ConfigDict(str_strip_whitespace=True)
-
-    updated_at: datetime = Field(
-        description="UTC timestamp when this catalog was written.",
-    )
-    count: int = Field(
-        ge=0,
-        description="Number of items (must match len(items)).",
-    )
-    index_hash: str | None = Field(
-        default=None,
-        description=(
-            "SHA-256 hex of the source index HTML (or local source file). "
-            "Used to skip no-op updates when the index is unchanged."
-        ),
-    )
-    items: list[Essay] = Field(
-        default_factory=list,
-        description="Essays newest-first, matching feed item order.",
-    )
-
-    def index_fingerprint(self) -> str:
-        """Concatenated per-item index fingerprints for change detection."""
-        return "\n".join(item.index_fingerprint() for item in self.items)
 
 
 def content_sha256(data: bytes | str) -> str:
@@ -226,10 +192,19 @@ def stable_updated(stable_id: str) -> datetime:
 
 
 def truncate_text(text: str, max_chars: int = FEED_SUMMARY_CHARS) -> str:
-    """Truncate at a word boundary and append an ellipsis when over ``max_chars``."""
+    """Truncate at a word boundary; result length is always ``≤ max_chars``.
+
+    When truncating, reserves one character for the ellipsis so verify/check
+    length caps (``[1, FEED_SUMMARY_CHARS]``) cannot reject generated feeds.
+    """
     if len(text) <= max_chars:
         return text
-    truncated = text[:max_chars].rsplit(" ", 1)[0]
+    if max_chars <= 1:
+        return "…"[:max_chars]
+    budget = max_chars - 1  # room for trailing "…"
+    truncated = text[:budget].rsplit(" ", 1)[0].rstrip()
+    if not truncated:
+        truncated = text[:budget]
     return truncated + "…"
 
 

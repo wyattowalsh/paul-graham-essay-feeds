@@ -7,7 +7,6 @@ the repository ``feeds/`` directory.
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import json
 import os
 import tempfile
@@ -31,17 +30,11 @@ from paul_graham_essay_feeds.model import (
     JSON_FEED_VERSION,
     SOURCE_URL,
     Essay,
-    EssayCatalog,
     FeedError,
     rfc822,
     rfc3339,
     stable_updated,
-    utc_now,
 )
-
-_CATALOG_NAME = "essays.json"
-_MANIFEST_NAME = ".manifest.json"
-_FEED_FILE_NAMES = ("rss.xml", "atom.xml", "feed.json")
 
 
 def render_rss(essays: list[Essay], *, built_at: datetime) -> bytes:
@@ -126,7 +119,13 @@ def render_atom(essays: list[Essay], *, built_at: datetime) -> bytes:
     return b'<?xml version="1.0" encoding="UTF-8"?>\n' + body + b"\n"
 
 
-def render_json(essays: list[Essay], *, built_at: datetime | None = None) -> bytes:
+def render_json(
+    essays: list[Essay],
+    *,
+    built_at: datetime | None = None,
+    index_hash: str | None = None,
+    index_fingerprint: str | None = None,
+) -> bytes:
     """JSON Feed 1.1: title, url, id, summary — no full essay body."""
     items: list[dict] = []
     for e in essays:
@@ -155,12 +154,18 @@ def render_json(essays: list[Essay], *, built_at: datetime | None = None) -> byt
         "authors": [{"name": AUTHOR, "url": AUTHOR_URL}],
         "items": items,
     }
-    if built_at is not None:
-        payload["_pg_essay_feeds"] = {
+    if built_at is not None or index_hash is not None or index_fingerprint is not None:
+        meta: dict = {
             "generator": GENERATOR,
-            "built_at": rfc3339(built_at),
             "item_count": len(items),
         }
+        if built_at is not None:
+            meta["built_at"] = rfc3339(built_at)
+        if index_hash is not None:
+            meta["index_hash"] = index_hash
+        if index_fingerprint is not None:
+            meta["index_fingerprint"] = index_fingerprint
+        payload["_pg_essay_feeds"] = meta
     return (json.dumps(payload, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
 
 
@@ -179,32 +184,38 @@ def _atomic_write(path: Path, data: bytes) -> None:
         raise
 
 
-def catalog_path(root: Path) -> Path:
-    """Path to the persisted essay catalog JSON."""
-    return root / "data" / _CATALOG_NAME
+def feeds_exist(root: Path) -> bool:
+    """True when all three feed artifacts exist under ``root``."""
+    return all(p.is_file() for p in feed_paths(root).values())
 
 
-def load_catalog(root: Path) -> EssayCatalog | None:
-    """Load ``data/essays.json`` when present and valid; else ``None``."""
-    path = catalog_path(root)
+def load_index_skip_state(root: Path) -> tuple[str, str, int] | None:
+    """Return ``(index_hash, index_fingerprint, item_count)`` from ``feed.json`` when present."""
+    path = feed_paths(root)["json"]
     if not path.is_file():
         return None
     try:
-        return EssayCatalog.model_validate_json(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        logger.warning("Ignoring unreadable catalog {}: {}", path, exc)
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        logger.warning("Ignoring unreadable feed.json skip state {}: {}", path, exc)
         return None
-
-
-def feeds_exist(root: Path) -> bool:
-    """True when feed artifacts and ``feeds/.manifest.json`` exist under ``root``."""
-    paths = feed_paths(root)
-    return all(p.is_file() for p in paths.values()) and manifest_path(root).is_file()
-
-
-def manifest_path(root: Path) -> Path:
-    """Path to the committed feed integrity manifest."""
-    return root / "feeds" / _MANIFEST_NAME
+    if not isinstance(payload, dict):
+        return None
+    meta = payload.get("_pg_essay_feeds")
+    if not isinstance(meta, dict):
+        return None
+    index_hash = meta.get("index_hash")
+    fingerprint = meta.get("index_fingerprint")
+    item_count = meta.get("item_count")
+    if (
+        not isinstance(index_hash, str)
+        or not index_hash
+        or not isinstance(fingerprint, str)
+        or not fingerprint
+        or not isinstance(item_count, int)
+    ):
+        return None
+    return index_hash, fingerprint, item_count
 
 
 def write_feeds(
@@ -213,13 +224,8 @@ def write_feeds(
     rss: bytes,
     atom: bytes,
     json_feed: bytes,
-    essays: list[Essay],
-    index_hash: str | None = None,
 ) -> None:
-    """Stage then publish ``feeds/*``, write ``.manifest.json``, plus ``data/essays.json``.
-
-    Catalog is gitignored best-effort and is not listed in the manifest.
-    """
+    """Stage then publish ``feeds/rss.xml``, ``atom.xml``, and ``feed.json``."""
     feeds_dir = root / "feeds"
     feeds_dir.mkdir(parents=True, exist_ok=True)
 
@@ -244,57 +250,25 @@ def write_feeds(
                 raise
             staged.append((final, tmp, blob))
 
-        # Tear window: after replaces begin and before .manifest.json is written,
-        # on-disk feeds may disagree with each other or with a stale manifest.
+        # Tear window: after replaces begin, on-disk feeds may disagree briefly.
         for final, tmp, blob in staged:
             os.replace(tmp, final)
             logger.debug("Wrote {} ({} bytes)", final, len(blob))
         staged.clear()
-
-        file_meta = {
-            name: {
-                "bytes": len(blob),
-                "sha256": hashlib.sha256(blob).hexdigest(),
-            }
-            for name, _final, blob in artifacts
-        }
-        manifest = {
-            "version": 1,
-            "item_count": len(essays),
-            "files": file_meta,
-        }
-        manifest_bytes = (json.dumps(manifest, indent=2) + "\n").encode("utf-8")
-        _atomic_write(manifest_path(root), manifest_bytes)
-        logger.info(
-            "Wrote {} ({} items, {} feed files)",
-            manifest_path(root),
-            len(essays),
-            len(file_meta),
-        )
+        logger.info("Wrote {} feed files → {}", len(artifacts), feeds_dir)
     except Exception:
         for _final, tmp, _blob in staged:
             with contextlib.suppress(OSError):
                 os.unlink(tmp)
         raise
 
-    catalog = EssayCatalog(
-        updated_at=utc_now(),
-        count=len(essays),
-        index_hash=index_hash,
-        items=essays,
-    )
-    payload = catalog.model_dump_json(indent=2) + "\n"
-    _atomic_write(catalog_path(root), payload.encode("utf-8"))
-    logger.info("Wrote catalog ({} items) → {}", len(essays), catalog_path(root))
-
 
 def verify_feed_artifacts(root: Path, *, min_items: int) -> None:
-    """Validate on-disk feeds against each other and ``feeds/.manifest.json``.
+    """Validate on-disk feeds against each other.
 
-    Checks item-count parity across RSS/Atom/JSON (and ``≥ min_items``), that
+    Checks item-count parity across RSS/Atom/JSON (and ``≥ min_items``), and that
     each JSON Feed item has ``content_text == summary`` within
-    ``[1, FEED_SUMMARY_CHARS]``, and that the manifest hashes/bytes/item_count
-    match the three committed feed files. Raises :class:`FeedError` on failure.
+    ``[1, FEED_SUMMARY_CHARS]``. Raises :class:`FeedError` on failure.
     """
     paths = feed_paths(root)
     for path in paths.values():
@@ -325,9 +299,7 @@ def verify_feed_artifacts(root: Path, *, min_items: int) -> None:
     json_count = len(items)
 
     if rss_count != atom_count or rss_count != json_count:
-        raise FeedError(
-            f"Feed count mismatch: RSS={rss_count} Atom={atom_count} JSON={json_count}"
-        )
+        raise FeedError(f"Feed count mismatch: RSS={rss_count} Atom={atom_count} JSON={json_count}")
     if rss_count < min_items:
         raise FeedError(f"Feed item count {rss_count} below floor {min_items}")
 
@@ -337,68 +309,13 @@ def verify_feed_artifacts(root: Path, *, min_items: int) -> None:
         content_text = item.get("content_text")
         summary = item.get("summary")
         if not isinstance(content_text, str) or not isinstance(summary, str):
-            raise FeedError(
-                f"feed.json items[{i}] requires string content_text and summary"
-            )
+            raise FeedError(f"feed.json items[{i}] requires string content_text and summary")
         if content_text != summary:
-            raise FeedError(
-                f"feed.json items[{i}]: content_text must equal summary"
-            )
+            raise FeedError(f"feed.json items[{i}]: content_text must equal summary")
         n = len(content_text)
         if not (1 <= n <= FEED_SUMMARY_CHARS):
             raise FeedError(
-                f"feed.json items[{i}]: content_text length {n} "
-                f"not in [1, {FEED_SUMMARY_CHARS}]"
-            )
-
-    man_path = manifest_path(root)
-    if not man_path.is_file():
-        raise FeedError(f"Missing feed manifest: {man_path}")
-    try:
-        manifest = json.loads(man_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise FeedError(f"feeds/.manifest.json is not valid JSON: {exc}") from exc
-    if not isinstance(manifest, dict):
-        raise FeedError("feeds/.manifest.json root must be an object")
-    if manifest.get("version") != 1:
-        raise FeedError(
-            f"feeds/.manifest.json version must be 1, got {manifest.get('version')!r}"
-        )
-    item_count = manifest.get("item_count")
-    if not isinstance(item_count, int) or item_count != rss_count:
-        raise FeedError(
-            f"Manifest item_count {item_count!r} does not match feed count {rss_count}"
-        )
-    files = manifest.get("files")
-    if not isinstance(files, dict):
-        raise FeedError("feeds/.manifest.json missing files object")
-
-    name_to_path = {
-        "rss.xml": paths["rss"],
-        "atom.xml": paths["atom"],
-        "feed.json": paths["json"],
-    }
-    for name in _FEED_FILE_NAMES:
-        meta = files.get(name)
-        if not isinstance(meta, dict):
-            raise FeedError(f"Manifest missing files.{name} object")
-        path = name_to_path[name]
-        try:
-            data = path.read_bytes()
-        except OSError as exc:
-            raise FeedError(f"Cannot read {path}: {exc}") from exc
-        expected_bytes = meta.get("bytes")
-        expected_sha = meta.get("sha256")
-        if expected_bytes != len(data):
-            raise FeedError(
-                f"Manifest bytes mismatch for {name}: "
-                f"manifest={expected_bytes!r} disk={len(data)}"
-            )
-        actual_sha = hashlib.sha256(data).hexdigest()
-        if expected_sha != actual_sha:
-            raise FeedError(
-                f"Manifest sha256 mismatch for {name}: "
-                f"manifest={expected_sha!r} disk={actual_sha!r}"
+                f"feed.json items[{i}]: content_text length {n} not in [1, {FEED_SUMMARY_CHARS}]"
             )
 
 

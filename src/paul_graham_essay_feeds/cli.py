@@ -18,10 +18,11 @@ from paul_graham_essay_feeds.extract import extract_essays
 from paul_graham_essay_feeds.feeds import (
     feed_paths,
     feeds_exist,
-    load_catalog,
+    load_index_skip_state,
     render_atom,
     render_json,
     render_rss,
+    verify_feed_artifacts,
     write_feeds,
 )
 from paul_graham_essay_feeds.fetch import decode_html, fetch_html
@@ -44,35 +45,6 @@ def _read_source_file(path: Path, *, max_bytes: int) -> str:
     if len(raw) > max_bytes:
         raise FeedError(f"Source file over {max_bytes} bytes: {path}")
     return decode_html(raw)
-
-
-def _json_item_count(text: str) -> int:
-    """Return ``len(items)`` from a JSON Feed document (metadata-only check)."""
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise FeedError(f"feed.json is not valid JSON: {exc}") from exc
-    if not isinstance(data, dict):
-        raise FeedError("feed.json root must be an object")
-    items = data.get("items")
-    if not isinstance(items, list):
-        raise FeedError("feed.json missing items array")
-    return len(items)
-
-
-def _assert_feed_count_parity(
-    *,
-    rss_count: int,
-    atom_count: int,
-    json_count: int,
-    min_items: int,
-) -> int:
-    """Require RSS/Atom/JSON item counts equal and ≥ ``min_items``; return the count."""
-    if rss_count != atom_count or rss_count != json_count:
-        raise FeedError(f"Feed count mismatch: RSS={rss_count} Atom={atom_count} JSON={json_count}")
-    if rss_count < min_items:
-        raise FeedError(f"RSS has {rss_count} items, below floor {min_items}")
-    return rss_count
 
 
 def configure_logging(*, verbose: bool = False, quiet: bool = False) -> None:
@@ -154,19 +126,20 @@ def _should_skip_update(
     essays: list[Essay],
     force: bool,
 ) -> bool:
-    """True when index/hash match prior catalog and feed artifacts already exist."""
+    """True when index hash/fingerprint match ``feed.json`` and feeds already exist."""
     if force:
         return False
     if not feeds_exist(root):
         return False
-    prior = load_catalog(root)
-    if prior is None or not prior.index_hash:
+    prior = load_index_skip_state(root)
+    if prior is None:
         return False
-    if prior.index_hash != index_hash:
+    prior_hash, prior_fp, prior_count = prior
+    if prior_hash != index_hash:
         return False
-    if prior.count != len(essays):
+    if prior_count != len(essays):
         return False
-    return prior.index_fingerprint() == _index_fingerprint(essays)
+    return prior_fp == _index_fingerprint(essays)
 
 
 app = typer.Typer(
@@ -266,11 +239,6 @@ def update_cmd(
                 )
             return
 
-        prior_catalog = load_catalog(settings.repo_root)
-        prior_by_id = (
-            {e.stable_id: e for e in prior_catalog.items} if prior_catalog is not None else {}
-        )
-
         if settings.enrich:
             logger.info("Enriching {} essays from page metadata…", len(essays))
             essays = enrich_essays(
@@ -280,7 +248,6 @@ def update_cmd(
                 retries=settings.retries,
                 max_bytes=settings.max_bytes,
                 quiet=settings.quiet,
-                prior_by_id=prior_by_id,
             )
         if settings.validate_links:
             validate_essays_live(
@@ -292,12 +259,18 @@ def update_cmd(
             )
 
         now = utc_now()
+        fingerprint = _index_fingerprint(essays)
         with tqdm(total=3, desc="Render", unit="fmt", disable=settings.quiet) as bar:
             rss = render_rss(essays, built_at=now)
             bar.update(1)
             atom = render_atom(essays, built_at=now)
             bar.update(1)
-            jf = render_json(essays, built_at=now)
+            jf = render_json(
+                essays,
+                built_at=now,
+                index_hash=index_hash,
+                index_fingerprint=fingerprint,
+            )
             bar.update(1)
 
         write_feeds(
@@ -305,8 +278,6 @@ def update_cmd(
             rss=rss,
             atom=atom,
             json_feed=jf,
-            essays=essays,
-            index_hash=index_hash,
         )
         if not settings.quiet:
             console.print(
@@ -332,7 +303,7 @@ def check_cmd(
     quiet: Annotated[bool, typer.Option("--quiet", "-q")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
 ) -> None:
-    """Sanity-check feeds under the repo root."""
+    """Sanity-check feeds under the repo root via ``verify_feed_artifacts``."""
     settings = _settings(
         repo_root=repo_root,
         min_items=min_items,
@@ -341,26 +312,10 @@ def check_cmd(
     )
     configure_logging(verbose=settings.verbose, quiet=settings.quiet)
     try:
-        paths = feed_paths(settings.repo_root)
-        missing = [p for p in paths.values() if not p.is_file()]
-        if missing:
-            raise FeedError("Missing: " + ", ".join(str(p) for p in missing))
-        rss = paths["rss"].read_text(encoding="utf-8")
-        atom = paths["atom"].read_text(encoding="utf-8")
-        jf = paths["json"].read_text(encoding="utf-8")
-        if "<rss" not in rss or "<item>" not in rss:
-            raise FeedError("rss.xml does not look like RSS")
-        if "<feed" not in atom or "<entry" not in atom:
-            raise FeedError("atom.xml does not look like Atom")
-        if '"version"' not in jf or '"items"' not in jf:
-            raise FeedError("feed.json does not look like JSON Feed")
-        count = _assert_feed_count_parity(
-            rss_count=rss.count("<item>"),
-            atom_count=atom.count("<entry"),
-            json_count=_json_item_count(jf),
-            min_items=settings.min_items,
-        )
+        verify_feed_artifacts(settings.repo_root, min_items=settings.min_items)
         if not settings.quiet:
+            payload = json.loads(feed_paths(settings.repo_root)["json"].read_text(encoding="utf-8"))
+            count = len(payload["items"])
             console.print(
                 f"[green]VALID[/green] {count} items in [bold]{settings.repo_root / 'feeds'}[/bold]"
             )
