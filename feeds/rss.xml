@@ -5,7 +5,7 @@
     <link>https://paulgraham.com/articles.html</link>
     <description>Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.</description>
     <language>en-US</language>
-    <lastBuildDate>Fri, 17 Jul 2026 09:07:38 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 17 Jul 2026 22:30:18 GMT</lastBuildDate>
     <category>Essays</category>
     <generator>pg-essay-feeds/0.1.0</generator>
     <docs>https://www.rssboard.org/rss-specification</docs>
@@ -17,7 +17,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/earn.html</guid>
-      <pubDate>Mon, 01 Jun 2026 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Convert Between Wealth and Income Tax</title>
@@ -26,7 +25,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/winc.html</guid>
-      <pubDate>Fri, 01 May 2026 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Brand Age</title>
@@ -35,7 +33,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/brandage.html</guid>
-      <pubDate>Sun, 01 Mar 2026 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Shape of the Essay Field</title>
@@ -44,7 +41,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/field.html</guid>
-      <pubDate>Sun, 01 Jun 2025 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Good Writing</title>
@@ -53,7 +49,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/goodwriting.html</guid>
-      <pubDate>Thu, 01 May 2025 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What to Do</title>
@@ -62,7 +57,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/do.html</guid>
-      <pubDate>Sat, 01 Mar 2025 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Origins of Wokeness</title>
@@ -71,7 +65,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/woke.html</guid>
-      <pubDate>Wed, 01 Jan 2025 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Writes and Write-Nots</title>
@@ -80,7 +73,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/writes.html</guid>
-      <pubDate>Tue, 01 Oct 2024 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>When To Do What You Love</title>
@@ -89,7 +81,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/when.html</guid>
-      <pubDate>Sun, 01 Sep 2024 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Founder Mode</title>
@@ -98,7 +89,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/foundermode.html</guid>
-      <pubDate>Sun, 01 Sep 2024 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Right Kind of Stubborn</title>
@@ -107,7 +97,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/persistence.html</guid>
-      <pubDate>Mon, 01 Jul 2024 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Reddits</title>
@@ -116,7 +105,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/reddits.html</guid>
-      <pubDate>Fri, 01 Mar 2024 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Start Google</title>
@@ -125,7 +113,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/google.html</guid>
-      <pubDate>Fri, 01 Mar 2024 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Best Essay</title>
@@ -134,7 +121,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/best.html</guid>
-      <pubDate>Fri, 01 Mar 2024 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Superlinear Returns</title>
@@ -143,7 +129,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/superlinear.html</guid>
-      <pubDate>Sun, 01 Oct 2023 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Do Great Work</title>
@@ -152,7 +137,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/greatwork.html</guid>
-      <pubDate>Sat, 01 Jul 2023 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Get New Ideas</title>
@@ -161,7 +145,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/getideas.html</guid>
-      <pubDate>Sun, 01 Jan 2023 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Need to Read</title>
@@ -170,7 +153,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/read.html</guid>
-      <pubDate>Tue, 01 Nov 2022 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What You (Want to)* Want</title>
@@ -179,7 +161,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/want.html</guid>
-      <pubDate>Tue, 01 Nov 2022 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Alien Truth</title>
@@ -188,7 +169,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/alien.html</guid>
-      <pubDate>Sat, 01 Oct 2022 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What I've Learned from Users</title>
@@ -197,7 +177,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/users.html</guid>
-      <pubDate>Thu, 01 Sep 2022 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Heresy</title>
@@ -206,7 +185,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/heresy.html</guid>
-      <pubDate>Fri, 01 Apr 2022 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Putting Ideas into Words</title>
@@ -215,7 +193,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/words.html</guid>
-      <pubDate>Tue, 01 Feb 2022 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Is There Such a Thing as Good Taste?</title>
@@ -224,7 +201,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/goodtaste.html</guid>
-      <pubDate>Mon, 01 Nov 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Beyond Smart</title>
@@ -233,7 +209,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/smart.html</guid>
-      <pubDate>Fri, 01 Oct 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Weird Languages</title>
@@ -242,7 +217,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/weird.html</guid>
-      <pubDate>Sun, 01 Aug 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Work Hard</title>
@@ -251,7 +225,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/hwh.html</guid>
-      <pubDate>Tue, 01 Jun 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>A Project of One's Own</title>
@@ -260,7 +233,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/own.html</guid>
-      <pubDate>Tue, 01 Jun 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Fierce Nerds</title>
@@ -269,7 +241,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/fn.html</guid>
-      <pubDate>Sat, 01 May 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Crazy New Ideas</title>
@@ -278,7 +249,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/newideas.html</guid>
-      <pubDate>Sat, 01 May 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>An NFT That Saves Lives</title>
@@ -287,7 +257,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/nft.html</guid>
-      <pubDate>Sat, 01 May 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Real Reason to End the Death Penalty</title>
@@ -296,7 +265,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/real.html</guid>
-      <pubDate>Thu, 01 Apr 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How People Get Rich Now</title>
@@ -305,7 +273,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/richnow.html</guid>
-      <pubDate>Thu, 01 Apr 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Write Simply</title>
@@ -314,7 +281,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/simply.html</guid>
-      <pubDate>Mon, 01 Mar 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Donate Unrestricted</title>
@@ -323,7 +289,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/donate.html</guid>
-      <pubDate>Mon, 01 Mar 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What I Worked On</title>
@@ -332,7 +297,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/worked.html</guid>
-      <pubDate>Mon, 01 Feb 2021 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Earnestness</title>
@@ -341,7 +305,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/earnest.html</guid>
-      <pubDate>Tue, 01 Dec 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Billionaires Build</title>
@@ -350,7 +313,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ace.html</guid>
-      <pubDate>Tue, 01 Dec 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Airbnbs</title>
@@ -359,7 +321,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/airbnbs.html</guid>
-      <pubDate>Tue, 01 Dec 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Think for Yourself</title>
@@ -368,7 +329,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/think.html</guid>
-      <pubDate>Sun, 01 Nov 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Early Work</title>
@@ -377,7 +337,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/early.html</guid>
-      <pubDate>Thu, 01 Oct 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Modeling a Wealth Tax</title>
@@ -386,7 +345,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/wtax.html</guid>
-      <pubDate>Sat, 01 Aug 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Four Quadrants of Conformism</title>
@@ -395,7 +353,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/conformism.html</guid>
-      <pubDate>Wed, 01 Jul 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Orthodox Privilege</title>
@@ -404,7 +361,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/orth.html</guid>
-      <pubDate>Wed, 01 Jul 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Coronavirus and Credibility</title>
@@ -413,7 +369,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/cred.html</guid>
-      <pubDate>Wed, 01 Apr 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Write Usefully</title>
@@ -422,7 +377,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/useful.html</guid>
-      <pubDate>Sat, 01 Feb 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Being a Noob</title>
@@ -431,7 +385,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/noob.html</guid>
-      <pubDate>Wed, 01 Jan 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Haters</title>
@@ -440,7 +393,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/fh.html</guid>
-      <pubDate>Wed, 01 Jan 2020 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Two Kinds of Moderate</title>
@@ -449,7 +401,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/mod.html</guid>
-      <pubDate>Sun, 01 Dec 2019 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Fashionable Problems</title>
@@ -458,7 +409,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/fp.html</guid>
-      <pubDate>Sun, 01 Dec 2019 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Having Kids</title>
@@ -467,7 +417,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/kids.html</guid>
-      <pubDate>Sun, 01 Dec 2019 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Lesson to Unlearn</title>
@@ -476,7 +425,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/lesson.html</guid>
-      <pubDate>Sun, 01 Dec 2019 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Novelty and Heresy</title>
@@ -485,7 +433,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/nov.html</guid>
-      <pubDate>Fri, 01 Nov 2019 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Bus Ticket Theory of Genius</title>
@@ -494,7 +441,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/genius.html</guid>
-      <pubDate>Fri, 01 Nov 2019 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>General and Surprising</title>
@@ -503,7 +449,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/sun.html</guid>
-      <pubDate>Fri, 01 Sep 2017 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Charisma / Power</title>
@@ -512,7 +457,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/pow.html</guid>
-      <pubDate>Sun, 01 Jan 2017 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Risk of Discovery</title>
@@ -521,7 +465,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/disc.html</guid>
-      <pubDate>Sun, 01 Jan 2017 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Make Pittsburgh a Startup Hub</title>
@@ -530,7 +473,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/pgh.html</guid>
-      <pubDate>Fri, 01 Apr 2016 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Life is Short</title>
@@ -539,7 +481,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/vb.html</guid>
-      <pubDate>Fri, 01 Jan 2016 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Economic Inequality</title>
@@ -548,7 +489,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ineq.html</guid>
-      <pubDate>Fri, 01 Jan 2016 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Refragmentation</title>
@@ -557,7 +497,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/re.html</guid>
-      <pubDate>Fri, 01 Jan 2016 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Jessica Livingston</title>
@@ -566,7 +505,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/jessica.html</guid>
-      <pubDate>Sun, 01 Nov 2015 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>A Way to Detect Bias</title>
@@ -575,7 +513,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/bias.html</guid>
-      <pubDate>Thu, 01 Oct 2015 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Write Like You Talk</title>
@@ -584,7 +521,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/talk.html</guid>
-      <pubDate>Thu, 01 Oct 2015 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Default Alive or Default Dead?</title>
@@ -593,7 +529,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/aord.html</guid>
-      <pubDate>Thu, 01 Oct 2015 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why It's Safe for Founders to Be Nice</title>
@@ -602,7 +537,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/safe.html</guid>
-      <pubDate>Sat, 01 Aug 2015 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Change Your Name</title>
@@ -611,7 +545,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/name.html</guid>
-      <pubDate>Sat, 01 Aug 2015 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What Microsoft Is this the Altair Basic of?</title>
@@ -620,7 +553,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/altair.html</guid>
-      <pubDate>Sun, 01 Feb 2015 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Ronco Principle</title>
@@ -629,7 +561,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ronco.html</guid>
-      <pubDate>Thu, 01 Jan 2015 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What Doesn't Seem Like Work?</title>
@@ -638,7 +569,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/work.html</guid>
-      <pubDate>Thu, 01 Jan 2015 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Don't Talk to Corp Dev</title>
@@ -647,7 +577,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/corpdev.html</guid>
-      <pubDate>Thu, 01 Jan 2015 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Let the Other 95% of Great Programmers In</title>
@@ -656,7 +585,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/95.html</guid>
-      <pubDate>Mon, 01 Dec 2014 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Be an Expert in a Changing World</title>
@@ -665,7 +593,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ecw.html</guid>
-      <pubDate>Mon, 01 Dec 2014 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How You Know</title>
@@ -674,7 +601,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/know.html</guid>
-      <pubDate>Mon, 01 Dec 2014 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Fatal Pinch</title>
@@ -683,7 +609,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/pinch.html</guid>
-      <pubDate>Mon, 01 Dec 2014 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Mean People Fail</title>
@@ -692,7 +617,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/mean.html</guid>
-      <pubDate>Sat, 01 Nov 2014 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Before the Startup</title>
@@ -701,7 +625,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/before.html</guid>
-      <pubDate>Wed, 01 Oct 2014 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Raise Money</title>
@@ -710,7 +633,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/fr.html</guid>
-      <pubDate>Sun, 01 Sep 2013 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Investor Herd Dynamics</title>
@@ -719,7 +641,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/herd.html</guid>
-      <pubDate>Thu, 01 Aug 2013 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Convince Investors</title>
@@ -728,7 +649,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/convince.html</guid>
-      <pubDate>Thu, 01 Aug 2013 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Do Things that Don't Scale</title>
@@ -737,7 +657,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ds.html</guid>
-      <pubDate>Mon, 01 Jul 2013 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Startup Investing Trends</title>
@@ -746,7 +665,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/invtrend.html</guid>
-      <pubDate>Sat, 01 Jun 2013 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Get Startup Ideas</title>
@@ -755,7 +673,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/startupideas.html</guid>
-      <pubDate>Thu, 01 Nov 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Hardware Renaissance</title>
@@ -764,7 +681,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/hw.html</guid>
-      <pubDate>Mon, 01 Oct 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Startup = Growth</title>
@@ -773,7 +689,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/growth.html</guid>
-      <pubDate>Sat, 01 Sep 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Black Swan Farming</title>
@@ -782,7 +697,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/swan.html</guid>
-      <pubDate>Sat, 01 Sep 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Top of My Todo List</title>
@@ -791,7 +705,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/todo.html</guid>
-      <pubDate>Sun, 01 Apr 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Writing and Speaking</title>
@@ -800,7 +713,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/speak.html</guid>
-      <pubDate>Thu, 01 Mar 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How Y Combinator Started</title>
@@ -809,7 +721,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ycstart.html</guid>
-      <pubDate>Thu, 01 Mar 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Defining Property</title>
@@ -818,7 +729,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/property.html</guid>
-      <pubDate>Thu, 01 Mar 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Frighteningly Ambitious Startup Ideas</title>
@@ -827,7 +737,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ambitious.html</guid>
-      <pubDate>Thu, 01 Mar 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>A Word to the Resourceful</title>
@@ -836,7 +745,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/word.html</guid>
-      <pubDate>Sun, 01 Jan 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Schlep Blindness</title>
@@ -845,7 +753,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/schlep.html</guid>
-      <pubDate>Sun, 01 Jan 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Snapshot: Viaweb, June 1998</title>
@@ -854,7 +761,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/vw.html</guid>
-      <pubDate>Sun, 01 Jan 2012 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why Startup Hubs Work</title>
@@ -863,7 +769,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/hubs.html</guid>
-      <pubDate>Sat, 01 Oct 2011 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Patent Pledge</title>
@@ -872,7 +777,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/patentpledge.html</guid>
-      <pubDate>Mon, 01 Aug 2011 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Subject: Airbnb</title>
@@ -881,7 +785,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/airbnb.html</guid>
-      <pubDate>Tue, 01 Mar 2011 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Founder Control</title>
@@ -890,7 +793,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/control.html</guid>
-      <pubDate>Wed, 01 Dec 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Tablets</title>
@@ -899,7 +801,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/tablets.html</guid>
-      <pubDate>Wed, 01 Dec 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What We Look for in Founders</title>
@@ -908,7 +809,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/founders.html</guid>
-      <pubDate>Fri, 01 Oct 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The New Funding Landscape</title>
@@ -917,7 +817,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/superangels.html</guid>
-      <pubDate>Fri, 01 Oct 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Where to See Silicon Valley</title>
@@ -926,7 +825,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/seesv.html</guid>
-      <pubDate>Fri, 01 Oct 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>High Resolution Fundraising</title>
@@ -935,7 +833,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/hiresfund.html</guid>
-      <pubDate>Wed, 01 Sep 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What Happened to Yahoo</title>
@@ -944,7 +841,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/yahoo.html</guid>
-      <pubDate>Sun, 01 Aug 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Future of Startup Funding</title>
@@ -953,7 +849,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/future.html</guid>
-      <pubDate>Sun, 01 Aug 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Acceleration of Addictiveness</title>
@@ -962,7 +857,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/addiction.html</guid>
-      <pubDate>Thu, 01 Jul 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Top Idea in Your Mind</title>
@@ -971,7 +865,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/top.html</guid>
-      <pubDate>Thu, 01 Jul 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Lose Time and Money</title>
@@ -980,7 +873,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/selfindulgence.html</guid>
-      <pubDate>Thu, 01 Jul 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Organic Startup Ideas</title>
@@ -989,7 +881,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/organic.html</guid>
-      <pubDate>Thu, 01 Apr 2010 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Apple's Mistake</title>
@@ -998,7 +889,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/apple.html</guid>
-      <pubDate>Sun, 01 Nov 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What Startups Are Really Like</title>
@@ -1007,7 +897,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/really.html</guid>
-      <pubDate>Thu, 01 Oct 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Persuade xor Discover</title>
@@ -1016,7 +905,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/discover.html</guid>
-      <pubDate>Tue, 01 Sep 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Post-Medium Publishing</title>
@@ -1025,7 +913,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/publishing.html</guid>
-      <pubDate>Tue, 01 Sep 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The List of N Things</title>
@@ -1034,7 +921,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/nthings.html</guid>
-      <pubDate>Tue, 01 Sep 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Anatomy of Determination</title>
@@ -1043,7 +929,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/determination.html</guid>
-      <pubDate>Tue, 01 Sep 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What Kate Saw in Silicon Valley</title>
@@ -1052,7 +937,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/kate.html</guid>
-      <pubDate>Sat, 01 Aug 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Trouble with the Segway</title>
@@ -1061,7 +945,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/segway.html</guid>
-      <pubDate>Wed, 01 Jul 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Ramen Profitable</title>
@@ -1070,7 +953,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ramenprofitable.html</guid>
-      <pubDate>Wed, 01 Jul 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Maker's Schedule, Manager's Schedule</title>
@@ -1079,7 +961,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/makersschedule.html</guid>
-      <pubDate>Wed, 01 Jul 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>A Local Revolution?</title>
@@ -1088,7 +969,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/revolution.html</guid>
-      <pubDate>Wed, 01 Apr 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why Twitter is a Big Deal</title>
@@ -1097,7 +977,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/twitter.html</guid>
-      <pubDate>Wed, 01 Apr 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Founder Visa</title>
@@ -1106,7 +985,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/foundervisa.html</guid>
-      <pubDate>Wed, 01 Apr 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Five Founders</title>
@@ -1115,7 +993,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/5founders.html</guid>
-      <pubDate>Wed, 01 Apr 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Relentlessly Resourceful</title>
@@ -1124,7 +1001,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/relres.html</guid>
-      <pubDate>Sun, 01 Mar 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Be an Angel Investor</title>
@@ -1133,7 +1009,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/angelinvesting.html</guid>
-      <pubDate>Sun, 01 Mar 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why TV Lost</title>
@@ -1142,7 +1017,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/convergence.html</guid>
-      <pubDate>Sun, 01 Mar 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Can You Buy a Silicon Valley? Maybe.</title>
@@ -1151,7 +1025,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/maybe.html</guid>
-      <pubDate>Sun, 01 Feb 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What I've Learned from Hacker News</title>
@@ -1160,7 +1033,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/hackernews.html</guid>
-      <pubDate>Sun, 01 Feb 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Startups in 13 Sentences</title>
@@ -1169,7 +1041,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/13sentences.html</guid>
-      <pubDate>Sun, 01 Feb 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Keep Your Identity Small</title>
@@ -1178,7 +1049,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/identity.html</guid>
-      <pubDate>Sun, 01 Feb 2009 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>After Credentials</title>
@@ -1187,7 +1057,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/credentials.html</guid>
-      <pubDate>Mon, 01 Dec 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Could VC be a Casualty of the Recession?</title>
@@ -1196,7 +1065,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/divergence.html</guid>
-      <pubDate>Mon, 01 Dec 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The High-Res Society</title>
@@ -1205,7 +1073,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/highres.html</guid>
-      <pubDate>Mon, 01 Dec 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Other Half of "Artists Ship"</title>
@@ -1214,7 +1081,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/artistsship.html</guid>
-      <pubDate>Sat, 01 Nov 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why to Start a Startup in a Bad Economy</title>
@@ -1223,7 +1089,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/badeconomy.html</guid>
-      <pubDate>Wed, 01 Oct 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>A Fundraising Survival Guide</title>
@@ -1232,7 +1097,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/fundraising.html</guid>
-      <pubDate>Fri, 01 Aug 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Pooled-Risk Company Management Company</title>
@@ -1241,7 +1105,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/prcmc.html</guid>
-      <pubDate>Tue, 01 Jul 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Cities and Ambition</title>
@@ -1250,7 +1113,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/cities.html</guid>
-      <pubDate>Thu, 01 May 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Disconnecting Distraction</title>
@@ -1267,7 +1129,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/lies.html</guid>
-      <pubDate>Thu, 01 May 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Be Good</title>
@@ -1276,7 +1137,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/good.html</guid>
-      <pubDate>Tue, 01 Apr 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why There Aren't More Googles</title>
@@ -1285,7 +1145,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/googles.html</guid>
-      <pubDate>Tue, 01 Apr 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Some Heroes</title>
@@ -1294,7 +1153,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/heroes.html</guid>
-      <pubDate>Tue, 01 Apr 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Disagree</title>
@@ -1303,7 +1161,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/disagree.html</guid>
-      <pubDate>Sat, 01 Mar 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>You Weren't Meant to Have a Boss</title>
@@ -1312,7 +1169,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/boss.html</guid>
-      <pubDate>Sat, 01 Mar 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>A New Venture Animal</title>
@@ -1321,7 +1177,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ycombinator.html</guid>
-      <pubDate>Sat, 01 Mar 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Trolls</title>
@@ -1330,7 +1185,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/trolls.html</guid>
-      <pubDate>Fri, 01 Feb 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Six Principles for Making New Things</title>
@@ -1339,7 +1193,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/newthings.html</guid>
-      <pubDate>Fri, 01 Feb 2008 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why to Move to a Startup Hub</title>
@@ -1348,7 +1201,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/startuphubs.html</guid>
-      <pubDate>Mon, 01 Oct 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Future of Web Startups</title>
@@ -1357,7 +1209,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/webstartups.html</guid>
-      <pubDate>Mon, 01 Oct 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Do Philosophy</title>
@@ -1366,7 +1217,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/philosophy.html</guid>
-      <pubDate>Sat, 01 Sep 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>News from the Front</title>
@@ -1375,7 +1225,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/colleges.html</guid>
-      <pubDate>Sat, 01 Sep 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How Not to Die</title>
@@ -1384,7 +1233,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/die.html</guid>
-      <pubDate>Wed, 01 Aug 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Holding a Program in One's Head</title>
@@ -1393,7 +1241,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/head.html</guid>
-      <pubDate>Wed, 01 Aug 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Stuff</title>
@@ -1402,7 +1249,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/stuff.html</guid>
-      <pubDate>Sun, 01 Jul 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Equity Equation</title>
@@ -1411,7 +1257,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/equity.html</guid>
-      <pubDate>Sun, 01 Jul 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>An Alternative Theory of Unions</title>
@@ -1420,7 +1265,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/unions.html</guid>
-      <pubDate>Tue, 01 May 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Hacker's Guide to Investors</title>
@@ -1429,7 +1273,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/guidetoinvestors.html</guid>
-      <pubDate>Sun, 01 Apr 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Two Kinds of Judgement</title>
@@ -1438,7 +1281,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/judgement.html</guid>
-      <pubDate>Sun, 01 Apr 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Microsoft is Dead</title>
@@ -1447,7 +1289,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/microsoft.html</guid>
-      <pubDate>Sun, 01 Apr 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why to Not Not Start a Startup</title>
@@ -1456,7 +1297,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/notnot.html</guid>
-      <pubDate>Thu, 01 Mar 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Is It Worth Being Wise?</title>
@@ -1465,7 +1305,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/wisdom.html</guid>
-      <pubDate>Thu, 01 Feb 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Learning from Founders</title>
@@ -1474,7 +1313,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/foundersatwork.html</guid>
-      <pubDate>Mon, 01 Jan 2007 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How Art Can Be Good</title>
@@ -1483,7 +1321,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/goodart.html</guid>
-      <pubDate>Fri, 01 Dec 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The 18 Mistakes That Kill Startups</title>
@@ -1492,7 +1329,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/startupmistakes.html</guid>
-      <pubDate>Sun, 01 Oct 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>A Student's Guide to Startups</title>
@@ -1501,7 +1337,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/mit.html</guid>
-      <pubDate>Sun, 01 Oct 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Present to Investors</title>
@@ -1510,7 +1345,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/investors.html</guid>
-      <pubDate>Tue, 01 Aug 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Copy What You Like</title>
@@ -1519,7 +1353,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/copy.html</guid>
-      <pubDate>Sat, 01 Jul 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Island Test</title>
@@ -1528,7 +1361,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/island.html</guid>
-      <pubDate>Sat, 01 Jul 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Power of the Marginal</title>
@@ -1537,7 +1369,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/marginal.html</guid>
-      <pubDate>Thu, 01 Jun 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why Startups Condense in America</title>
@@ -1546,7 +1377,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/america.html</guid>
-      <pubDate>Mon, 01 May 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Be Silicon Valley</title>
@@ -1555,7 +1385,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/siliconvalley.html</guid>
-      <pubDate>Mon, 01 May 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Hardest Lessons for Startups to Learn</title>
@@ -1564,7 +1393,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/startuplessons.html</guid>
-      <pubDate>Sat, 01 Apr 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>See Randomness</title>
@@ -1573,7 +1401,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/randomness.html</guid>
-      <pubDate>Sat, 01 Apr 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Are Software Patents Evil?</title>
@@ -1582,7 +1409,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/softwarepatents.html</guid>
-      <pubDate>Wed, 01 Mar 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>6,631,372</title>
@@ -1591,7 +1417,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/6631327.html</guid>
-      <pubDate>Wed, 01 Mar 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why YC</title>
@@ -1600,7 +1425,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/whyyc.html</guid>
-      <pubDate>Wed, 01 Mar 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Do What You Love</title>
@@ -1609,7 +1433,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/love.html</guid>
-      <pubDate>Sun, 01 Jan 2006 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Good and Bad Procrastination</title>
@@ -1618,7 +1441,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/procrastination.html</guid>
-      <pubDate>Thu, 01 Dec 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Web 2.0</title>
@@ -1627,7 +1449,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/web20.html</guid>
-      <pubDate>Tue, 01 Nov 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Fund a Startup</title>
@@ -1636,7 +1457,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/startupfunding.html</guid>
-      <pubDate>Tue, 01 Nov 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Venture Capital Squeeze</title>
@@ -1645,7 +1465,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/vcsqueeze.html</guid>
-      <pubDate>Tue, 01 Nov 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Ideas for Startups</title>
@@ -1654,7 +1473,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ideas.html</guid>
-      <pubDate>Sat, 01 Oct 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What I Did this Summer</title>
@@ -1663,7 +1481,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/sfp.html</guid>
-      <pubDate>Sat, 01 Oct 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Inequality and Risk</title>
@@ -1672,7 +1489,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/inequality.html</guid>
-      <pubDate>Mon, 01 Aug 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>After the Ladder</title>
@@ -1681,7 +1497,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ladder.html</guid>
-      <pubDate>Mon, 01 Aug 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What Business Can Learn from Open Source</title>
@@ -1690,7 +1505,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/opensource.html</guid>
-      <pubDate>Mon, 01 Aug 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Hiring is Obsolete</title>
@@ -1699,7 +1513,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/hiring.html</guid>
-      <pubDate>Sun, 01 May 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Submarine</title>
@@ -1708,7 +1521,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/submarine.html</guid>
-      <pubDate>Fri, 01 Apr 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why Smart People Have Bad Ideas</title>
@@ -1717,7 +1529,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/bronze.html</guid>
-      <pubDate>Fri, 01 Apr 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Return of the Mac</title>
@@ -1726,7 +1537,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/mac.html</guid>
-      <pubDate>Tue, 01 Mar 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Writing, Briefly</title>
@@ -1735,7 +1545,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/writing44.html</guid>
-      <pubDate>Tue, 01 Mar 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Undergraduation</title>
@@ -1744,7 +1553,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/college.html</guid>
-      <pubDate>Tue, 01 Mar 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>A Unified Theory of VC Suckage</title>
@@ -1753,7 +1561,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/venturecapital.html</guid>
-      <pubDate>Tue, 01 Mar 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Start a Startup</title>
@@ -1762,7 +1569,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/start.html</guid>
-      <pubDate>Tue, 01 Mar 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What You'll Wish You'd Known</title>
@@ -1771,7 +1577,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/hs.html</guid>
-      <pubDate>Sat, 01 Jan 2005 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Made in USA</title>
@@ -1780,7 +1585,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/usa.html</guid>
-      <pubDate>Mon, 01 Nov 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>It's Charisma, Stupid</title>
@@ -1789,7 +1593,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/charisma.html</guid>
-      <pubDate>Mon, 01 Nov 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Bradley's Ghost</title>
@@ -1798,7 +1601,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/polls.html</guid>
-      <pubDate>Mon, 01 Nov 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>A Version 1.0</title>
@@ -1807,7 +1609,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/laundry.html</guid>
-      <pubDate>Fri, 01 Oct 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What the Bubble Got Right</title>
@@ -1816,7 +1617,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/bubble.html</guid>
-      <pubDate>Wed, 01 Sep 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Age of the Essay</title>
@@ -1825,7 +1625,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/essay.html</guid>
-      <pubDate>Wed, 01 Sep 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Python Paradox</title>
@@ -1834,7 +1633,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/pypar.html</guid>
-      <pubDate>Sun, 01 Aug 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Great Hackers</title>
@@ -1843,7 +1641,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/gh.html</guid>
-      <pubDate>Thu, 01 Jul 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Mind the Gap</title>
@@ -1852,7 +1649,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/gap.html</guid>
-      <pubDate>Sat, 01 May 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>How to Make Wealth</title>
@@ -1861,7 +1657,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/wealth.html</guid>
-      <pubDate>Sat, 01 May 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Word "Hacker"</title>
@@ -1870,7 +1665,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/gba.html</guid>
-      <pubDate>Thu, 01 Apr 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What You Can't Say</title>
@@ -1879,7 +1673,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/say.html</guid>
-      <pubDate>Thu, 01 Jan 2004 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Filters that Fight Back</title>
@@ -1888,7 +1681,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ffb.html</guid>
-      <pubDate>Fri, 01 Aug 2003 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Hackers and Painters</title>
@@ -1897,7 +1689,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/hp.html</guid>
-      <pubDate>Thu, 01 May 2003 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>If Lisp is So Great</title>
@@ -1906,7 +1697,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/iflisp.html</guid>
-      <pubDate>Thu, 01 May 2003 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Hundred-Year Language</title>
@@ -1915,7 +1705,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/hundred.html</guid>
-      <pubDate>Tue, 01 Apr 2003 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why Nerds are Unpopular</title>
@@ -1924,7 +1713,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/nerds.html</guid>
-      <pubDate>Sat, 01 Feb 2003 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Better Bayesian Filtering</title>
@@ -1933,7 +1721,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/better.html</guid>
-      <pubDate>Wed, 01 Jan 2003 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Design and Research</title>
@@ -1942,7 +1729,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/desres.html</guid>
-      <pubDate>Wed, 01 Jan 2003 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>A Plan for Spam</title>
@@ -1951,7 +1737,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/spam.html</guid>
-      <pubDate>Thu, 01 Aug 2002 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Revenge of the Nerds</title>
@@ -1960,7 +1745,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/icad.html</guid>
-      <pubDate>Wed, 01 May 2002 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Succinctness is Power</title>
@@ -1969,7 +1753,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/power.html</guid>
-      <pubDate>Wed, 01 May 2002 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>What Languages Fix</title>
@@ -1986,7 +1769,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/taste.html</guid>
-      <pubDate>Fri, 01 Feb 2002 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Why Arc Isn't Especially Object-Oriented</title>
@@ -2003,7 +1785,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/diff.html</guid>
-      <pubDate>Sat, 01 Dec 2001 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Other Road Ahead</title>
@@ -2012,7 +1793,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/road.html</guid>
-      <pubDate>Sat, 01 Sep 2001 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>The Roots of Lisp</title>
@@ -2021,7 +1801,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/rootsoflisp.html</guid>
-      <pubDate>Tue, 01 May 2001 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Five Questions about Language Design</title>
@@ -2030,7 +1809,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/langdes.html</guid>
-      <pubDate>Tue, 01 May 2001 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Being Popular</title>
@@ -2039,7 +1817,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/popular.html</guid>
-      <pubDate>Tue, 01 May 2001 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Java's Cover</title>
@@ -2048,7 +1825,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/javacover.html</guid>
-      <pubDate>Sun, 01 Apr 2001 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Beating the Averages</title>
@@ -2057,7 +1833,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/avg.html</guid>
-      <pubDate>Sun, 01 Apr 2001 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Lisp for Web-Based Applications</title>
@@ -2098,7 +1873,6 @@
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/prop62.html</guid>
-      <pubDate>Tue, 01 Nov 2016 00:00:00 GMT</pubDate>
     </item>
   </channel>
 </rss>
