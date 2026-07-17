@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from paul_graham_essay_feeds.model import MIN_ITEMS, PROTECTED_PATHS
+
 MARKER = "https://s.turbifycdn.com/aah/paulgraham/the-reddits-2.gif"
 
+# Regular essay rows only; PROTECTED_PATHS chapters are appended separately.
+_DEFAULT_ESSAY_COUNT = MIN_ITEMS - len(PROTECTED_PATHS)
 
-def synthetic_index_html(*, essay_count: int = 231) -> str:
+
+def synthetic_index_html(*, essay_count: int = _DEFAULT_ESSAY_COUNT) -> str:
     """Build minimal essay-row HTML (markers + essays + protected Turbify chapters)."""
     rows: list[str] = []
     for index in range(essay_count):

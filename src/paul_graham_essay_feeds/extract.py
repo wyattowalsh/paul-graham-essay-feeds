@@ -1,86 +1,56 @@
-"""HTML extraction from the official Paul Graham essays index."""
+"""Pull essay links from the official index HTML."""
 
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
-from datetime import datetime
 from html.parser import HTMLParser
-from typing import Any
 from urllib.parse import urlsplit
 
-from paul_graham_essay_feeds.domain import (
-    PROTECTED_EXTERNAL_PATHS,
+from loguru import logger
+from tqdm import tqdm
+
+from paul_graham_essay_feeds.model import (
+    MIN_ITEMS,
+    PROTECTED_PATHS,
     SOURCE_URL,
-    EssayItem,
-    ExtractionResult,
+    Essay,
     FeedError,
     canonicalize_url,
     is_content_candidate,
     make_stable_id,
     normalize_text,
-    utc_now,
 )
-
-__all__ = ["Anchor", "EssayAnchorParser", "extract_items", "validate_extracted_items"]
-
-
-@dataclass(frozen=True, slots=True)
-class Anchor:
-    """Raw visible anchor collected from the source HTML.
-
-    Attributes
-    ----------
-    href :
-        Raw ``href`` attribute text.
-    title :
-        Normalized visible anchor text.
-    marked_as_essay :
-        True when the site essay-row marker image immediately preceded this link.
-    """
-
-    href: str
-    title: str
-    marked_as_essay: bool
+from paul_graham_essay_feeds.validate import validate_essays_structural
 
 
-class EssayAnchorParser(HTMLParser):
-    """Collect visible anchors and recognize the site's essay-row marker image."""
+class _Parser(HTMLParser):
+    """Collect anchors; flag those right after the site's essay-row gif."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
-        self.anchors: list[Anchor] = []
+        self.anchors: list[tuple[str, str, bool]] = []
         self._href: str | None = None
         self._parts: list[str] = []
-        self._current_marked = False
-        self._pending_essay_marker = False
+        self._marked = False
+        self._pending = False
 
-    def handle_starttag(
-        self,
-        tag: str,
-        attrs: list[tuple[str, str | None]],
-    ) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         tag = tag.lower()
-        attr_map = {key.lower(): value for key, value in attrs}
-
+        amap = {k.lower(): v for k, v in attrs}
         if tag == "img":
-            src = attr_map.get("src") or ""
+            src = amap.get("src") or ""
             if urlsplit(src).path.endswith("/the-reddits-2.gif"):
-                self._pending_essay_marker = True
+                self._pending = True
             return
-
         if tag != "a":
             return
-
-        href = attr_map.get("href")
+        href = amap.get("href")
         if href is None:
             return
-
         self._href = href.strip()
         self._parts = []
-        self._current_marked = self._pending_essay_marker
-        self._pending_essay_marker = False
+        self._marked = self._pending
+        self._pending = False
 
     def handle_data(self, data: str) -> None:
         if self._href is not None:
@@ -89,163 +59,82 @@ class EssayAnchorParser(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if tag.lower() != "a" or self._href is None:
             return
-
         title = normalize_text("".join(self._parts))
-        self.anchors.append(
-            Anchor(
-                href=self._href,
-                title=title,
-                marked_as_essay=self._current_marked,
-            )
-        )
+        self.anchors.append((self._href, title, self._marked))
         self._href = None
         self._parts = []
-        self._current_marked = False
+        self._marked = False
 
 
-def _anchors_to_items(
-    anchors: Iterable[Anchor],
+def _to_essays(
+    rows: list[tuple[str, str, bool]],
     *,
     base_url: str,
-    observed_at: datetime,
-    deduplicate_by_last_occurrence: bool,
-) -> tuple[list[EssayItem], int]:
-    rows: list[tuple[str, str, str, bool]] = []
-    for anchor in anchors:
-        if not anchor.title:
+    dedupe_last: bool,
+) -> list[Essay]:
+    built: list[tuple[str, str, str, bool]] = []
+    for href, title, _marked in tqdm(rows, desc="Parse anchors", unit="a", disable=len(rows) < 50):
+        if not title:
             continue
         try:
-            url = canonicalize_url(base_url, anchor.href)
+            url = canonicalize_url(base_url, href)
         except FeedError:
             continue
-        if not is_content_candidate(url, anchor.title):
+        if not is_content_candidate(url, title):
             continue
-        stable_id, is_permalink = make_stable_id(url)
-        rows.append((anchor.title, url, stable_id, is_permalink))
+        sid, perm = make_stable_id(url)
+        built.append((title, url, sid, perm))
 
-    duplicate_count = 0
-    if deduplicate_by_last_occurrence:
-        last_index = {stable_id: index for index, (*_, stable_id, _) in enumerate(rows)}
-        duplicate_count = len(rows) - len(last_index)
-        rows = [row for index, row in enumerate(rows) if last_index[row[2]] == index]
+    if dedupe_last:
+        last = {sid: i for i, (*_, sid, _) in enumerate(built)}
+        built = [row for i, row in enumerate(built) if last[row[2]] == i]
 
-    items = [
-        EssayItem(
-            position=index,
-            title=title,
-            url=url,
-            stable_id=stable_id,
-            is_permalink=is_permalink,
-            first_seen_at=observed_at,
-            last_changed_at=observed_at,
-        )
-        for index, (title, url, stable_id, is_permalink) in enumerate(rows, start=1)
+    return [
+        Essay(position=i, title=t, url=u, stable_id=s, is_permalink=p)
+        for i, (t, u, s, p) in enumerate(built, start=1)
     ]
-    return items, duplicate_count
 
 
-def validate_extracted_items(
-    items: Sequence[EssayItem],
-    *,
-    min_items: int,
-    require_protected_external: bool,
-) -> None:
-    """Raise :class:`FeedError` when extracted items violate safety invariants."""
-    if len(items) < min_items:
-        raise FeedError(f"Extracted {len(items)} items, below the safety floor of {min_items}.")
-
-    identities = [item.identity for item in items]
-    duplicates = sorted(identity for identity, count in Counter(identities).items() if count > 1)
-    if duplicates:
-        raise FeedError(f"Duplicate stable item identities: {duplicates}")
-
-    links = [item.url for item in items]
-    duplicate_links = sorted(link for link, count in Counter(links).items() if count > 1)
-    if duplicate_links:
-        raise FeedError(f"Duplicate item links: {duplicate_links}")
-
-    for item in items:
-        if not item.title or item.title != normalize_text(item.title):
-            raise FeedError(f"Unnormalized or empty title at position {item.position}.")
-        parts = urlsplit(item.url)
-        if parts.scheme != "https":
-            raise FeedError(f"Non-canonical item URL: {item.url}")
-        if "paulgraham.com/https://" in item.url:
-            raise FeedError(f"Malformed doubly-prefixed item URL: {item.url}")
-        if item.is_permalink and item.stable_id != item.url:
-            raise FeedError(f"Permalink stable_id does not equal item link: {item.url}")
-
-    external_paths = {
-        urlsplit(item.url).path
-        for item in items
-        if urlsplit(item.url).hostname == "sep.turbifycdn.com"
-    }
-    missing_external = sorted(PROTECTED_EXTERNAL_PATHS - external_paths)
-    if require_protected_external and missing_external:
-        raise FeedError(
-            "The protected ANSI Common Lisp chapter links are missing: "
-            + ", ".join(missing_external)
-        )
-
-
-def extract_items(
-    source_html: str,
+def extract_essays(
+    html: str,
     *,
     base_url: str = SOURCE_URL,
-    min_items: int,
-    require_protected_external: bool = True,
-    observed_at: datetime | None = None,
-) -> ExtractionResult:
-    """Extract and normalize essay items from source HTML.
-
-    Uses the site's essay-row marker as the primary signal, with a controlled
-    filtered-anchor fallback when the marked count falls below ``min_items``.
-    """
-    when = observed_at or utc_now()
-    parser = EssayAnchorParser()
-    parser.feed(source_html)
+    min_items: int = MIN_ITEMS,
+) -> list[Essay]:
+    """Return newest→oldest essays; raise if too few or ACL chapters missing."""
+    parser = _Parser()
+    parser.feed(html)
     parser.close()
+    logger.debug("Parsed {} anchors", len(parser.anchors))
 
-    marked = [anchor for anchor in parser.anchors if anchor.marked_as_essay]
-    marked_items, marked_duplicates = _anchors_to_items(
-        marked,
-        base_url=base_url,
-        observed_at=when,
-        deduplicate_by_last_occurrence=False,
-    )
-
-    if len(marked_items) >= min_items:
-        items = marked_items
-        mode = "essay-row-marker"
-        duplicate_count = marked_duplicates
-    else:
-        items, duplicate_count = _anchors_to_items(
-            parser.anchors,
-            base_url=base_url,
-            observed_at=when,
-            deduplicate_by_last_occurrence=True,
+    marked = [(h, t, m) for h, t, m in parser.anchors if m]
+    essays = _to_essays(marked, base_url=base_url, dedupe_last=False)
+    mode = "essay-row-marker"
+    if len(essays) < min_items:
+        logger.warning(
+            "Marked rows only yielded {}; falling back to filtered anchors",
+            len(essays),
         )
+        essays = _to_essays(parser.anchors, base_url=base_url, dedupe_last=True)
         mode = "filtered-anchor-fallback"
 
-    validate_extracted_items(
-        items,
-        min_items=min_items,
-        require_protected_external=require_protected_external,
-    )
-    return ExtractionResult(
-        items=tuple(items),
-        mode=mode,
-        anchor_count=len(parser.anchors),
-        marked_anchor_count=len(marked),
-        duplicate_count=duplicate_count,
-    )
+    if len(essays) < min_items:
+        raise FeedError(f"Only {len(essays)} essays (need ≥ {min_items})")
 
+    ids = [e.stable_id for e in essays]
+    dups = [i for i, c in Counter(ids).items() if c > 1]
+    if dups:
+        raise FeedError(f"Duplicate ids: {dups[:5]}")
 
-def extraction_meta_dict(result: ExtractionResult) -> dict[str, Any]:
-    """Serialize extraction metadata for reports."""
-    return {
-        "mode": result.mode,
-        "anchor_count": result.anchor_count,
-        "marked_anchor_count": result.marked_anchor_count,
-        "duplicate_count": result.duplicate_count,
+    paths = {
+        urlsplit(e.url).path
+        for e in essays
+        if (urlsplit(e.url).hostname or "") == "sep.turbifycdn.com"
     }
+    missing = sorted(PROTECTED_PATHS - paths)
+    if missing:
+        raise FeedError(f"Missing protected ACL chapters: {', '.join(missing)}")
+
+    validate_essays_structural(essays)
+    logger.info("Extracted {} essays ({})", len(essays), mode)
+    return essays

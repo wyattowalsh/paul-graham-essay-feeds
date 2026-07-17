@@ -1,13 +1,22 @@
 [project]
 name = "paul-graham-essay-feeds"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Unofficial multi-format metadata feeds for Paul Graham's essays"
 readme = "README.md"
 requires-python = ">=3.13"
 license = { text = "MIT" }
 authors = [{ name = "Wyatt" }]
-keywords = ["paul-graham", "essays", "rss", "atom", "json-feed", "opml", "syndication"]
-dependencies = []
+keywords = ["paul-graham", "essays", "rss", "atom", "json-feed", "syndication"]
+dependencies = [
+    "httpx>=0.28.1",
+    "loguru>=0.7.3",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.2",
+    "rich>=15.0.0",
+    "tenacity>=9.1.4",
+    "tqdm>=4.68.4",
+    "typer>=0.27.0",
+]
 
 [project.scripts]
 pg-essay-feeds = "paul_graham_essay_feeds.cli:main"
@@ -22,29 +31,58 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-  "pytest>=8",
-  "ruff>=0.12",
-  "ty>=0.0.1a1",
+  "pytest>=9.1.1",
+  "pytest-cov>=7.1.0",
+  "respx>=0.23.1",
+  "ruff>=0.15.22",
+  "ty>=0.0.60",
 ]
 
 [tool.uv]
 package = true
 
+[tool.hatch.version]
+path = "src/paul_graham_essay_feeds/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/paul_graham_essay_feeds"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --strict-markers -m 'not integration'"
+# Default: offline unit + integration + e2e + smoke. Opt in: pytest -m live
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "-m",
+  "not live",
+  "--cov=paul_graham_essay_feeds",
+  "--cov-report=term-missing",
+  "--cov-fail-under=90",
+]
 testpaths = ["tests"]
 markers = [
-  "integration: live network tests (disabled by default)",
+  "unit: pure unit tests for one module",
+  "integration: multi-module or local HTTP server (no public network)",
+  "e2e: full CLI path offline",
+  "smoke: subprocess / entrypoint smoke",
+  "live: hits paulgraham.com (opt-in only)",
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["paul_graham_essay_feeds"]
+
+[tool.coverage.report]
+precision = 1
+show_missing = true
+skip_empty = true
+fail_under = 90
 
 [tool.ruff]
 target-version = "py313"
 line-length = 100
+# Notebook cells re-import stdlib on purpose; skip lint/format noise on notebook.ipynb
+extend-exclude = ["notebook.ipynb"]
 src = ["src", "tests"]
-extend-exclude = ["colab.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
@@ -57,5 +95,6 @@ line-ending = "lf"
 [tool.ty.environment]
 python-version = "3.13"
 
+# Notebook cells re-import / use Colab; skip type-check noise (mirrors ruff exclude).
 [tool.ty.src]
-exclude = ["colab.ipynb"]
+exclude = ["notebook.ipynb"]
