@@ -11,10 +11,6 @@ from paul_graham_essay_feeds.model import ALLOWED_HOSTS, FeedError
 
 
 @pytest.mark.characterization
-@pytest.mark.xfail(
-    strict=True,
-    reason="F-016: HEAD still shares GET body-size rejection path in hop_safe_request",
-)
 @respx.mock
 def test_head_with_large_content_length_is_allowed() -> None:
     """HEAD advertising a large representation must not raise solely on Content-Length."""

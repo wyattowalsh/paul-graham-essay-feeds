@@ -119,27 +119,23 @@ def test_live_probe_max_bytes_on_get_fallback() -> None:
 
 
 @respx.mock
-def test_live_probe_head_content_length_over_max_bytes() -> None:
-    """HEAD Content-Length over max_bytes fails closed (same budget as GET)."""
+def test_live_probe_head_content_length_over_max_bytes_allowed() -> None:
+    """F-016: HEAD Content-Length over max_bytes is allowed (no body budget)."""
     respx.head("https://paulgraham.com/a.html").mock(
         return_value=httpx.Response(
             200,
-            content=b"tiny",
+            content=b"",
             headers={"Content-Length": "99999"},
         )
     )
-    with pytest.raises(FeedError, match="link probe"):
-        validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
+    validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
 
 
 @respx.mock
-def test_live_probe_head_body_over_max_bytes() -> None:
-    """HEAD response body over max_bytes fails closed."""
-    respx.head("https://paulgraham.com/a.html").mock(
-        return_value=httpx.Response(200, content=b"x" * 200)
-    )
-    with pytest.raises(FeedError, match="link probe"):
-        validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
+def test_live_probe_head_empty_body_ok() -> None:
+    """HEAD with empty entity body succeeds under a small max_bytes budget."""
+    respx.head("https://paulgraham.com/a.html").mock(return_value=httpx.Response(200, content=b""))
+    validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
 
 
 @respx.mock

@@ -13,10 +13,9 @@ static hosted endpoints.
 
 | Doc | Audience |
 | :--- | :--- |
-| [README.md](./README.md) | Users (Colab hero CTA + local CLI + hosted feeds) |
+| [README.md](./README.md) | Users (Colab + local CLI + hosted feeds) |
 | [DOCS.md](./DOCS.md) | Developers |
 | [docs/adr/](./docs/adr/) | Architecture decision records |
-| [audit/](./audit/) | Program evidence, baseline, execution ledger |
 | [notebook.ipynb](./notebook.ipynb) | Colab / Jupyter — pin immutable ref |
 
 ---
@@ -24,19 +23,17 @@ static hosted endpoints.
 ## Target architecture
 
 ```text
-raw fetch evidence → decode → discovery+diagnostics → catalog reconcile
-  → refresh plan → prior-good enrich → FeedSnapshot
-  → RSS/Atom/JSON → deep verify → immutable generation+manifest
-  → atomic current pointer → post-verify → optional site/
+raw fetch → decode → discovery → catalog reconcile → refresh plan
+  → prior-good enrich → FeedSnapshot → RSS/Atom/JSON
+  → deep verify → immutable generation + manifest
+  → atomic current pointer → optional site/
 ```
-
-Canonical state (semantics fixed; exact paths per ADR-005):
 
 ```text
 state/generations/<id>/{catalog.json,feeds/*,reports/*,manifest.json}
 state/current.json
-feeds/*            # compatibility projections during migration
-site/*             # Pages artifact rebuilt from validated current
+feeds/*   # migration projections only
+site/*    # Pages artifact from validated current
 ```
 
 ---
@@ -45,11 +42,11 @@ site/*             # Pages artifact rebuilt from validated current
 
 | Area | Responsibility |
 | :--- | :--- |
-| Domain modules under `src/paul_graham_essay_feeds/` | fetch, decode, discovery, catalog, enrich, render, verify, publish, CLI |
-| `docs/adr/` | Normative contracts (feed, catalog, time, HTTP, publication, CLI, governance, CI) |
-| `schemas/` | JSON Schemas for catalog, feed snapshot, manifest |
-| `tests/` | unit / integration / e2e / smoke / live / characterization / property / fault |
-| `audit/` | baseline evidence + execution ledger (no secrets) |
+| `src/paul_graham_essay_feeds/` | Domain package (transport, decode, discovery, catalog models, enrich, render, verify, publish, CLI) |
+| `docs/adr/` | Normative ADRs |
+| `tests/` | unit / integration / e2e / smoke / live / characterization |
+
+**Schema SSOT:** Pydantic models (e.g. `catalog_models.py`). No parallel JSON Schema tree.
 
 ---
 
@@ -57,33 +54,25 @@ site/*             # Pages artifact rebuilt from validated current
 
 | Area | Rule |
 | :--- | :--- |
-| Runtime | Python **3.12+** (3.12 / 3.13 / 3.14) + `uv` |
-| Deps | typer, httpx, pydantic, pydantic-settings, tqdm, loguru, rich, tenacity |
-| Tests | Default offline (`-m 'not live'`); coverage fail-under 90%; relative invariants only |
-| Feed body | **No full essay bodies**; short source-derived summary only |
-| HTTP | httpx `trust_env=False`; hop-safe host allowlist; redirect close without body; raw-byte caps; HEAD ≠ body budget |
-| Dates | month+year → `published_hint` only; never invent day-1 `published_at`; no 1970 semantic sentinel for Atom `updated` |
-| State | Schema-versioned durable **catalog** is SSOT; feeds are projections |
-| Publish | Verify in memory → immutable generation + manifest → **one** atomic current pointer |
-| Determinism | Identical logical state → byte-identical canonical artifacts |
-| Hosting | Optional public base URL; Atom/RSS self links + JSON `feed_url` when configured |
-| CLI | Flags override Settings only when explicitly passed; quiet success → **zero** bytes |
-| CI | Full-SHA action pins; least privilege; network jobs never hold write tokens; **zero** workflow warnings |
-| Models | Every Field has a description; strict validation; aware UTC |
+| Runtime | Python **3.12+** + `uv` |
+| Tests | Offline default (`-m 'not live'`); coverage ≥90%; relative invariants only |
+| Feed body | No full essay bodies; short source-derived summary only |
+| HTTP | `trust_env=False`; hop-safe allowlist; HEAD ≠ body budget; raw-byte caps |
+| Dates | month+year → `published_hint` only; no invented day-1 dates; no 1970 Atom sentinel |
+| State | Durable **catalog** is SSOT; feeds are projections |
+| Publish | Verify in memory → generation + manifest → one atomic current pointer |
+| CLI | Flags override Settings only when explicit; quiet success → zero bytes |
+| Models | Every Field has a description; `extra="forbid"` where durable; aware UTC |
 
-### Authorized (this program)
+### Authorized
 
-- Schema-versioned durable catalog (not flat `data/essays.json` SSOT)
+- Schema-versioned durable catalog (not flat `data/essays.json`)
 - Generation-scoped deterministic manifest + single-pointer publication
-- Minimal static hosted surface (`site/`) + configurable public base URL
+- Minimal static host (`site/`) + configurable public base URL
 
-### Still forbidden
+### Forbidden
 
-- OPML
-- Full essay body persistence or republication
-- Invented publication dates
-- Browser automation / LLM summaries by default
-- Service/queue split without measured need
+- OPML · full essay bodies · invented publication dates · LLM summaries by default
 
 ---
 
@@ -99,4 +88,4 @@ uv run pg-essay-feeds check --quiet
 uv build --no-sources
 ```
 
-Prefer `just all` / `just ci-local` when available. See [DOCS.md](./DOCS.md) and ADRs.
+Prefer `just all` / `just ci-local`. See [DOCS.md](./DOCS.md) and ADRs.

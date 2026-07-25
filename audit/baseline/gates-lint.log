@@ -1,9 +1,0 @@
-=== ruff format ===
-34 files already formatted
-EXIT:0
-=== ruff check ===
-[1;32mAll checks passed![0m
-EXIT:0
-=== ty check ===
-All checks passed!
-EXIT:0

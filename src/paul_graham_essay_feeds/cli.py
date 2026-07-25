@@ -27,11 +27,11 @@ from paul_graham_essay_feeds.feeds import (
     render_json,
     render_rss,
     verify_feed_artifacts,
-    write_feeds,
 )
 from paul_graham_essay_feeds.fetch import decode_html, fetch_html
 from paul_graham_essay_feeds.model import Essay, FeedError, content_sha256, utc_now
 from paul_graham_essay_feeds.presentation import OutputPolicy, ProgressReporter
+from paul_graham_essay_feeds.publication import publish_feed_bundle
 from paul_graham_essay_feeds.settings import Settings
 from paul_graham_essay_feeds.validate import validate_essays_live
 
@@ -292,11 +292,13 @@ def update_cmd(
             rendered[name] = fn()
         rss, atom, jf = rendered["rss"], rendered["atom"], rendered["json"]
 
-        write_feeds(
+        # F-008: deep-verify in memory before any on-disk replace (ADR-005).
+        publish_feed_bundle(
             settings.repo_root,
             rss=rss,
             atom=atom,
             json_feed=jf,
+            min_items=settings.min_items,
             reporter=reporter,
         )
         if not settings.quiet:

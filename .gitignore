@@ -23,3 +23,7 @@ articles.html
 **/.staging-*/
 .publish-staging-*/
 **/.publish-staging-*/
+
+# Local program evidence / agent ledgers (not source of truth)
+/audit/
+

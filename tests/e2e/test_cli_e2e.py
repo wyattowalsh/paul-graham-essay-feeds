@@ -185,7 +185,7 @@ def test_cli_update_oserror_exits_1(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "paul_graham_essay_feeds.cli.write_feeds",
+        "paul_graham_essay_feeds.cli.publish_feed_bundle",
         MagicMock(side_effect=OSError("disk full")),
     )
     result = runner.invoke(

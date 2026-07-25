@@ -14,10 +14,10 @@ from tenacity import (
     Retrying,
     retry_if_exception,
     stop_after_attempt,
-    wait_exponential_jitter,
 )
 
 from paul_graham_essay_feeds.model import MAX_BYTES, SOURCE_URL, FeedError, user_agent
+from paul_graham_essay_feeds.retry_policy import wait_full_jitter
 
 _LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1"})
 _USER_AGENT = user_agent()
@@ -128,10 +128,15 @@ def hop_safe_request(
     current = url
     response: httpx.Response | None = None
     method_u = method.upper()
+    # F-016 / ADR-004: HEAD must not treat representation Content-Length as a
+    # downloaded-body budget. Only GET (and other body-bearing methods) apply
+    # the transfer cap.
+    apply_body_budget = max_bytes is not None and method_u != "HEAD"
+    budget = max_bytes if apply_body_budget else None
     for _hop in range(max_hops):
         _assert_hop_allowed(current, allowed_hosts, allow_loopback=allow_loopback)
         logger.debug("{} {}", method_u, current)
-        if max_bytes is None:
+        if budget is None:
             # Stream so redirect responses can be closed without buffering a body.
             req = client.build_request(method_u, current)
             # Force no auto-follow even if the Client was constructed with
@@ -168,7 +173,8 @@ def hop_safe_request(
                         raise FeedError(f"Redirect without Location from {current}")
                     current = str(httpx.URL(current).join(location))
                     continue
-                body = _read_body_capped(response, max_bytes=max_bytes)
+                assert budget is not None
+                body = _read_body_capped(response, max_bytes=budget)
                 # Body is already decoded by iter_bytes; drop encoding headers so
                 # a rebuilt Response does not try to decompress again.
                 headers = httpx.Headers(response.headers)
@@ -193,8 +199,8 @@ def hop_safe_request(
 
     assert response is not None
     _assert_hop_allowed(str(response.url), allowed_hosts, allow_loopback=allow_loopback)
-    if max_bytes is not None and len(response.content) > max_bytes:
-        raise FeedError(f"Response over {max_bytes} bytes")
+    if apply_body_budget and budget is not None and len(response.content) > budget:
+        raise FeedError(f"Response over {budget} bytes")
     return response
 
 
@@ -293,11 +299,11 @@ def _before_sleep(retry_state: RetryCallState) -> None:
 
 
 def retrying(*, attempts: int, reraise: bool = True) -> Retrying:
-    """Build a Retrying controller: exponential backoff + full jitter."""
+    """Build a Retrying controller: exponential backoff + **true** full jitter."""
     n = max(1, attempts)
     return Retrying(
         stop=stop_after_attempt(n),
-        wait=wait_exponential_jitter(initial=0.4, max=8.0, exp_base=2, jitter=0.5),
+        wait=wait_full_jitter(initial=0.4, max=8.0, exp_base=2),
         retry=retry_if_exception(is_retryable_exception),
         before_sleep=_before_sleep,
         reraise=reraise,

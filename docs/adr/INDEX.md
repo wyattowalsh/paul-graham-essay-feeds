@@ -3,7 +3,7 @@
 | ADR | Title | Status |
 | :--- | :--- | :--- |
 | [ADR-001](./ADR-001-feed-contract.md) | Feed contract (RSS/Atom/JSON) | Accepted |
-| [ADR-002](./ADR-002-catalog.md) | Catalog schema, lifecycle, migrations | Accepted |
+| [ADR-002](./ADR-002-catalog.md) | Catalog schema (Pydantic SSOT), lifecycle, migrations | Accepted |
 | [ADR-003](./ADR-003-time-and-identity.md) | Timestamp and identity semantics | Accepted |
 | [ADR-004](./ADR-004-http-policy.md) | Transport, cache, encoding, retry, politeness | Accepted |
 | [ADR-005](./ADR-005-publication.md) | Publication, generations, hosting | Accepted |

@@ -8,6 +8,11 @@
 
 Use a **schema-versioned JSON catalog** as the durable source of truth (not `data/essays.json` flat legacy, not feed-embedded skip meta).
 
+### Schema SSOT
+
+**Pydantic models in `catalog_models.py`** (and related modules) are the contract.
+There is no separate `schemas/*.json` tree to keep in sync.
+
 ### Models (logical)
 
 - `Catalog`, `CatalogEntry`, `ResourceState`/`FetchState`, `EnrichmentState`
