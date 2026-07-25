@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wyattowalsh/paul-graham-essay-feeds/schemas/catalog.schema.json",
+  "title": "PaulGrahamEssayCatalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "entries",
+    "entry_order",
+    "index",
+    "versions",
+    "material_config_fingerprint"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "material_config_fingerprint": { "type": "string", "minLength": 1 },
+    "versions": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "index": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "entry_order": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "entries": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stable_id", "url", "title", "position", "lifecycle"],
+        "properties": {
+          "stable_id": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri" },
+          "title": { "type": "string", "minLength": 1 },
+          "position": { "type": "integer", "minimum": 0 },
+          "lifecycle": {
+            "type": "string",
+            "enum": ["active", "missing_candidate", "tombstoned"]
+          },
+          "first_seen_at": { "type": "string", "format": "date-time" },
+          "last_seen_at": { "type": "string", "format": "date-time" },
+          "last_checked_at": { "type": "string", "format": "date-time" },
+          "observed_updated_at": { "type": "string", "format": "date-time" },
+          "published_at": { "type": ["string", "null"], "format": "date-time" },
+          "published_hint": { "type": ["string", "null"] },
+          "summary": { "type": ["string", "null"] },
+          "summary_source": { "type": ["string", "null"] },
+          "summary_quality": { "type": ["number", "null"] },
+          "prior_good_summary": { "type": ["string", "null"] },
+          "page_etag": { "type": ["string", "null"] },
+          "page_last_modified": { "type": ["string", "null"] },
+          "raw_sha256": { "type": ["string", "null"] },
+          "decoded_sha256": { "type": ["string", "null"] },
+          "selected_encoding": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "last_generation_id": { "type": ["string", "null"] },
+    "migration_history": {
+      "type": "array",
+      "items": { "type": "object" }
+    }
+  }
+}

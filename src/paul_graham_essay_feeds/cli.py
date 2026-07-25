@@ -9,11 +9,15 @@ from typing import Annotated
 
 import typer
 from loguru import logger
+from pydantic import ValidationError
 from rich.console import Console
 from rich.logging import RichHandler
-from tqdm import tqdm
 
 from paul_graham_essay_feeds.enrich import enrich_essays
+from paul_graham_essay_feeds.errors import (
+    ExitCode,
+    format_validation_error,
+)
 from paul_graham_essay_feeds.extract import extract_essays
 from paul_graham_essay_feeds.feeds import (
     feed_paths,
@@ -27,6 +31,7 @@ from paul_graham_essay_feeds.feeds import (
 )
 from paul_graham_essay_feeds.fetch import decode_html, fetch_html
 from paul_graham_essay_feeds.model import Essay, FeedError, content_sha256, utc_now
+from paul_graham_essay_feeds.presentation import OutputPolicy, ProgressReporter
 from paul_graham_essay_feeds.settings import Settings
 from paul_graham_essay_feeds.validate import validate_essays_live
 
@@ -88,30 +93,35 @@ def _settings(
     force: bool | None = None,
 ) -> Settings:
     """Merge CLI overrides onto pydantic-settings (COMMANDLINE > env/.env > defaults)."""
-    base = Settings()
-    data = base.model_dump()
-    if repo_root is not None:
-        data["repo_root"] = repo_root.expanduser().resolve()
-    if min_items is not None:
-        data["min_items"] = min_items
-    if timeout is not None:
-        data["timeout"] = timeout
-    if retries is not None:
-        data["retries"] = retries
-    if validate_links is not None:
-        data["validate_links"] = validate_links
-    if enrich is not None:
-        data["enrich"] = enrich
-    if force is not None:
-        data["force"] = force
-    if quiet is not None:
-        data["quiet"] = quiet
-    if verbose is not None:
-        data["verbose"] = verbose
-    # Prefer quiet when both end up true (CLI quiet wins over verbose).
-    if data.get("quiet") and data.get("verbose"):
-        data["verbose"] = False
-    return Settings.model_validate(data)
+    try:
+        base = Settings()
+        data = base.model_dump()
+        if repo_root is not None:
+            data["repo_root"] = repo_root.expanduser().resolve()
+        if min_items is not None:
+            data["min_items"] = min_items
+        if timeout is not None:
+            data["timeout"] = timeout
+        if retries is not None:
+            data["retries"] = retries
+        if validate_links is not None:
+            data["validate_links"] = validate_links
+        if enrich is not None:
+            data["enrich"] = enrich
+        if force is not None:
+            data["force"] = force
+        if quiet is not None:
+            data["quiet"] = quiet
+        if verbose is not None:
+            data["verbose"] = verbose
+        # Prefer quiet when both end up true (CLI quiet wins over verbose).
+        if data.get("quiet") and data.get("verbose"):
+            data["verbose"] = False
+        return Settings.model_validate(data)
+    except ValidationError as exc:
+        # Concise expected-config failure (no traceback) — F-014 / ADR-006.
+        print(format_validation_error(exc), file=sys.stderr)
+        raise typer.Exit(code=int(ExitCode.USAGE)) from None
 
 
 def _index_fingerprint(essays: list[Essay]) -> str:
@@ -256,28 +266,38 @@ def update_cmd(
                 retries=settings.retries,
                 workers=settings.link_workers,
                 max_bytes=settings.max_bytes,
+                quiet=settings.quiet,
             )
 
         now = utc_now()
         fingerprint = _index_fingerprint(essays)
-        with tqdm(total=3, desc="Render", unit="fmt", disable=settings.quiet) as bar:
-            rss = render_rss(essays, built_at=now)
-            bar.update(1)
-            atom = render_atom(essays, built_at=now)
-            bar.update(1)
-            jf = render_json(
-                essays,
-                built_at=now,
-                index_hash=index_hash,
-                index_fingerprint=fingerprint,
-            )
-            bar.update(1)
+        reporter = ProgressReporter(
+            OutputPolicy(quiet=settings.quiet, machine=not sys.stderr.isatty())
+        )
+        render_steps = (
+            ("rss", lambda: render_rss(essays, built_at=now)),
+            ("atom", lambda: render_atom(essays, built_at=now)),
+            (
+                "json",
+                lambda: render_json(
+                    essays,
+                    built_at=now,
+                    index_hash=index_hash,
+                    index_fingerprint=fingerprint,
+                ),
+            ),
+        )
+        rendered: dict[str, bytes] = {}
+        for name, fn in reporter.track(render_steps, desc="Render", unit="fmt", total=3):
+            rendered[name] = fn()
+        rss, atom, jf = rendered["rss"], rendered["atom"], rendered["json"]
 
         write_feeds(
             settings.repo_root,
             rss=rss,
             atom=atom,
             json_feed=jf,
+            reporter=reporter,
         )
         if not settings.quiet:
             console.print(

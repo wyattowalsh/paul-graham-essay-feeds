@@ -9,7 +9,6 @@ from urllib.parse import urljoin, urlsplit
 
 import httpx
 from loguru import logger
-from tqdm import tqdm
 
 from paul_graham_essay_feeds.fetch import hop_safe_get, run_with_retry
 from paul_graham_essay_feeds.model import (
@@ -22,6 +21,7 @@ from paul_graham_essay_feeds.model import (
     truncate_text,
     user_agent,
 )
+from paul_graham_essay_feeds.presentation import OutputPolicy, ProgressReporter
 
 _USER_AGENT = user_agent()
 _MONTH_YEAR = re.compile(
@@ -244,12 +244,12 @@ def enrich_essays(
             ): e.position
             for e in essays
         }
-        for fut in tqdm(
+        reporter = ProgressReporter(OutputPolicy(quiet=quiet))
+        for fut in reporter.track(
             as_completed(futures),
             total=len(futures),
             desc="Enrich pages",
             unit="page",
-            disable=quiet,
         ):
             pos = futures[fut]
             try:

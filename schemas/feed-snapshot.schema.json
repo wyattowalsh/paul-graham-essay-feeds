@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wyattowalsh/paul-graham-essay-feeds/schemas/feed-snapshot.schema.json",
+  "title": "FeedSnapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["logical_updated_at", "items", "generator"],
+  "properties": {
+    "logical_updated_at": { "type": "string", "format": "date-time" },
+    "generator": { "type": "string", "minLength": 1 },
+    "title": { "type": "string" },
+    "home_page_url": { "type": "string", "format": "uri" },
+    "feed_url": { "type": ["string", "null"], "format": "uri" },
+    "public_base_url": { "type": ["string", "null"], "format": "uri" },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "url", "title", "summary", "observed_updated_at"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri" },
+          "title": { "type": "string", "minLength": 1 },
+          "summary": { "type": "string", "minLength": 1 },
+          "observed_updated_at": { "type": "string", "format": "date-time" },
+          "published_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      }
+    }
+  }
+}

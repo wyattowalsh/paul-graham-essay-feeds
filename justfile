@@ -76,6 +76,18 @@ alias c := check
 all: lint type test check
 alias a := all
 
+# Offline CI mirror: sync lock, lint, type, test, quiet check, build
+[group("checks")]
+[doc("Offline CI mirror: locked sync, lint, type, test, quiet check, wheel build")]
+ci-local: sync
+    {{ uv }} run ruff format --check .
+    {{ uv }} run ruff check .
+    {{ uv }} run ty check
+    {{ uv }} run pytest
+    {{ uv }} run pg-essay-feeds check --quiet
+    {{ uv }} build --no-sources
+alias cil := ci-local
+
 # ---------------------------------------------------------------------------- #
 #                                   TEST                                       #
 # ---------------------------------------------------------------------------- #

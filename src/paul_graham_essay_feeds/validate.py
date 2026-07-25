@@ -7,7 +7,6 @@ from urllib.parse import urlsplit
 
 import httpx
 from loguru import logger
-from tqdm import tqdm
 
 from paul_graham_essay_feeds.fetch import hop_safe_get, hop_safe_request, run_with_retry
 from paul_graham_essay_feeds.model import (
@@ -18,13 +17,23 @@ from paul_graham_essay_feeds.model import (
     user_agent,
     validate_essay_link,
 )
+from paul_graham_essay_feeds.presentation import NULL_REPORTER, OutputPolicy, ProgressReporter
 
 _USER_AGENT = user_agent(" link-check")
 
 
-def validate_essays_structural(essays: list[Essay]) -> None:
+def validate_essays_structural(
+    essays: list[Essay],
+    *,
+    reporter: ProgressReporter | None = None,
+) -> None:
     """Always-on validation for every included link."""
-    for essay in tqdm(essays, desc="Validate links", unit="url", disable=len(essays) < 20):
+    progress = reporter or NULL_REPORTER
+    if len(essays) < 20:
+        iterable = essays
+    else:
+        iterable = progress.track(essays, desc="Validate links", unit="url")
+    for essay in iterable:
         validate_essay_link(essay)
     logger.info("Structural link validation OK ({} urls)", len(essays))
 
@@ -89,10 +98,13 @@ def validate_essays_live(
     workers: int = 4,
     retries: int = 2,
     max_bytes: int = MAX_BYTES,
+    quiet: bool = False,
+    reporter: ProgressReporter | None = None,
 ) -> None:
     """Optional live probe of each essay URL (slow; Tenacity per-URL)."""
     errors: list[str] = []
     attempts = max(1, retries + 1)
+    progress = reporter or ProgressReporter(OutputPolicy(quiet=quiet))
     with (
         httpx.Client(
             timeout=httpx.Timeout(timeout),
@@ -112,7 +124,7 @@ def validate_essays_live(
             ): e
             for e in essays
         }
-        for fut in tqdm(
+        for fut in progress.track(
             as_completed(futures),
             total=len(futures),
             desc="Probe links",

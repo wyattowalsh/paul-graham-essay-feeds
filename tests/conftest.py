@@ -31,14 +31,18 @@ def repo_root(tmp_path: Path) -> Path:
 def pytest_collection_modifyitems(config, items):
     """Auto-mark by directory so unit/ mirrors modules without repeating markers."""
     for item in items:
-        path = str(item.fspath)
-        if "/tests/unit/" in path or path.endswith("\\unit\\"):
+        parts = set(Path(str(item.fspath)).parts)
+        if "unit" in parts:
             item.add_marker(pytest.mark.unit)
-        elif "/tests/integration/" in path:
+        elif "integration" in parts:
             item.add_marker(pytest.mark.integration)
-        elif "/tests/e2e/" in path:
+        elif "e2e" in parts:
             item.add_marker(pytest.mark.e2e)
-        elif "/tests/smoke/" in path:
+        elif "smoke" in parts:
             item.add_marker(pytest.mark.smoke)
-        elif "/tests/live/" in path:
+        elif "live" in parts:
             item.add_marker(pytest.mark.live)
+        elif "characterization" in parts:
+            item.add_marker(pytest.mark.characterization)
+        elif "packaging" in parts:
+            item.add_marker(pytest.mark.unit)

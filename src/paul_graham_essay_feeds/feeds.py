@@ -15,7 +15,6 @@ from datetime import datetime
 from pathlib import Path
 
 from loguru import logger
-from tqdm import tqdm
 
 from paul_graham_essay_feeds.model import (
     ATOM_NS,
@@ -35,6 +34,7 @@ from paul_graham_essay_feeds.model import (
     rfc3339,
     stable_updated,
 )
+from paul_graham_essay_feeds.presentation import NULL_REPORTER, ProgressReporter
 
 
 def render_rss(essays: list[Essay], *, built_at: datetime) -> bytes:
@@ -224,8 +224,11 @@ def write_feeds(
     rss: bytes,
     atom: bytes,
     json_feed: bytes,
+    reporter: ProgressReporter | None = None,
+    file_mode: int = 0o644,
 ) -> None:
     """Stage then publish ``feeds/rss.xml``, ``atom.xml``, and ``feed.json``."""
+    progress = reporter or NULL_REPORTER
     feeds_dir = root / "feeds"
     feeds_dir.mkdir(parents=True, exist_ok=True)
 
@@ -237,13 +240,15 @@ def write_feeds(
 
     staged: list[tuple[Path, str, bytes]] = []  # (final, tmp, blob)
     try:
-        for name, final, blob in tqdm(artifacts, desc="Stage feeds", unit="file"):
+        for name, final, blob in progress.track(artifacts, desc="Stage feeds", unit="file"):
             fd, tmp = tempfile.mkstemp(dir=str(feeds_dir), prefix=f".{name}.")
             try:
                 with os.fdopen(fd, "wb") as handle:
                     handle.write(blob)
                     handle.flush()
                     os.fsync(handle.fileno())
+                # Explicit readable mode (F-013); subject to process umask.
+                os.chmod(tmp, file_mode)
             except Exception:
                 with contextlib.suppress(OSError):
                     os.unlink(tmp)

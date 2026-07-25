@@ -65,11 +65,11 @@ def _assert_hop_allowed(
         raise FeedError(f"Host not allowed: {host!r}")
 
 
-def decode_html(body: bytes) -> str:
-    try:
-        return body.decode("utf-8")
-    except UnicodeDecodeError:
-        return body.decode("latin-1")
+def decode_html(body: bytes, *, transport_charset: str | None = None) -> str:
+    """Decode HTML bytes via :mod:`paul_graham_essay_feeds.decoding` (ADR-004)."""
+    from paul_graham_essay_feeds.decoding import decode_html as _decode_html
+
+    return _decode_html(body, transport_charset=transport_charset)
 
 
 def _content_length(response: httpx.Response) -> int | None:

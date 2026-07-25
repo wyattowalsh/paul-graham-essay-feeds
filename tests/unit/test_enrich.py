@@ -309,10 +309,6 @@ def test_enrich_worker_exception_keeps_essay() -> None:
             "paul_graham_essay_feeds.enrich.as_completed",
             return_value=[boom_fut],
         ),
-        patch(
-            "paul_graham_essay_feeds.enrich.tqdm",
-            side_effect=lambda it, **_kw: it,
-        ),
     ):
         pool_cls.return_value.__enter__.return_value = pool
         pool_cls.return_value.__exit__.return_value = None

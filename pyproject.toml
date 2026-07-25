@@ -62,6 +62,9 @@ path = "src/paul_graham_essay_feeds/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/paul_graham_essay_feeds"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"src/paul_graham_essay_feeds/py.typed" = "paul_graham_essay_feeds/py.typed"
+
 # Sdist omits generated feeds + CI/venv/build dirs. git+uvx still clones the
 # full repo (feeds present for local use); installed packages write feeds/ at runtime.
 [tool.hatch.build.targets.sdist]
@@ -90,6 +93,7 @@ markers = [
   "e2e: full CLI path offline",
   "smoke: subprocess / entrypoint smoke",
   "live: hits paulgraham.com (opt-in only)",
+  "characterization: contract locks for audited defects (may xfail until fixed)",
 ]
 
 [tool.coverage.run]

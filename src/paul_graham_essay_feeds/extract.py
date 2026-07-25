@@ -7,7 +7,6 @@ from html.parser import HTMLParser
 from urllib.parse import urlsplit
 
 from loguru import logger
-from tqdm import tqdm
 
 from paul_graham_essay_feeds.model import (
     MIN_ITEMS,
@@ -20,6 +19,7 @@ from paul_graham_essay_feeds.model import (
     make_stable_id,
     normalize_text,
 )
+from paul_graham_essay_feeds.presentation import NULL_REPORTER
 from paul_graham_essay_feeds.validate import validate_essays_structural
 
 
@@ -73,7 +73,9 @@ def _to_essays(
     dedupe_last: bool,
 ) -> list[Essay]:
     built: list[tuple[str, str, str, bool]] = []
-    for href, title, _marked in tqdm(rows, desc="Parse anchors", unit="a", disable=len(rows) < 50):
+    progress = NULL_REPORTER
+    track = rows if len(rows) < 50 else progress.track(rows, desc="Parse anchors", unit="a")
+    for href, title, _marked in track:
         if not title:
             continue
         try:
