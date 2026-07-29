@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from typer.main import get_command
 from typer.testing import CliRunner
 
 from paul_graham_essay_feeds.cli import _settings, app
@@ -15,6 +17,7 @@ from paul_graham_essay_feeds.feeds import render_snapshot_feeds, write_feeds
 from paul_graham_essay_feeds.models import FeedEntrySnapshot, FeedSnapshot, utc_now
 
 runner = CliRunner()
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def test_help() -> None:
@@ -28,10 +31,16 @@ def test_help() -> None:
     assert "catalog-pipeline" not in result.output
 
 
-def test_update_help_exposes_from_feeds() -> None:
+def test_update_exposes_from_feeds_option() -> None:
+    """`--from-feeds` is a real update flag (param + help; ANSI-safe)."""
+    update = get_command(app).commands["update"]
+    from_feeds = next(p for p in update.params if p.name == "from_feeds")
+    assert "--from-feeds" in from_feeds.opts
+
     result = runner.invoke(app, ["update", "--help"])
     assert result.exit_code == 0
-    assert "--from-feeds" in result.output
+    plain = _ANSI.sub("", result.output)
+    assert "from-feeds" in plain
 
 
 def test_check_missing_feeds(repo_root: Path) -> None:
