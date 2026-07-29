@@ -389,7 +389,7 @@ just cov
 | :--- | :--- |
 | `ci.yml` | matrix 3.12–3.14; lint/types (3.13); pytest + cov ≥90%; committed-feed `check`; offline catalog smoke (`feeds/` + `catalog.json`); dist job |
 | `release.yml` | on tag `v*`: version match, quality gates, `uv build --no-sources`, wheel smoke, GitHub Release |
-| `update-feeds.yml` | scheduled live refresh → validate → stage `feeds` + `state` PR |
+| `update-feeds.yml` | scheduled live refresh → validate → stage `feeds` + `catalog.json` PR |
 | Dependabot | weekly `uv` + `github-actions` |
 
 CI policy: exit 0 on matrix; full-SHA action pins; least privilege on generation jobs;
