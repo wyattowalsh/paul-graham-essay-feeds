@@ -5,7 +5,7 @@
     <link>https://paulgraham.com/articles.html</link>
     <description>Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.</description>
     <language>en-US</language>
-    <lastBuildDate>Fri, 17 Jul 2026 22:30:18 GMT</lastBuildDate>
+    <lastBuildDate>Wed, 29 Jul 2026 07:00:54 GMT</lastBuildDate>
     <category>Essays</category>
     <generator>pg-essay-feeds/0.1.0</generator>
     <docs>https://www.rssboard.org/rss-specification</docs>
@@ -357,7 +357,7 @@
     <item>
       <title>Orthodox Privilege</title>
       <link>https://paulgraham.com/orth.html</link>
-      <description>July 2020 "Few people are capable of expressing with equanimity opinions which differ from the prejudices of their social environment. Most people are even incapable of forming such opinions." � Einstein There has been a lot of talk about privilege lately. Although the concept is overused, there is something to it, and in particular to the idea that privilege makes you blind � that you can't see…</description>
+      <description>July 2020 "Few people are capable of expressing with equanimity opinions which differ from the prejudices of their social environment. Most people are even incapable of forming such opinions."  Einstein There has been a lot of talk about privilege lately. Although the concept is overused, there is something to it, and in particular to the idea that privilege makes you blind  that you can't see…</description>
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/orth.html</guid>
@@ -957,7 +957,7 @@
     <item>
       <title>Maker's Schedule, Manager's Schedule</title>
       <link>https://paulgraham.com/makersschedule.html</link>
-      <description>"...the mere consciousness of an engagement will sometimes worry a whole day." � Charles Dickens July 2009 One reason programmers dislike meetings so much is that they're on a different type of schedule from other people. Meetings cost them more. There are two types of schedule, which I'll call the manager's schedule and the maker's schedule. The manager's schedule is for bosses. It's embodied in…</description>
+      <description>"...the mere consciousness of an engagement will sometimes worry a whole day."  Charles Dickens July 2009 One reason programmers dislike meetings so much is that they're on a different type of schedule from other people. Meetings cost them more. There are two types of schedule, which I'll call the manager's schedule and the maker's schedule. The manager's schedule is for bosses. It's embodied in…</description>
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/makersschedule.html</guid>
@@ -1181,7 +1181,7 @@
     <item>
       <title>Trolls</title>
       <link>https://paulgraham.com/trolls.html</link>
-      <description>February 2008 A user on Hacker News recently posted a comment that set me thinking: Something about hacker culture that never really set well with me was this � the nastiness. ... I just don't understand why people troll like they do. I've thought a lot over the last couple years about the problem of trolls. It's an old one, as old as forums, but we're still just learning what the causes are and…</description>
+      <description>February 2008 A user on Hacker News recently posted a comment that set me thinking: Something about hacker culture that never really set well with me was this  the nastiness. ... I just don't understand why people troll like they do. I've thought a lot over the last couple years about the problem of trolls. It's an old one, as old as forums, but we're still just learning what the causes are and…</description>
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/trolls.html</guid>
@@ -1797,7 +1797,7 @@
     <item>
       <title>The Roots of Lisp</title>
       <link>https://paulgraham.com/rootsoflisp.html</link>
-      <description>May 2001 (I wrote this article to help myself understand exactly what McCarthy discovered. You don't need to know this stuff to program in Lisp, but it should be helpful to anyone who wants to understand the essence of Lisp � both in the sense of its origins and its semantic core. The fact that it has such a core is one of Lisp's distinguishing features, and the reason why, unlike other…</description>
+      <description>May 2001 (I wrote this article to help myself understand exactly what McCarthy discovered. You don't need to know this stuff to program in Lisp, but it should be helpful to anyone who wants to understand the essence of Lisp  both in the sense of its origins and its semantic core. The fact that it has such a core is one of Lisp's distinguishing features, and the reason why, unlike other…</description>
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/rootsoflisp.html</guid>
