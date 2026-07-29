@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from paul_graham_essay_feeds.discovery import (
@@ -9,8 +11,14 @@ from paul_graham_essay_feeds.discovery import (
     build_discovery_snapshot,
     discover_essays,
 )
-from paul_graham_essay_feeds.model import MIN_ITEMS, FeedError
+from paul_graham_essay_feeds.models import MIN_ITEMS, FeedError
 from tests.html_samples import MARKER, synthetic_index_html
+
+UPSTREAM = Path(__file__).resolve().parents[1] / "fixtures" / "upstream"
+
+
+def _load_upstream(name: str) -> str:
+    return (UPSTREAM / name).read_text(encoding="utf-8")
 
 
 def test_marker_happy_path(sample_html: str) -> None:
@@ -117,7 +125,7 @@ def test_empty_title_and_nav_rejections_recorded() -> None:
     assert any("Host not allowed" in r for r in report.rejections)
 
     snap = build_discovery_snapshot(html, min_items=8)
-    assert snap.essays
+    assert snap.items
     assert snap.candidates
     assert any(not c.accepted for c in snap.candidates)
     assert any(c.rejection_reason == "empty title" for c in snap.candidates)
@@ -187,3 +195,50 @@ def test_drift_score_increases_with_duplicates_and_rejections() -> None:
     assert report.duplicates
     assert report.rejections
     assert report.drift_score > 0.0
+
+
+# --- Upstream fixture corpus (P0) -------------------------------------------
+
+
+def test_fixture_index_marker_basic() -> None:
+    essays, report = discover_essays(
+        _load_upstream("index-marker-basic.html"),
+        min_items=8,
+        allow_fallback=False,
+    )
+    assert len(essays) >= 8
+    assert essays[0].title == "Essay 0"
+    assert report.strategy is ExtractionStrategy.MARKER
+    assert report.fallback_used is False
+
+
+def test_fixture_index_marker_leak() -> None:
+    essays, report = discover_essays(
+        _load_upstream("index-marker-leak.html"),
+        min_items=7,
+        allow_fallback=False,
+    )
+    assert all(not e.url.endswith("/articles.html") for e in essays)
+    assert report.strategy is ExtractionStrategy.MARKER
+
+
+def test_fixture_index_sparse_fail_closed_and_fallback() -> None:
+    html = _load_upstream("index-sparse-fallback.html")
+    with pytest.raises(FeedError, match="fallback disabled"):
+        discover_essays(html, min_items=8, allow_fallback=False)
+    essays, report = discover_essays(html, min_items=8, allow_fallback=True)
+    assert len(essays) >= 8
+    assert report.fallback_used is True
+    assert report.strategy is ExtractionStrategy.FALLBACK
+
+
+def test_fixture_index_duplicate_anchors() -> None:
+    essays, report = discover_essays(
+        _load_upstream("index-duplicate-anchors.html"),
+        min_items=8,
+        allow_fallback=False,
+    )
+    dups = [e for e in essays if e.url.endswith("/dup.html")]
+    assert len(dups) == 1
+    assert dups[0].title == "First Title"
+    assert any(d.endswith("/dup.html") for d in report.duplicates)

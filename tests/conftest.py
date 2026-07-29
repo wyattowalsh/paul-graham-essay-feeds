@@ -28,6 +28,20 @@ def repo_root(tmp_path: Path) -> Path:
     return tmp_path
 
 
+@pytest.fixture(autouse=True)
+def _offline_default_no_live_probes(
+    monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
+) -> None:
+    """Keep offline suites from live-probing essay URLs (default validate_links=True).
+
+    Live-marked tests keep the production default. Opt-in probe tests set the env
+    or pass ``--validate-links`` explicitly (and mock HTTP).
+    """
+    if "live" in request.keywords:
+        return
+    monkeypatch.setenv("PG_ESSAY_FEEDS_VALIDATE_LINKS", "false")
+
+
 def pytest_collection_modifyitems(config, items):
     """Auto-mark by directory so unit/ mirrors modules without repeating markers."""
     for item in items:

@@ -1,4 +1,4 @@
-"""Unit tests for transport.py (ADR-004 / F-016)."""
+"""Unit tests for http transport evidence (ADR-004 / F-016)."""
 
 from __future__ import annotations
 
@@ -8,8 +8,7 @@ import httpx
 import pytest
 import respx
 
-from paul_graham_essay_feeds.model import ALLOWED_HOSTS, FeedError
-from paul_graham_essay_feeds.transport import (
+from paul_graham_essay_feeds.http import (
     ResultKind,
     get_with_evidence,
     head_with_evidence,
@@ -17,6 +16,7 @@ from paul_graham_essay_feeds.transport import (
     parse_content_type,
     request_with_evidence,
 )
+from paul_graham_essay_feeds.models import ALLOWED_HOSTS, FeedError
 
 
 def test_parse_content_type_html_charset() -> None:

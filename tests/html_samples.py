@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from paul_graham_essay_feeds.model import MIN_ITEMS, PROTECTED_PATHS
+from paul_graham_essay_feeds.models import MIN_ITEMS, PROTECTED_PATHS
 
 MARKER = "https://s.turbifycdn.com/aah/paulgraham/the-reddits-2.gif"
 

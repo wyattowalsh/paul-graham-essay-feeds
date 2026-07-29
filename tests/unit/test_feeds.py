@@ -1,4 +1,4 @@
-"""Unit tests for feeds.py (render, write, verify)."""
+"""Unit tests for feeds.py (snapshot-native render, write, verify, projection)."""
 
 from __future__ import annotations
 
@@ -12,44 +12,122 @@ from unittest.mock import patch
 
 import pytest
 
-from paul_graham_essay_feeds.extract import extract_essays
 from paul_graham_essay_feeds.feeds import (
-    _atomic_write,
+    catalog_to_feed_snapshot,
     feed_paths,
     render_atom,
     render_json,
     render_rss,
+    render_snapshot_feeds,
     verify_feed_artifacts,
     write_feeds,
 )
-from paul_graham_essay_feeds.model import (
+from paul_graham_essay_feeds.models import (
     ATOM_NS,
-    PROTECTED_PATHS,
-    STABLE_UNPUBLISHED_UPDATED,
-    Essay,
+    FEED_SUMMARY_CHARS,
+    Catalog,
+    CatalogEntry,
+    FeedEntrySnapshot,
     FeedError,
+    FeedSnapshot,
+    Lifecycle,
+    ResourceState,
+    blurb,
     rfc3339,
-    stable_updated,
-    utc_now,
 )
-from tests.html_samples import synthetic_index_html
+
+GENERATOR = "pg-essay-feeds/0.1.0"
+T0 = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
+T1 = datetime(2024, 6, 15, 9, 30, 0, tzinfo=UTC)
+T2 = datetime(2025, 3, 1, 0, 0, 0, tzinfo=UTC)
+_OBSERVED = datetime(2024, 3, 1, 8, 0, 0, tzinfo=UTC)
+_LOGICAL = datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC)
 
 
-def _essays(*, regular: int = 3) -> list[Essay]:
-    """Tiny synthetic catalog for render shape tests (not live inventory size)."""
-    floor = regular + len(PROTECTED_PATHS)
-    return extract_essays(synthetic_index_html(essay_count=regular), min_items=floor)
-
-
-def _undated_essay(*, summary: str = "Short undated summary.") -> Essay:
-    return Essay(
-        position=1,
-        title="Undated",
-        url="https://paulgraham.com/undated.html",
-        stable_id="https://paulgraham.com/undated.html",
-        is_permalink=True,
+def _entry_snap(
+    *,
+    sid: str = "https://paulgraham.com/a.html",
+    title: str = "A",
+    summary: str = "Short summary for essay A.",
+    observed: datetime = _OBSERVED,
+    published_at: datetime | None = None,
+    url: str | None = None,
+) -> FeedEntrySnapshot:
+    return FeedEntrySnapshot(
+        id=sid,
+        url=url or sid,
+        title=title,
         summary=summary,
-        published_at=None,
+        observed_updated_at=observed,
+        published_at=published_at,
+    )
+
+
+def _snapshot(
+    items: list[FeedEntrySnapshot] | None = None,
+    *,
+    logical_updated_at: datetime = _LOGICAL,
+    index_hash: str | None = None,
+    index_fingerprint: str | None = None,
+    generator: str = GENERATOR,
+) -> FeedSnapshot:
+    if items is None:
+        items = [
+            _entry_snap(),
+            _entry_snap(
+                sid="https://paulgraham.com/b.html",
+                title="B",
+                summary="Short summary for essay B.",
+                observed=T1,
+            ),
+        ]
+    return FeedSnapshot(
+        logical_updated_at=logical_updated_at,
+        generator=generator,
+        index_hash=index_hash,
+        index_fingerprint=index_fingerprint,
+        items=items,
+    )
+
+
+def _catalog_entry(
+    *,
+    sid: str,
+    title: str,
+    position: int,
+    lifecycle: Lifecycle = Lifecycle.ACTIVE,
+    observed_updated_at: datetime | None = T1,
+    first_seen_at: datetime | None = T0,
+    summary: str | None = None,
+    published_at: datetime | None = None,
+    url: str | None = None,
+) -> CatalogEntry:
+    return CatalogEntry(
+        stable_id=sid,
+        url=url or sid,
+        title=title,
+        position=position,
+        lifecycle=lifecycle,
+        first_seen_at=first_seen_at,
+        last_seen_at=first_seen_at,
+        observed_updated_at=observed_updated_at,
+        summary=summary,
+        published_at=published_at,
+    )
+
+
+def _catalog(
+    entries: list[CatalogEntry],
+    *,
+    last_checked_at: datetime | None = None,
+) -> Catalog:
+    order = [e.stable_id for e in entries]
+    return Catalog(
+        schema_version=1,
+        material_config_fingerprint="test",
+        entry_order=order,
+        entries={e.stable_id: e for e in entries},
+        index=ResourceState(last_checked_at=last_checked_at),
     )
 
 
@@ -59,10 +137,10 @@ def _atom_entry_updateds(raw: str) -> list[str]:
 
 
 def test_rss_shape_no_full_content() -> None:
-    essays = _essays()
-    raw = render_rss(essays, built_at=utc_now()).decode()
+    snap = _snapshot()
+    raw = render_rss(snap).decode()
     assert raw.startswith("<?xml")
-    assert raw.count("<item>") == len(essays)
+    assert raw.count("<item>") == len(snap.items)
     assert "content:encoded" not in raw
     assert "<rss" in raw
     root = ET.fromstring(raw[raw.index("<rss") :])
@@ -71,92 +149,103 @@ def test_rss_shape_no_full_content() -> None:
 
 
 def test_atom_shape_summary_only() -> None:
-    essays = _essays()
-    raw = render_atom(essays, built_at=utc_now()).decode()
+    snap = _snapshot()
+    raw = render_atom(snap).decode()
     assert "<feed" in raw
-    assert raw.count("<entry>") == len(essays)
+    assert raw.count("<entry>") == len(snap.items)
     assert f'xmlns="{ATOM_NS}"' in raw
     assert "<content" not in raw
     assert "<summary" in raw
 
 
-def test_atom_undated_entry_updated_stable_across_built_at() -> None:
-    undated = _undated_essay()
-    t1 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
-    t2 = datetime(2026, 7, 17, 18, 30, 0, tzinfo=UTC)
-    raw1 = render_atom([undated], built_at=t1).decode()
-    raw2 = render_atom([undated], built_at=t2).decode()
-    expected = rfc3339(stable_updated(undated.stable_id))
-    assert expected == rfc3339(STABLE_UNPUBLISHED_UPDATED)
+def test_atom_entry_updated_uses_observed_not_logical() -> None:
+    undated = _entry_snap(
+        sid="https://paulgraham.com/undated.html",
+        title="Undated",
+        summary="Short undated summary.",
+        observed=_OBSERVED,
+    )
+    snap1 = _snapshot([undated], logical_updated_at=datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC))
+    snap2 = _snapshot([undated], logical_updated_at=datetime(2026, 7, 17, 18, 30, 0, tzinfo=UTC))
+    raw1 = render_atom(snap1).decode()
+    raw2 = render_atom(snap2).decode()
+    expected = rfc3339(_OBSERVED)
+    assert "1970" not in expected
     assert _atom_entry_updateds(raw1) == _atom_entry_updateds(raw2)
     assert _atom_entry_updateds(raw1) == [expected]
-    # Feed-level updated may differ with built_at.
     feed_updated = re.findall(r"<feed[^>]*>.*?<updated>([^<]+)</updated>", raw1, re.S)
     feed_updated2 = re.findall(r"<feed[^>]*>.*?<updated>([^<]+)</updated>", raw2, re.S)
-    assert feed_updated[0] == rfc3339(t1)
-    assert feed_updated2[0] == rfc3339(t2)
+    assert feed_updated[0] == rfc3339(snap1.logical_updated_at)
+    assert feed_updated2[0] == rfc3339(snap2.logical_updated_at)
     assert "<published>" not in raw1
     assert "<published>" not in raw2
 
 
 def test_undated_omits_publish_dates_keeps_json_content_text() -> None:
-    """U6: undated essays omit pub dates; JSON keeps short content_text."""
-    undated = _undated_essay(summary="Metadata-only summary for undated essay.")
-    now = utc_now()
-    rss = render_rss([undated], built_at=now).decode()
-    atom = render_atom([undated], built_at=now).decode()
-    item = json.loads(render_json([undated], built_at=now))["items"][0]
+    """Undated entries omit pub dates; JSON keeps short content_text."""
+    undated = _entry_snap(
+        sid="https://paulgraham.com/undated.html",
+        title="Undated",
+        summary="Metadata-only summary for undated essay.",
+        observed=_OBSERVED,
+    )
+    snap = _snapshot([undated])
+    rss = render_rss(snap).decode()
+    atom = render_atom(snap).decode()
+    item = json.loads(render_json(snap))["items"][0]
 
     assert "<pubDate>" not in rss
     assert "<published>" not in atom
-    assert _atom_entry_updateds(atom) == [rfc3339(stable_updated(undated.stable_id))]
+    assert _atom_entry_updateds(atom) == [rfc3339(_OBSERVED)]
+    assert "1970-01-01T00:00:00Z" not in atom
     assert "date_published" not in item
+    assert item["date_modified"] == rfc3339(_OBSERVED)
     assert "content_text" in item
-    assert item["content_text"] == item["summary"] == undated.feed_summary()
-    assert item["content_text"] == "Metadata-only summary for undated essay."
+    assert item["content_text"] == item["summary"] == undated.summary
 
 
 def test_json_feed_shape_short_content_text() -> None:
-    essays = _essays()
-    data = json.loads(render_json(essays, built_at=utc_now()))
+    snap = _snapshot()
+    data = json.loads(render_json(snap))
     assert data["version"] == "https://jsonfeed.org/version/1.1"
-    assert len(data["items"]) == len(essays)
-    assert data["items"][0]["id"] == essays[0].stable_id
-    assert data["items"][0]["url"] == essays[0].url
+    assert len(data["items"]) == len(snap.items)
+    assert data["items"][0]["id"] == snap.items[0].id
+    assert data["items"][0]["url"] == snap.items[0].url
     item0 = data["items"][0]
     assert "content_text" in item0
-    assert item0["summary"] == essays[0].feed_summary()
-    assert item0["content_text"] == item0["summary"] == essays[0].feed_summary()
+    assert item0["summary"] == snap.items[0].summary
+    assert item0["content_text"] == item0["summary"]
     assert "authors" in item0
 
 
 def test_cross_format_id_parity() -> None:
-    essays = _essays()
-    now = utc_now()
-    rss = render_rss(essays, built_at=now).decode()
-    atom = render_atom(essays, built_at=now).decode()
-    data = json.loads(render_json(essays, built_at=now))
-    assert essays[0].stable_id in rss
-    assert essays[0].stable_id in atom
-    assert data["items"][0]["id"] == essays[0].stable_id
+    snap = _snapshot()
+    rss = render_rss(snap).decode()
+    atom = render_atom(snap).decode()
+    data = json.loads(render_json(snap))
+    assert snap.items[0].id in rss
+    assert snap.items[0].id in atom
+    assert data["items"][0]["id"] == snap.items[0].id
 
 
-def test_render_uses_enriched_summary() -> None:
-    long_body = "Full body text should not appear in feeds. " * 40
-    e = Essay(
-        position=1,
+def test_permalink_guid_equals_url() -> None:
+    snap = _snapshot([_entry_snap()])
+    rss = render_rss(snap).decode()
+    assert 'isPermaLink="true"' in rss
+    assert '<guid isPermaLink="true">https://paulgraham.com/a.html</guid>' in rss
+
+
+def test_render_uses_snapshot_summary() -> None:
+    e = _entry_snap(
+        sid="https://paulgraham.com/t.html",
         title="T",
-        url="https://paulgraham.com/t.html",
-        stable_id="https://paulgraham.com/t.html",
-        is_permalink=True,
         summary="Real scraped summary about startups.",
-        content_text=long_body,
         published_at=datetime(2026, 6, 1, tzinfo=UTC),
     )
-    now = utc_now()
-    rss = render_rss([e], built_at=now).decode()
-    atom = render_atom([e], built_at=now).decode()
-    data = json.loads(render_json([e], built_at=now))
+    snap = _snapshot([e])
+    rss = render_rss(snap).decode()
+    atom = render_atom(snap).decode()
+    data = json.loads(render_json(snap))
     assert "Real scraped summary" in rss
     assert "Full body text" not in rss
     assert "content:encoded" not in rss
@@ -164,42 +253,19 @@ def test_render_uses_enriched_summary() -> None:
     assert "<content" not in atom
     item = data["items"][0]
     assert item["summary"] == "Real scraped summary about startups."
-    assert item["content_text"] == item["summary"] == e.feed_summary()
-    assert item["content_text"] != e.content_text
+    assert item["content_text"] == item["summary"]
     assert "date_published" in item
 
 
-def _sample() -> list[Essay]:
-    return [
-        Essay(
-            position=1,
-            title="A",
-            url="https://paulgraham.com/a.html",
-            stable_id="https://paulgraham.com/a.html",
-            is_permalink=True,
-            summary="Short summary for essay A.",
-        ),
-        Essay(
-            position=2,
-            title="B",
-            url="https://paulgraham.com/b.html",
-            stable_id="https://paulgraham.com/b.html",
-            is_permalink=True,
-            summary="Short summary for essay B.",
-        ),
-    ]
-
-
-def _write_sample(repo_root: Path, essays: list[Essay] | None = None) -> list[Essay]:
-    essays = essays if essays is not None else _sample()
-    now = utc_now()
+def _write_sample(repo_root: Path, snap: FeedSnapshot | None = None) -> FeedSnapshot:
+    snap = snap if snap is not None else _snapshot()
     write_feeds(
         repo_root,
-        rss=render_rss(essays, built_at=now),
-        atom=render_atom(essays, built_at=now),
-        json_feed=render_json(essays, built_at=now),
+        rss=render_rss(snap),
+        atom=render_atom(snap),
+        json_feed=render_json(snap),
     )
-    return essays
+    return snap
 
 
 def _assert_no_staging_temps(feeds_dir: Path) -> None:
@@ -213,14 +279,7 @@ def _assert_no_staging_temps(feeds_dir: Path) -> None:
 
 
 def test_write_feeds_creates_expected_paths(repo_root: Path) -> None:
-    essays = _sample()
-    now = utc_now()
-    write_feeds(
-        repo_root,
-        rss=render_rss(essays, built_at=now),
-        atom=render_atom(essays, built_at=now),
-        json_feed=render_json(essays, built_at=now),
-    )
+    _write_sample(repo_root)
     paths = feed_paths(repo_root)
     assert paths["rss"].is_file()
     assert paths["atom"].is_file()
@@ -230,7 +289,7 @@ def test_write_feeds_creates_expected_paths(repo_root: Path) -> None:
 
 
 def test_write_feeds_happy_path_and_verify(repo_root: Path) -> None:
-    essays = _write_sample(repo_root)
+    snap = _write_sample(repo_root)
     paths = feed_paths(repo_root)
     assert paths["rss"].is_file()
     assert paths["atom"].is_file()
@@ -238,7 +297,7 @@ def test_write_feeds_happy_path_and_verify(repo_root: Path) -> None:
     assert not (repo_root / "feeds" / ".manifest.json").exists()
 
     payload = json.loads(paths["json"].read_text(encoding="utf-8"))
-    assert len(payload["items"]) == len(essays)
+    assert len(payload["items"]) == len(snap.items)
     assert payload["items"][0]["content_text"] == payload["items"][0]["summary"]
 
     verify_feed_artifacts(repo_root, min_items=2)
@@ -246,17 +305,17 @@ def test_write_feeds_happy_path_and_verify(repo_root: Path) -> None:
 
 
 def test_write_feeds_overwrites(repo_root: Path) -> None:
-    essays = _sample()
-    now = utc_now()
+    full = _snapshot()
+    one = _snapshot([full.items[0]])
     write_feeds(
         repo_root,
-        rss=render_rss(essays, built_at=now),
+        rss=render_rss(full),
         atom=b"<feed/>",
         json_feed=b"{}",
     )
     write_feeds(
         repo_root,
-        rss=render_rss(essays[:1], built_at=now),
+        rss=render_rss(one),
         atom=b"<feed/>",
         json_feed=b"{}",
     )
@@ -270,16 +329,6 @@ def test_feed_paths_keys(repo_root: Path) -> None:
     assert set(feed_paths(repo_root)) == {"rss", "atom", "json"}
 
 
-def test_atomic_write_cleans_tmp_on_failure(repo_root: Path) -> None:
-    target = repo_root / "feeds" / "x.xml"
-    with (
-        patch("paul_graham_essay_feeds.feeds.os.replace", side_effect=OSError("disk")),
-        pytest.raises(OSError, match="disk"),
-    ):
-        _atomic_write(target, b"data")
-    assert list((repo_root / "feeds").glob(".x.xml.*")) == []
-
-
 @pytest.mark.parametrize("fail_after", [0, 1, 2])
 def test_write_feeds_replace_failure_leaves_safe_state(
     repo_root: Path,
@@ -290,11 +339,10 @@ def test_write_feeds_replace_failure_leaves_safe_state(
     feeds_dir = repo_root / "feeds"
     prior = {name: (feeds_dir / name).read_bytes() for name in ("rss.xml", "atom.xml", "feed.json")}
 
-    essays = _sample()
-    now = utc_now()
-    new_rss = render_rss(essays[:1], built_at=now)
-    new_atom = render_atom(essays[:1], built_at=now)
-    new_json = render_json(essays[:1], built_at=now)
+    one = _snapshot([_entry_snap()])
+    new_rss = render_rss(one)
+    new_atom = render_atom(one)
+    new_json = render_json(one)
     new_blobs = {"rss.xml": new_rss, "atom.xml": new_atom, "feed.json": new_json}
 
     real_replace = os.replace
@@ -307,7 +355,7 @@ def test_write_feeds_replace_failure_leaves_safe_state(
         real_replace(src, dst)
 
     with (
-        patch("paul_graham_essay_feeds.feeds.os.replace", side_effect=flaky_replace),
+        patch("paul_graham_essay_feeds.catalog.os.replace", side_effect=flaky_replace),
         pytest.raises(OSError, match="simulated replace failure"),
     ):
         write_feeds(
@@ -322,12 +370,11 @@ def test_write_feeds_replace_failure_leaves_safe_state(
     order = ("rss.xml", "atom.xml", "feed.json")
     for i, name in enumerate(order):
         data = (feeds_dir / name).read_bytes()
-        # Each final is a complete prior or complete new blob — never truncated.
         if i < fail_after:
             assert data == new_blobs[name]
         else:
             assert data == prior[name]
-        assert data  # non-empty whole file
+        assert data
 
 
 def test_verify_feed_artifacts_missing_content_text(repo_root: Path) -> None:
@@ -350,17 +397,320 @@ def test_verify_feed_artifacts_wrong_content_text(repo_root: Path) -> None:
         verify_feed_artifacts(repo_root, min_items=2)
 
 
-def test_render_json_includes_index_skip_metadata() -> None:
-    essays = _sample()
-    data = json.loads(
-        render_json(
-            essays,
-            built_at=utc_now(),
-            index_hash="abc123",
-            index_fingerprint="fp-line",
-        )
-    )
+def test_render_json_includes_snapshot_meta() -> None:
+    snap = _snapshot(index_hash="abc123", index_fingerprint="fp-line")
+    data = json.loads(render_json(snap))
     meta = data["_pg_essay_feeds"]
     assert meta["index_hash"] == "abc123"
     assert meta["index_fingerprint"] == "fp-line"
     assert meta["item_count"] == 2
+    assert meta["logical_updated_at"] == rfc3339(snap.logical_updated_at)
+    assert meta["generator"] == GENERATOR
+
+
+# --- catalog → FeedSnapshot projection (folded from test_snapshot) ---
+
+
+def test_active_only_and_entry_order() -> None:
+    active_a = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    missing = _catalog_entry(
+        sid="https://paulgraham.com/m.html",
+        title="M",
+        position=1,
+        lifecycle=Lifecycle.MISSING_CANDIDATE,
+    )
+    active_b = _catalog_entry(
+        sid="https://paulgraham.com/b.html",
+        title="B",
+        position=2,
+        observed_updated_at=T2,
+    )
+    tomb = _catalog_entry(
+        sid="https://paulgraham.com/t.html",
+        title="T",
+        position=3,
+        lifecycle=Lifecycle.TOMBSTONED,
+    )
+    cat = _catalog([active_a, missing, active_b, tomb])
+    snap = catalog_to_feed_snapshot(cat, generator=GENERATOR)
+
+    assert [i.id for i in snap.items] == [
+        "https://paulgraham.com/a.html",
+        "https://paulgraham.com/b.html",
+    ]
+    assert snap.generator == GENERATOR
+
+
+def test_summary_from_catalog_and_blurb_fallback() -> None:
+    with_summary = _catalog_entry(
+        sid="https://paulgraham.com/a.html",
+        title="Alpha",
+        position=0,
+        summary="Source-derived short summary for Alpha.",
+    )
+    without = _catalog_entry(
+        sid="https://paulgraham.com/b.html",
+        title="Beta",
+        position=1,
+        summary=None,
+    )
+    snap = catalog_to_feed_snapshot(
+        _catalog([with_summary, without]),
+        generator=GENERATOR,
+    )
+    assert snap.items[0].summary == "Source-derived short summary for Alpha."
+    assert snap.items[1].summary == blurb("Beta")
+
+
+def test_observed_falls_back_to_first_seen() -> None:
+    entry = _catalog_entry(
+        sid="https://paulgraham.com/a.html",
+        title="A",
+        position=0,
+        observed_updated_at=None,
+        first_seen_at=T0,
+    )
+    snap = catalog_to_feed_snapshot(_catalog([entry]), generator=GENERATOR)
+    assert snap.items[0].observed_updated_at == T0
+    assert snap.logical_updated_at == T0
+
+
+def test_skips_entries_missing_both_timestamps() -> None:
+    good = _catalog_entry(
+        sid="https://paulgraham.com/a.html",
+        title="A",
+        position=0,
+        observed_updated_at=T1,
+        first_seen_at=T0,
+    )
+    undated = _catalog_entry(
+        sid="https://paulgraham.com/u.html",
+        title="U",
+        position=1,
+        observed_updated_at=None,
+        first_seen_at=None,
+    )
+    snap = catalog_to_feed_snapshot(_catalog([good, undated]), generator=GENERATOR)
+    assert [i.id for i in snap.items] == ["https://paulgraham.com/a.html"]
+
+
+def test_empty_active_set_raises() -> None:
+    only_missing = _catalog_entry(
+        sid="https://paulgraham.com/m.html",
+        title="M",
+        position=0,
+        lifecycle=Lifecycle.MISSING_CANDIDATE,
+    )
+    with pytest.raises(FeedError, match="no ACTIVE"):
+        catalog_to_feed_snapshot(_catalog([only_missing]), generator=GENERATOR)
+
+
+def test_all_undated_active_raises() -> None:
+    undated = _catalog_entry(
+        sid="https://paulgraham.com/u.html",
+        title="U",
+        position=0,
+        observed_updated_at=None,
+        first_seen_at=None,
+    )
+    with pytest.raises(FeedError, match="no ACTIVE"):
+        catalog_to_feed_snapshot(_catalog([undated]), generator=GENERATOR)
+
+
+def test_logical_updated_at_is_max_of_items() -> None:
+    older = _catalog_entry(
+        sid="https://paulgraham.com/a.html",
+        title="A",
+        position=0,
+        observed_updated_at=T0,
+    )
+    newer = _catalog_entry(
+        sid="https://paulgraham.com/b.html",
+        title="B",
+        position=1,
+        observed_updated_at=T2,
+    )
+    snap = catalog_to_feed_snapshot(_catalog([older, newer]), generator=GENERATOR)
+    assert snap.logical_updated_at == T2
+
+
+def test_feed_url_from_public_base() -> None:
+    entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    snap = catalog_to_feed_snapshot(
+        _catalog([entry]),
+        generator=GENERATOR,
+        public_base_url="https://example.com/pg-feeds/",
+    )
+    assert snap.public_base_url == "https://example.com/pg-feeds/"
+    assert snap.feed_url == "https://example.com/pg-feeds/feed.json"
+
+    snap_none = catalog_to_feed_snapshot(_catalog([entry]), generator=GENERATOR)
+    assert snap_none.feed_url is None
+    assert snap_none.public_base_url is None
+
+
+def test_missing_entry_in_order_raises() -> None:
+    entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    cat = Catalog(
+        schema_version=1,
+        material_config_fingerprint="test",
+        entry_order=["https://paulgraham.com/a.html", "https://paulgraham.com/ghost.html"],
+        entries={entry.stable_id: entry},
+    )
+    with pytest.raises(FeedError, match="missing entry"):
+        catalog_to_feed_snapshot(cat, generator=GENERATOR)
+
+
+def test_never_uses_1970_sentinel_in_projection() -> None:
+    entry = _catalog_entry(
+        sid="https://paulgraham.com/a.html",
+        title="A",
+        position=0,
+        observed_updated_at=T1,
+        first_seen_at=T0,
+    )
+    snap = catalog_to_feed_snapshot(_catalog([entry]), generator=GENERATOR)
+    assert snap.logical_updated_at.year != 1970
+    assert snap.items[0].observed_updated_at.year != 1970
+    atom = render_atom(snap).decode()
+    assert "1970-01-01T00:00:00Z" not in atom
+
+
+def test_published_at_carried_through() -> None:
+    pub = datetime(2020, 5, 1, tzinfo=UTC)
+    entry = _catalog_entry(
+        sid="https://paulgraham.com/a.html",
+        title="A",
+        position=0,
+        published_at=pub,
+        summary="Has a real published day.",
+    )
+    snap = catalog_to_feed_snapshot(_catalog([entry]), generator=GENERATOR)
+    assert snap.items[0].published_at == pub
+
+
+def test_render_snapshot_feeds_parity() -> None:
+    entries = [
+        _catalog_entry(
+            sid="https://paulgraham.com/a.html",
+            title="Alpha",
+            position=0,
+            summary="Alpha summary text for feeds.",
+            observed_updated_at=T2,
+        ),
+        _catalog_entry(
+            sid="https://paulgraham.com/b.html",
+            title="Beta",
+            position=1,
+            summary="Beta summary text for feeds.",
+            observed_updated_at=T1,
+        ),
+    ]
+    snap = catalog_to_feed_snapshot(_catalog(entries), generator=GENERATOR)
+    rss, atom, json_feed = render_snapshot_feeds(snap)
+
+    assert rss.startswith(b"<?xml")
+    assert atom.startswith(b"<?xml")
+    payload = json.loads(json_feed.decode())
+    assert len(payload["items"]) == 2
+    assert payload["items"][0]["id"] == "https://paulgraham.com/a.html"
+    assert payload["items"][0]["summary"] == "Alpha summary text for feeds."
+    assert payload["items"][0]["content_text"] == payload["items"][0]["summary"]
+
+    rss_root = ET.fromstring(rss[rss.index(b"<rss") :])
+    assert len(rss_root.findall(".//item")) == 2
+    last_build = rss_root.findtext("./channel/lastBuildDate")
+    assert last_build is not None
+
+    atom_root = ET.fromstring(atom[atom.index(b"<feed") :])
+    feed_updated = atom_root.findtext(f"{{{ATOM_NS}}}updated")
+    assert feed_updated == rfc3339(snap.logical_updated_at)
+    assert len(atom_root.findall(f"{{{ATOM_NS}}}entry")) == 2
+
+
+def test_summary_truncated_to_feed_limit() -> None:
+    long = "word " * 200
+    entry = _catalog_entry(
+        sid="https://paulgraham.com/a.html",
+        title="Long",
+        position=0,
+        summary=long,
+    )
+    snap = catalog_to_feed_snapshot(_catalog([entry]), generator=GENERATOR)
+    assert 1 <= len(snap.items[0].summary) <= FEED_SUMMARY_CHARS
+
+
+def test_turbify_non_permalink_renders() -> None:
+    sid = "urn:uuid:11111111-1111-5111-8111-111111111111"
+    entry = _catalog_entry(
+        sid=sid,
+        title="Chapter 1",
+        position=0,
+        url="https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt",
+        summary="Protected chapter summary.",
+    )
+    snap = catalog_to_feed_snapshot(_catalog([entry]), generator=GENERATOR)
+    rss, _atom, _jf = render_snapshot_feeds(snap)
+    assert b'isPermaLink="false"' in rss
+    assert sid.encode() in rss
+
+
+def test_catalog_to_feed_snapshot_carries_index_hashes() -> None:
+    entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    snap = catalog_to_feed_snapshot(
+        _catalog([entry]),
+        generator=GENERATOR,
+        index_hash="deadbeef",
+        index_fingerprint="fp\nline",
+    )
+    assert snap.index_hash == "deadbeef"
+    assert snap.index_fingerprint == "fp\nline"
+    meta = json.loads(render_json(snap))["_pg_essay_feeds"]
+    assert meta["index_hash"] == "deadbeef"
+    assert meta["index_fingerprint"] == "fp\nline"
+
+
+def test_same_snapshot_renders_deterministically() -> None:
+    snap = _snapshot()
+    assert render_rss(snap) == render_rss(snap)
+    assert render_atom(snap) == render_atom(snap)
+    assert render_json(snap) == render_json(snap)
+
+
+def test_golden_fixtures_parity() -> None:
+    """Render matches committed P0.3 goldens under tests/fixtures/feeds/."""
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures" / "feeds"
+    snap = FeedSnapshot(
+        logical_updated_at=datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC),
+        generator="pg-essay-feeds/0.1.0",
+        index_hash="abc123",
+        index_fingerprint=(
+            "1\thttps://paulgraham.com/a.html\thttps://paulgraham.com/a.html\tAlpha"
+        ),
+        items=[
+            FeedEntrySnapshot(
+                id="https://paulgraham.com/a.html",
+                url="https://paulgraham.com/a.html",
+                title="Alpha",
+                summary="Alpha summary text for feeds.",
+                observed_updated_at=datetime(2025, 3, 1, 0, 0, 0, tzinfo=UTC),
+            ),
+            FeedEntrySnapshot(
+                id="https://paulgraham.com/b.html",
+                url="https://paulgraham.com/b.html",
+                title="Beta",
+                summary="Beta summary text for feeds.",
+                observed_updated_at=datetime(2024, 6, 15, 9, 30, 0, tzinfo=UTC),
+            ),
+            FeedEntrySnapshot(
+                id="urn:uuid:11111111-1111-5111-8111-111111111111",
+                url="https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt",
+                title="Chapter 1",
+                summary="Protected chapter summary.",
+                observed_updated_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
+            ),
+        ],
+    )
+    assert render_rss(snap) == (fixtures / "golden.rss.xml").read_bytes()
+    assert render_atom(snap) == (fixtures / "golden.atom.xml").read_bytes()
+    assert render_json(snap) == (fixtures / "golden.feed.json").read_bytes()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -14,8 +15,14 @@ from paul_graham_essay_feeds.feeds import (
     render_rss,
     write_feeds,
 )
-from paul_graham_essay_feeds.model import FEED_SUMMARY_CHARS, Essay, FeedError, utc_now
-from paul_graham_essay_feeds.verification import (
+from paul_graham_essay_feeds.models import (
+    FEED_SUMMARY_CHARS,
+    Essay,
+    FeedEntrySnapshot,
+    FeedError,
+    FeedSnapshot,
+)
+from paul_graham_essay_feeds.verify import (
     BELOW_MIN_ITEMS,
     CONTENT_TEXT_MISMATCH,
     COUNT_MISMATCH,
@@ -35,6 +42,8 @@ from paul_graham_essay_feeds.verification import (
     verify_feed_bytes,
     verify_feed_dir,
 )
+
+T0 = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
 
 
 def _sample() -> list[Essay]:
@@ -58,14 +67,28 @@ def _sample() -> list[Essay]:
     ]
 
 
-def _good_triple(essays: list[Essay] | None = None) -> tuple[bytes, bytes, bytes]:
+def _snapshot(essays: list[Essay] | None = None) -> FeedSnapshot:
     essays = essays if essays is not None else _sample()
-    now = utc_now()
-    return (
-        render_rss(essays, built_at=now),
-        render_atom(essays, built_at=now),
-        render_json(essays, built_at=now),
+    return FeedSnapshot(
+        logical_updated_at=T0,
+        generator="pg-essay-feeds/test",
+        items=[
+            FeedEntrySnapshot(
+                id=e.stable_id,
+                url=e.url,
+                title=e.title,
+                summary=e.summary or e.title,
+                observed_updated_at=T0,
+                published_at=e.published_at,
+            )
+            for e in essays
+        ],
     )
+
+
+def _good_triple(essays: list[Essay] | None = None) -> tuple[bytes, bytes, bytes]:
+    snap = _snapshot(essays)
+    return render_rss(snap), render_atom(snap), render_json(snap)
 
 
 def _codes(report: VerificationReport) -> list[str]:
@@ -157,12 +180,12 @@ def test_duplicate_ids() -> None:
 
 def test_verify_feed_dir_happy_and_missing(tmp_path: Path) -> None:
     essays = _sample()
-    now = utc_now()
+    snap = _snapshot(essays)
     write_feeds(
         tmp_path,
-        rss=render_rss(essays, built_at=now),
-        atom=render_atom(essays, built_at=now),
-        json_feed=render_json(essays, built_at=now),
+        rss=render_rss(snap),
+        atom=render_atom(snap),
+        json_feed=render_json(snap),
     )
     ok = verify_feed_dir(tmp_path, min_items=2)
     assert ok.ok is True
@@ -315,12 +338,12 @@ def test_id_order_mismatch_across_formats() -> None:
 
 def test_assert_verified_root_and_mode_errors(tmp_path: Path) -> None:
     essays = _sample()
-    now = utc_now()
+    snap = _snapshot(essays)
     write_feeds(
         tmp_path,
-        rss=render_rss(essays, built_at=now),
-        atom=render_atom(essays, built_at=now),
-        json_feed=render_json(essays, built_at=now),
+        rss=render_rss(snap),
+        atom=render_atom(snap),
+        json_feed=render_json(snap),
     )
     report = assert_verified(root=tmp_path, min_items=2)
     assert report.ok is True
@@ -392,12 +415,12 @@ def test_atom_link_fallback_without_alternate_rel() -> None:
 
 def test_verify_feed_dir_unreadable_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     essays = _sample()
-    now = utc_now()
+    snap = _snapshot(essays)
     write_feeds(
         tmp_path,
-        rss=render_rss(essays, built_at=now),
-        atom=render_atom(essays, built_at=now),
-        json_feed=render_json(essays, built_at=now),
+        rss=render_rss(snap),
+        atom=render_atom(snap),
+        json_feed=render_json(snap),
     )
     feeds = tmp_path / "feeds"
     real_read = Path.read_bytes

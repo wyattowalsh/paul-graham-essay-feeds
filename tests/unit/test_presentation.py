@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from paul_graham_essay_feeds.presentation import NULL_REPORTER, OutputPolicy, ProgressReporter
+from paul_graham_essay_feeds.models import NULL_REPORTER, OutputPolicy, ProgressReporter
 
 
 def test_null_reporter_returns_same_iterable() -> None:

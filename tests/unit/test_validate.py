@@ -9,11 +9,12 @@ import httpx
 import pytest
 import respx
 
-from paul_graham_essay_feeds.model import Essay, FeedError
-from paul_graham_essay_feeds.validate import (
+from paul_graham_essay_feeds.enrich import (
+    LinkProbeReport,
     validate_essays_live,
     validate_essays_structural,
 )
+from paul_graham_essay_feeds.models import Essay
 
 
 @pytest.fixture(autouse=True)
@@ -26,9 +27,9 @@ def _no_tenacity_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     from tenacity import wait_none
 
-    from paul_graham_essay_feeds import fetch as fetch_mod
+    from paul_graham_essay_feeds import http as http_mod
 
-    original = fetch_mod.retrying
+    original = http_mod.retrying
 
     def _fast_retrying(*, attempts: int, reraise: bool = True):
         controller = original(attempts=attempts, reraise=reraise)
@@ -36,7 +37,7 @@ def _no_tenacity_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
         controller.sleep = lambda _seconds: None
         return controller
 
-    monkeypatch.setattr(fetch_mod, "retrying", _fast_retrying)
+    monkeypatch.setattr(http_mod, "retrying", _fast_retrying)
 
 
 def _essay(url: str = "https://paulgraham.com/a.html") -> Essay:
@@ -56,51 +57,63 @@ def test_structural_ok() -> None:
 @respx.mock
 def test_live_probe_ok() -> None:
     respx.head("https://paulgraham.com/a.html").mock(return_value=httpx.Response(200))
-    validate_essays_live([_essay()], timeout=2.0, workers=2)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=2)
+    assert isinstance(report, LinkProbeReport)
+    assert report.checked == 1
+    assert report.ok == 1
+    assert report.failed == 0
+    assert report.failures == ()
 
 
 @respx.mock
-def test_live_probe_failure() -> None:
+def test_live_probe_failure_reports_without_raising() -> None:
+    """Probe failures are reported; essays stay included (no raise)."""
     respx.head("https://paulgraham.com/a.html").mock(return_value=httpx.Response(404))
-    with pytest.raises(FeedError, match="link probe"):
-        validate_essays_live([_essay()], timeout=2.0, workers=2)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=2)
+    assert report.failed == 1
+    assert report.ok == 0
+    assert "HTTP 404" in report.failures[0]
 
 
 @respx.mock
 def test_live_probe_head_not_allowed_falls_back_to_get() -> None:
     respx.head("https://paulgraham.com/a.html").mock(return_value=httpx.Response(405))
     respx.get("https://paulgraham.com/a.html").mock(return_value=httpx.Response(200))
-    validate_essays_live([_essay()], timeout=2.0, workers=2)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=2)
+    assert report.failed == 0
 
 
 @respx.mock
 def test_live_probe_head_501_falls_back_to_get() -> None:
     respx.head("https://paulgraham.com/a.html").mock(return_value=httpx.Response(501))
     respx.get("https://paulgraham.com/a.html").mock(return_value=httpx.Response(200))
-    validate_essays_live([_essay()], timeout=2.0, workers=2)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=2)
+    assert report.failed == 0
 
 
 @respx.mock
-def test_live_probe_transport_error() -> None:
+def test_live_probe_transport_error_reports_without_raising() -> None:
     respx.head("https://paulgraham.com/a.html").mock(side_effect=httpx.ConnectError("nope"))
-    with pytest.raises(FeedError, match="link probe"):
-        validate_essays_live([_essay()], timeout=2.0, workers=2)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=2)
+    assert report.failed == 1
+    assert "nope" in report.failures[0]
 
 
 @respx.mock
-def test_live_probe_redirect_disallowed() -> None:
+def test_live_probe_redirect_disallowed_reports() -> None:
     respx.head("https://paulgraham.com/a.html").mock(
         return_value=httpx.Response(302, headers={"Location": "https://evil.example/x"})
     )
-    with pytest.raises(FeedError, match="link probe"):
-        validate_essays_live([_essay()], timeout=2.0, workers=2, retries=0)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=2, retries=0)
+    assert report.failed == 1
+    assert "disallowed" in report.failures[0].lower() or "evil" in report.failures[0]
 
 
 @respx.mock
 def test_live_probe_workers_kwarg_honored() -> None:
     respx.head("https://paulgraham.com/a.html").mock(return_value=httpx.Response(200))
     with patch(
-        "paul_graham_essay_feeds.validate.ThreadPoolExecutor",
+        "paul_graham_essay_feeds.enrich.ThreadPoolExecutor",
         wraps=ThreadPoolExecutor,
     ) as pool_cls:
         validate_essays_live([_essay()], timeout=2.0, workers=3, retries=0)
@@ -109,13 +122,13 @@ def test_live_probe_workers_kwarg_honored() -> None:
 
 
 @respx.mock
-def test_live_probe_max_bytes_on_get_fallback() -> None:
+def test_live_probe_max_bytes_on_get_fallback_reports() -> None:
     respx.head("https://paulgraham.com/a.html").mock(return_value=httpx.Response(405))
     respx.get("https://paulgraham.com/a.html").mock(
         return_value=httpx.Response(200, content=b"x" * 200)
     )
-    with pytest.raises(FeedError, match="link probe"):
-        validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
+    assert report.failed == 1
 
 
 @respx.mock
@@ -128,14 +141,16 @@ def test_live_probe_head_content_length_over_max_bytes_allowed() -> None:
             headers={"Content-Length": "99999"},
         )
     )
-    validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
+    assert report.failed == 0
 
 
 @respx.mock
 def test_live_probe_head_empty_body_ok() -> None:
     """HEAD with empty entity body succeeds under a small max_bytes budget."""
     respx.head("https://paulgraham.com/a.html").mock(return_value=httpx.Response(200, content=b""))
-    validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0, max_bytes=50)
+    assert report.failed == 0
 
 
 @respx.mock
@@ -147,13 +162,13 @@ def test_live_probe_redirect_to_loopback_rejected() -> None:
             headers={"Location": "http://127.0.0.1/secret"},
         )
     )
-    with pytest.raises(FeedError, match="link probe"):
-        validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0)
+    assert report.failed == 1
 
 
 @respx.mock
 def test_live_probe_error_preview_plus_n_more() -> None:
-    """Aggregate failures show first 10 lines plus ``+N more`` overflow."""
+    """Aggregate failures return all issues; log preview shows first 10 + overflow."""
     essays = [
         Essay(
             position=i,
@@ -166,19 +181,20 @@ def test_live_probe_error_preview_plus_n_more() -> None:
     ]
     for essay in essays:
         respx.head(essay.url).mock(return_value=httpx.Response(404))
-    with pytest.raises(FeedError, match=r"12 link probe failure\(s\):") as exc_info:
-        validate_essays_live(essays, timeout=2.0, workers=4, retries=0)
-    msg = str(exc_info.value)
-    assert "+2 more" in msg
-    # First 10 failures listed; overflow summarized (not a 12th detail line).
-    assert msg.count("→ HTTP 404") == 10
+    report = validate_essays_live(essays, timeout=2.0, workers=4, retries=0)
+    assert report.failed == 12
+    assert report.ok == 0
+    assert report.checked == 12
+    assert len(report.failures) == 12
+    assert all("HTTP 404" in msg for msg in report.failures)
 
 
 @respx.mock
 def test_live_probe_turbify_host_ok() -> None:
     url = "https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt"
     respx.head(url).mock(return_value=httpx.Response(200))
-    validate_essays_live([_essay(url)], timeout=2.0, workers=1, retries=0)
+    report = validate_essays_live([_essay(url)], timeout=2.0, workers=1, retries=0)
+    assert report.failed == 0
 
 
 @respx.mock
@@ -193,7 +209,8 @@ def test_live_probe_allowed_turbify_redirect() -> None:
     respx.head("https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt").mock(
         return_value=httpx.Response(200)
     )
-    validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0)
+    assert report.failed == 0
 
 
 @respx.mock
@@ -202,7 +219,8 @@ def test_live_probe_relative_redirect_same_host() -> None:
         return_value=httpx.Response(302, headers={"Location": "/b.html"})
     )
     respx.head("https://paulgraham.com/b.html").mock(return_value=httpx.Response(200))
-    validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=1, retries=0)
+    assert report.failed == 0
 
 
 @respx.mock
@@ -212,4 +230,10 @@ def test_live_probe_retryable_then_ok() -> None:
         httpx.Response(503, text="busy"),
         httpx.Response(200),
     ]
-    validate_essays_live([_essay()], timeout=2.0, workers=1, retries=2)
+    report = validate_essays_live([_essay()], timeout=2.0, workers=1, retries=2)
+    assert report.failed == 0
+
+
+def test_live_probe_empty_list() -> None:
+    report = validate_essays_live([], timeout=2.0, workers=1)
+    assert report == LinkProbeReport(checked=0, ok=0, failures=())

@@ -6,8 +6,8 @@ import httpx
 import pytest
 import respx
 
-from paul_graham_essay_feeds.fetch import hop_safe_request
-from paul_graham_essay_feeds.model import ALLOWED_HOSTS, FeedError
+from paul_graham_essay_feeds.http import hop_safe_request
+from paul_graham_essay_feeds.models import ALLOWED_HOSTS, FeedError
 
 
 @pytest.mark.characterization
