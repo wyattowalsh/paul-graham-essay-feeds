@@ -43,20 +43,18 @@ def _offline_default_no_live_probes(
 
 
 def pytest_collection_modifyitems(config, items):
-    """Auto-mark by directory so unit/ mirrors modules without repeating markers."""
+    """Auto-mark by directory so unit/ mirrors modules without repeating markers.
+
+    Flat singleton suites (``tests/test_cli_e2e.py``, ``tests/test_live_fetch.py``)
+    carry ``pytestmark`` in-module; directory heuristics cover nested layers only.
+    """
     for item in items:
         parts = set(Path(str(item.fspath)).parts)
         if "unit" in parts:
             item.add_marker(pytest.mark.unit)
         elif "integration" in parts:
             item.add_marker(pytest.mark.integration)
-        elif "e2e" in parts:
-            item.add_marker(pytest.mark.e2e)
         elif "smoke" in parts:
             item.add_marker(pytest.mark.smoke)
-        elif "live" in parts:
-            item.add_marker(pytest.mark.live)
         elif "characterization" in parts:
             item.add_marker(pytest.mark.characterization)
-        elif "packaging" in parts:
-            item.add_marker(pytest.mark.unit)

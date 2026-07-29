@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from paul_graham_essay_feeds.discovery import ExtractionStrategy, discover_essays
+from paul_graham_essay_feeds.discover import ExtractionStrategy, discover_essays
 from paul_graham_essay_feeds.http import EncodingSource, decode_html_document
 from paul_graham_essay_feeds.models import FeedError
 

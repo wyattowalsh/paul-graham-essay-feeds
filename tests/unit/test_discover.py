@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from paul_graham_essay_feeds.discovery import (
+from paul_graham_essay_feeds.discover import (
     ExtractionStrategy,
     build_discovery_snapshot,
     discover_essays,

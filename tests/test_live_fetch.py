@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from paul_graham_essay_feeds.discovery import discover_essays
+from paul_graham_essay_feeds.discover import discover_essays
 from paul_graham_essay_feeds.http import fetch_html
 from paul_graham_essay_feeds.models import MIN_ITEMS, SOURCE_URL
 

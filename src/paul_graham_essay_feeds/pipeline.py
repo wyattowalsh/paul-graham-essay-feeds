@@ -27,7 +27,7 @@ from paul_graham_essay_feeds.catalog import (
     reconcile_discovery,
     save_catalog,
 )
-from paul_graham_essay_feeds.discovery import discover_essays
+from paul_graham_essay_feeds.discover import discover_essays
 from paul_graham_essay_feeds.enrich import PageEnrichEvidence, enrich_essays, validate_essays_live
 from paul_graham_essay_feeds.feeds import (
     catalog_to_feed_snapshot,

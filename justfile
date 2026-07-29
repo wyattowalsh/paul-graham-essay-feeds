@@ -124,7 +124,7 @@ alias ti := test-integration
 [group("test")]
 [doc("End-to-end CLI tests only")]
 @test-e2e:
-    {{ uv }} run pytest tests/e2e -m e2e -q
+    {{ uv }} run pytest tests/test_cli_e2e.py -m e2e -q
 alias te := test-e2e
 
 # Smoke-marked pytest tests only

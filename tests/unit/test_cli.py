@@ -549,7 +549,7 @@ def test_discovery_passes_source_url_as_base_url(
 
     def fake_discover(html: str, **kwargs: Any) -> Any:
         captured.update(kwargs)
-        from paul_graham_essay_feeds.discovery import discover_essays as real
+        from paul_graham_essay_feeds.discover import discover_essays as real
 
         return real(html, **kwargs)
 

@@ -1,7 +1,7 @@
 """Page enrich (selectolax metadata) + live link probes.
 
 Absorbs former ``metadata`` / ``validate`` modules (T7). HTML parsing uses
-selectolax only; marker/allowlist policy for the index lives in ``discovery``.
+selectolax only; marker/allowlist policy for the index lives in ``discover``.
 """
 
 from __future__ import annotations

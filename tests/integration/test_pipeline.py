@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from paul_graham_essay_feeds.catalog import default_catalog_path
-from paul_graham_essay_feeds.discovery import discover_essays
+from paul_graham_essay_feeds.discover import discover_essays
 from paul_graham_essay_feeds.models import MIN_ITEMS
 from paul_graham_essay_feeds.pipeline import run_catalog_pipeline
 from paul_graham_essay_feeds.settings import Settings
