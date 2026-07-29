@@ -390,7 +390,7 @@ just cov
 | :--- | :--- |
 | `ci.yml` | matrix 3.12–3.14; lint/types (3.13); pytest + cov ≥90%; committed-feed `check`; offline catalog smoke (`feeds/` + `catalog.json`); dist job |
 | `release.yml` | on tag `v*`: version match, quality gates, `uv build --no-sources`, wheel smoke, GitHub Release |
-| `update-feeds.yml` | scheduled live refresh → validate → stage `feeds` + `catalog.json` PR |
+| `update-feeds.yml` | scheduled live refresh → validate → commit `feeds/` + `catalog.json` to `main` |
 | Dependabot | weekly `uv` + `github-actions` |
 
 CI policy: exit 0 on matrix; full-SHA action pins; least privilege on generation jobs;
@@ -578,7 +578,7 @@ leaves prior catalog + feeds intact.
 ### AD-006 — CLI and Python
 
 - Python **3.12–3.14** (`requires-python >=3.12`); ship `py.typed`.
-- Commands: `update`, `check`, `bootstrap`, `site` (+ legacy pipeline escape hatch).
+- Commands: `update` + `check` only (no `site` / legacy pipeline escape hatches).
 - Flags override Settings only when `ParameterSource.COMMANDLINE`.
 - Quiet success → **zero bytes** on stdout/stderr.
 - Exit codes: `0` success; `1` usage/expected failure; higher codes reserved for
@@ -589,13 +589,13 @@ leaves prior catalog + feeds intact.
 - MIT covers **code**, not Paul Graham essays.
 - Short source-derived summaries only; no full-body storage.
 - Release tags must match package version; user-facing CHANGELOG only.
-- Scheduled automation stages deterministic catalog + feed + site artifacts.
+- Scheduled automation commits deterministic `catalog.json` + `feeds/` to `main`.
 
 ### AD-008 — CI clean
 
 Matrix 3.12/3.13/3.14; full-SHA pins; least privilege; offline suite default;
 coverage ≥90% on full suite; `pg-essay-feeds check` on committed feeds; offline smoke
-asserts catalog pipeline + site materialize.
+asserts catalog pipeline + feed projections under `feeds/`.
 
 ---
 

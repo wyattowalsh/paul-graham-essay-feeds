@@ -59,7 +59,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -83,51 +82,24 @@ jobs:
       - name: Validate feeds
         run: uv run pg-essay-feeds check
 
-      - name: Open or update automation PR
+      - name: Commit feeds to main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           if git diff --quiet -- feeds catalog.json; then
             echo "No feed/catalog changes."
             exit 0
           fi
-          branch="automation/feed-update"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch origin "$branch" 2>/dev/null || true
-          if git rev-parse --verify "refs/remotes/origin/$branch" >/dev/null 2>&1; then
-            expect="$(git rev-parse "refs/remotes/origin/$branch")"
-          else
-            expect=""
-          fi
-          # Branch from current HEAD so updated feeds stay in the worktree (not reset).
-          git checkout -B "$branch"
+          expect="${GITHUB_SHA}"
           git add feeds catalog.json
           if git diff --cached --quiet; then
             echo "Nothing staged."
             exit 0
           fi
           git commit -m "chore: refresh Paul Graham essay feeds"
-          if [ -n "$expect" ]; then
-            git push origin "HEAD:refs/heads/$branch" \
-              --force-with-lease="refs/heads/$branch:${expect}"
-          else
-            git push -u origin "HEAD:refs/heads/$branch"
-          fi
-          if gh pr list --head "$branch" --json number --jq 'length' | grep -qx 0; then
-            gh pr create \
-              --title "chore: refresh Paul Graham essay feeds" \
-              --body "$(printf '%s\n' \
-                'Automated snapshot update (`feeds/` + `catalog.json`) from the official essays index.' \
-                '' \
-                'Validated by `pg-essay-feeds check` (feed structure + optional catalog integrity) before opening this PR.' \
-                '' \
-                'Reader impact: Atom entry `updated` and JSON `date_modified` use truthful observation clocks (no 1970 sentinel on the catalog path).' \
-                '' \
-                'Enrichment ran with capped workers (`PG_ESSAY_FEEDS_ENRICH_WORKERS=4`) for politeness toward paulgraham.com.')" \
-              --base main \
-              --head "$branch"
-          else
-            echo "PR already open for $branch"
-          fi
+          git push origin "HEAD:refs/heads/main" \
+            --force-with-lease="refs/heads/main:${expect}"
