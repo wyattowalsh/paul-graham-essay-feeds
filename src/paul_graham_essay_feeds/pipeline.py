@@ -1,6 +1,7 @@
 """Catalog-native update pipeline (v7.1).
 
-load/bootstrap catalog → discover → reconcile → refresh plan → selective enrich
+load/bootstrap catalog → discover → reconcile → refresh plan
+→ live-probe URLs not due for enrich → selective enrich (GET implies reachability)
 → snapshot → verify in memory → atomic root ``catalog.json`` + ``feeds/*``.
 """
 
@@ -538,6 +539,34 @@ def run_catalog_pipeline(
         )
 
     due_ids = {d.stable_id for d in plan.decisions if d.fetch_page}
+    # URLs we will GET for enrich this run — a successful enrich implies reachability,
+    # so live HEAD probes skip those ids (probe the rest first, then enrich).
+    enrich_ids = due_ids if settings.enrich else set()
+
+    if settings.validate_links:
+        probe_essays = (
+            [e for e in essays if e.stable_id not in enrich_ids] if enrich_ids else essays
+        )
+        if enrich_ids and probe_essays:
+            logger.info(
+                "Live-probing {}/{} essays not selected for enrich this run…",
+                len(probe_essays),
+                len(essays),
+            )
+        elif enrich_ids and not probe_essays:
+            logger.info(
+                "Skipping dedicated link probes (all {} essays due for enrich GET)",
+                len(essays),
+            )
+        validate_essays_live(
+            probe_essays,
+            timeout=settings.link_timeout,
+            retries=settings.retries,
+            workers=settings.link_workers,
+            max_bytes=settings.max_bytes,
+            quiet=settings.quiet,
+        )
+
     if settings.enrich and due_ids:
         due_essays = _essays_for_ids(essays, due_ids)
         logger.info(
@@ -572,16 +601,6 @@ def run_catalog_pipeline(
         )
     elif settings.enrich and not due_ids:
         logger.info("Refresh plan: no page fetches due")
-
-    if settings.validate_links:
-        validate_essays_live(
-            essays,
-            timeout=settings.link_timeout,
-            retries=settings.retries,
-            workers=settings.link_workers,
-            max_bytes=settings.max_bytes,
-            quiet=settings.quiet,
-        )
 
     # Stamp index validators into catalog only when we continue toward publish.
     index_state = ResourceState(

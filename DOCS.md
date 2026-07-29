@@ -82,10 +82,11 @@ flowchart LR
   A[fetch index] --> B[discover + structural validate]
   B --> C[catalog reconcile]
   C --> D[refresh plan]
-  D --> E[selective enrich]
-  E --> F[FeedSnapshot + render]
-  F --> G[verify in memory]
-  G --> H[catalog.json + feeds]
+  D --> E[live probe non-enrich URLs]
+  E --> F[selective enrich]
+  F --> G[FeedSnapshot + render]
+  G --> H[verify in memory]
+  H --> I[catalog.json + feeds]
 ```
 
 | Stage | When | Notes |
@@ -93,8 +94,8 @@ flowchart LR
 | Structural validate | Always (inside discovery) | Host / URL / count floor |
 | Catalog reconcile | Always (default pipeline) | Durable `catalog.json` SSOT (repo root) |
 | Refresh plan | Always | F-001: never skip solely on index hash |
-| Enrich | Default on; planned pages only | Prior-good summary retained |
-| Live link probes | Default on; `--no-validate-links` to skip | Report-only; never drop essays |
+| Live link probes | Default on; `--no-validate-links` to skip | **Before** enrich; skips URLs due for enrich GET (successful enrich implies reachability). Report-only; never drop essays |
+| Enrich | Default on; planned pages only | Prior-good summary retained; page GET is the probe for those URLs |
 | Publish | Verify → atomic `catalog.json` + `feeds/*` | No generation tree / `current.json` |
 
 > [!TIP]
@@ -109,7 +110,7 @@ flowchart LR
 
 ```text
 raw fetch → decode → discovery → catalog reconcile → refresh plan
-  → prior-good enrich → FeedSnapshot → RSS/Atom/JSON
+  → live-probe (non-enrich URLs) → prior-good enrich → FeedSnapshot → RSS/Atom/JSON
   → deep verify → project feeds/ + durable catalog
 ```
 
@@ -430,20 +431,21 @@ uv build --no-sources
 filename as the README hero badge) — audience is feed-reader users, not
 maintainers:
 
-1. HTML hero (`IPython.display.HTML`) — brand, unofficial disclaimer, 3-step
-   how-to (enrich + live link checks), RSS / Atom / JSON what-you-get,
-   metadata-only honesty; notes `catalog.json` on disk and feeds-only zip
+1. HTML hero (`IPython.display.HTML`, `#@title` + `cellView: form` so code stays
+   hidden) — brand, unofficial disclaimer, 3-step how-to (enrich + live checks
+   on non-enrich URLs), RSS / Atom / JSON what-you-get, metadata-only honesty;
+   notes `catalog.json` on disk and feeds-only zip
 2. Form cell (`#@title` + `cellView: form`): **Enrich** on/off; `ROOT` under
    Advanced (default `/content/pg-feeds`)
 3. `!pip install -q "uv>=0.12"` → `subprocess` `uvx … update` (capture + print
    logs; `+ --no-enrich` when off; **do not** pass `--no-validate-links` —
-   package default `validate_links=True`) → `uvx … check` → assert feeds →
-   zip three feeds → Colab download
+   package default `validate_links=True`; probes run **before** enrich and skip
+   URLs due for enrich GET) → `uvx … check` → assert feeds → zip three feeds →
+   Colab download
 4. Status HTML after the zip (report-only): **green** when logs show live link
    probes OK / no failure lines; **amber** panel with failure count + up to
    ~10 `Link probe issue:` messages when probes fail — zip still downloads
-5. Collapsed markdown troubleshooting (slow = enrich + probes; amber panel;
-   `catalog.json` under `ROOT`)
+5. Troubleshooting cell (`#@title` + form-hidden HTML `<details>`)
 
 No package API imports in the kernel; CLI only via `uvx` from floating `main`.
 `notebook.ipynb` stays ruff/ty-excluded.
