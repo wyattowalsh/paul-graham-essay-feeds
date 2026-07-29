@@ -26,7 +26,7 @@ There is **no** `docs/` tree. Normative architecture decisions live in
 
 ```text
 raw fetch → decode → discovery → catalog reconcile → refresh plan
-  → prior-good enrich → FeedSnapshot → RSS/Atom/JSON
+  → live-probe (non-enrich URLs) → prior-good enrich → FeedSnapshot → RSS/Atom/JSON
   → deep verify → project feeds/ + durable catalog
 ```
 

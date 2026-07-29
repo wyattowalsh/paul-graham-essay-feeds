@@ -73,6 +73,63 @@ def test_pipeline_publish_creates_catalog_and_feeds(tmp_path: Path) -> None:
     assert len(result.catalog.entry_order) >= MIN_ITEMS
 
 
+def test_live_probes_skip_urls_due_for_enrich(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When enrich will GET a URL, dedicated probes skip it (enrich implies reachability)."""
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+
+    html = synthetic_index_html()
+    validate = MagicMock(return_value=None)
+    enrich = MagicMock(side_effect=_stable_enrich)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.validate_essays_live", validate)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.enrich_essays", enrich)
+
+    settings = _settings(
+        tmp_path,
+        min_items=MIN_ITEMS,
+        enrich=True,
+        validate_links=True,
+        force=True,
+    )
+    result = run_catalog_pipeline(settings, html=html, now=T0)
+    assert result.action == "updated"
+    enrich.assert_called_once()
+    validate.assert_called_once()
+    probed = validate.call_args.args[0]
+    enriched = enrich.call_args.args[0]
+    probed_ids = {e.stable_id for e in probed}
+    enriched_ids = {e.stable_id for e in enriched}
+    assert probed_ids.isdisjoint(enriched_ids)
+    # First force+enrich run: every essay is typically due → probe list empty.
+    assert probed_ids == set() or enriched_ids
+
+
+def test_live_probes_cover_all_when_enrich_off(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With --no-enrich, live probes check every essay URL."""
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+
+    html = synthetic_index_html()
+    validate = MagicMock(return_value=None)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.validate_essays_live", validate)
+
+    settings = _settings(
+        tmp_path,
+        min_items=MIN_ITEMS,
+        enrich=False,
+        validate_links=True,
+    )
+    result = run_catalog_pipeline(settings, html=html, now=T0)
+    assert result.action == "updated"
+    validate.assert_called_once()
+    probed = validate.call_args.args[0]
+    assert len(probed) == result.essay_count
+
+
 def test_pipeline_second_pass_skips_when_not_due(tmp_path: Path) -> None:
     from paul_graham_essay_feeds.models import MIN_ITEMS
 
