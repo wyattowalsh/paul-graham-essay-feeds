@@ -1,4 +1,4 @@
-"""Render and write RSS/Atom/JSON feed artifacts.
+"""Render and write RSS/Atom/JSON feed artifacts from ``FeedSnapshot``.
 
 Note: this module is named ``feeds`` (package code); generated files live in
 the repository ``feeds/`` directory.
@@ -6,17 +6,14 @@ the repository ``feeds/`` directory.
 
 from __future__ import annotations
 
-import contextlib
 import json
-import os
-import tempfile
 import xml.etree.ElementTree as ET
-from datetime import datetime
 from pathlib import Path
 
 from loguru import logger
 
-from paul_graham_essay_feeds.model import (
+from paul_graham_essay_feeds.catalog import atomic_write_bytes
+from paul_graham_essay_feeds.models import (
     ATOM_NS,
     AUTHOR,
     AUTHOR_URL,
@@ -25,19 +22,111 @@ from paul_graham_essay_feeds.model import (
     FEED_ID,
     FEED_SUMMARY_CHARS,
     FEED_TITLE,
-    GENERATOR,
     JSON_FEED_VERSION,
+    NULL_REPORTER,
     SOURCE_URL,
-    Essay,
+    Catalog,
+    FeedEntrySnapshot,
     FeedError,
+    FeedSnapshot,
+    Lifecycle,
+    ProgressReporter,
+    blurb,
     rfc822,
     rfc3339,
-    stable_updated,
+    truncate_text,
 )
-from paul_graham_essay_feeds.presentation import NULL_REPORTER, ProgressReporter
 
 
-def render_rss(essays: list[Essay], *, built_at: datetime) -> bytes:
+def catalog_to_feed_snapshot(
+    catalog: Catalog,
+    *,
+    generator: str,
+    public_base_url: str | None = None,
+    index_hash: str | None = None,
+    index_fingerprint: str | None = None,
+) -> FeedSnapshot:
+    """Project ACTIVE catalog entries into an immutable feed snapshot.
+
+    Rules:
+
+    - Only ``Lifecycle.ACTIVE`` entries, in ``catalog.entry_order``.
+    - ``summary`` = catalog summary when present, else a title blurb.
+    - ``observed_updated_at`` = entry value, else ``first_seen_at``; entries
+      missing both are skipped (reconcile should set observation times).
+    - ``logical_updated_at`` = max item ``observed_updated_at``, else
+      ``catalog.index.last_checked_at``.
+    - Never invents 1970-01-01 observation times.
+    """
+    items: list[FeedEntrySnapshot] = []
+    for stable_id in catalog.entry_order:
+        entry = catalog.entries.get(stable_id)
+        if entry is None:
+            raise FeedError(f"Catalog entry_order references missing entry: {stable_id!r}")
+        if entry.lifecycle is not Lifecycle.ACTIVE:
+            continue
+
+        observed = entry.observed_updated_at or entry.first_seen_at
+        if observed is None:
+            # Reconcile is expected to set observed_updated_at; skip undated.
+            continue
+
+        summary = _entry_summary(entry.summary, entry.title)
+        items.append(
+            FeedEntrySnapshot(
+                id=entry.stable_id,
+                url=entry.url,
+                title=entry.title,
+                summary=summary,
+                observed_updated_at=observed,
+                published_at=entry.published_at,
+            )
+        )
+
+    if items:
+        logical_updated_at = max(item.observed_updated_at for item in items)
+    else:
+        # FeedSnapshot requires ≥1 item; index last_checked is the only
+        # remaining candidate clock (never invent wall-clock or 1970).
+        logical_updated_at = catalog.index.last_checked_at
+
+    if not items or logical_updated_at is None:
+        raise FeedError(
+            "Catalog has no ACTIVE entries with observation timestamps for feed projection"
+        )
+
+    base = public_base_url.strip() if public_base_url else None
+    if not base:
+        base = None
+    feed_url = f"{base.rstrip('/')}/feed.json" if base is not None else None
+
+    return FeedSnapshot(
+        logical_updated_at=logical_updated_at,
+        generator=generator,
+        feed_url=feed_url,
+        public_base_url=base,
+        index_hash=index_hash,
+        index_fingerprint=index_fingerprint,
+        items=items,
+    )
+
+
+def render_snapshot_feeds(snapshot: FeedSnapshot) -> tuple[bytes, bytes, bytes]:
+    """Render RSS, Atom, and JSON Feed bytes from ``snapshot``.
+
+    Returns
+    -------
+    tuple[bytes, bytes, bytes]
+        ``(rss, atom, json_feed)`` artifact bytes.
+    """
+    return (
+        render_rss(snapshot),
+        render_atom(snapshot),
+        render_json(snapshot),
+    )
+
+
+def render_rss(snapshot: FeedSnapshot) -> bytes:
     """RSS 2.0: title, link, guid, short description — no full essay body."""
     ET.register_namespace("dc", DC_NS)
     root = ET.Element("rss", {"version": "2.0"})
@@ -47,35 +136,37 @@ def render_rss(essays: list[Essay], *, built_at: datetime) -> bytes:
         ("link", SOURCE_URL),
         ("description", FEED_DESCRIPTION),
         ("language", "en-US"),
-        ("lastBuildDate", rfc822(built_at)),
+        ("lastBuildDate", rfc822(snapshot.logical_updated_at)),
         ("category", "Essays"),
-        ("generator", GENERATOR),
+        ("generator", snapshot.generator),
         ("docs", "https://www.rssboard.org/rss-specification"),
         ("ttl", "1440"),
     ):
         ET.SubElement(ch, tag).text = val
 
-    for e in essays:
+    for entry in snapshot.items:
         item = ET.SubElement(ch, "item")
-        ET.SubElement(item, "title").text = e.title
-        ET.SubElement(item, "link").text = e.url
-        ET.SubElement(item, "description").text = e.feed_summary()
+        ET.SubElement(item, "title").text = entry.title
+        ET.SubElement(item, "link").text = entry.url
+        ET.SubElement(item, "description").text = entry.summary
         ET.SubElement(item, f"{{{DC_NS}}}creator").text = AUTHOR
         ET.SubElement(item, "category").text = "Essays"
+        is_permalink = _is_permalink(entry)
+        guid_text = entry.url if is_permalink else entry.id
         ET.SubElement(
             item,
             "guid",
-            {"isPermaLink": "true" if e.is_permalink else "false"},
-        ).text = e.stable_id
-        if e.published_at is not None:
-            ET.SubElement(item, "pubDate").text = rfc822(e.published_at)
+            {"isPermaLink": "true" if is_permalink else "false"},
+        ).text = guid_text
+        if entry.published_at is not None:
+            ET.SubElement(item, "pubDate").text = rfc822(entry.published_at)
 
     ET.indent(root, space="  ")
     body = ET.tostring(root, encoding="utf-8", xml_declaration=False)
     return b'<?xml version="1.0" encoding="UTF-8"?>\n' + body + b"\n"
 
 
-def render_atom(essays: list[Essay], *, built_at: datetime) -> bytes:
+def render_atom(snapshot: FeedSnapshot) -> bytes:
     """Atom 1.0: title, link, id, summary — no full essay body."""
     feed = ET.Element(
         "feed",
@@ -86,7 +177,7 @@ def render_atom(essays: list[Essay], *, built_at: datetime) -> bytes:
     )
     ET.SubElement(feed, "title").text = FEED_TITLE
     ET.SubElement(feed, "id").text = FEED_ID
-    ET.SubElement(feed, "updated").text = rfc3339(built_at)
+    ET.SubElement(feed, "updated").text = rfc3339(snapshot.logical_updated_at)
     ET.SubElement(feed, "subtitle").text = FEED_DESCRIPTION
     author = ET.SubElement(feed, "author")
     ET.SubElement(author, "name").text = AUTHOR
@@ -96,53 +187,46 @@ def render_atom(essays: list[Essay], *, built_at: datetime) -> bytes:
         "link",
         {"rel": "alternate", "type": "text/html", "href": SOURCE_URL},
     )
-    ET.SubElement(feed, "generator").text = GENERATOR
+    ET.SubElement(feed, "generator").text = snapshot.generator
 
-    for e in essays:
-        entry = ET.SubElement(feed, "entry")
-        ET.SubElement(entry, "title").text = e.title
-        ET.SubElement(entry, "id").text = e.stable_id
-        # Feed-level updated = built_at; entry updated never uses wall-clock for undated.
-        updated = e.published_at or stable_updated(e.stable_id)
-        ET.SubElement(entry, "updated").text = rfc3339(updated)
-        if e.published_at is not None:
-            ET.SubElement(entry, "published").text = rfc3339(e.published_at)
+    for entry in snapshot.items:
+        atom_entry = ET.SubElement(feed, "entry")
+        ET.SubElement(atom_entry, "title").text = entry.title
+        ET.SubElement(atom_entry, "id").text = entry.id
+        # Required truthful observation clock — never 1970 sentinel.
+        ET.SubElement(atom_entry, "updated").text = rfc3339(entry.observed_updated_at)
+        if entry.published_at is not None:
+            ET.SubElement(atom_entry, "published").text = rfc3339(entry.published_at)
         ET.SubElement(
-            entry,
+            atom_entry,
             "link",
-            {"rel": "alternate", "type": "text/html", "href": e.url},
+            {"rel": "alternate", "type": "text/html", "href": entry.url},
         )
-        ET.SubElement(entry, "summary", {"type": "text"}).text = e.feed_summary()
+        ET.SubElement(atom_entry, "summary", {"type": "text"}).text = entry.summary
 
     ET.indent(feed, space="  ")
     body = ET.tostring(feed, encoding="utf-8", xml_declaration=False)
     return b'<?xml version="1.0" encoding="UTF-8"?>\n' + body + b"\n"
 
 
-def render_json(
-    essays: list[Essay],
-    *,
-    built_at: datetime | None = None,
-    index_hash: str | None = None,
-    index_fingerprint: str | None = None,
-) -> bytes:
+def render_json(snapshot: FeedSnapshot) -> bytes:
     """JSON Feed 1.1: title, url, id, summary — no full essay body."""
     items: list[dict] = []
-    for e in essays:
-        short = e.feed_summary()
+    for entry in snapshot.items:
         item: dict = {
-            "id": e.stable_id,
-            "url": e.url,
-            "title": e.title,
-            "summary": short,
+            "id": entry.id,
+            "url": entry.url,
+            "title": entry.title,
+            "summary": entry.summary,
             # JSON Feed 1.1 SHOULD content_text — short metadata only, not full body.
-            "content_text": short,
+            "content_text": entry.summary,
             "authors": [{"name": AUTHOR, "url": AUTHOR_URL}],
             "tags": ["Essays"],
             "language": "en",
         }
-        if e.published_at is not None:
-            item["date_published"] = rfc3339(e.published_at)
+        if entry.published_at is not None:
+            item["date_published"] = rfc3339(entry.published_at)
+        item["date_modified"] = rfc3339(entry.observed_updated_at)
         items.append(item)
 
     payload: dict = {
@@ -154,68 +238,25 @@ def render_json(
         "authors": [{"name": AUTHOR, "url": AUTHOR_URL}],
         "items": items,
     }
-    if built_at is not None or index_hash is not None or index_fingerprint is not None:
-        meta: dict = {
-            "generator": GENERATOR,
-            "item_count": len(items),
-        }
-        if built_at is not None:
-            meta["built_at"] = rfc3339(built_at)
-        if index_hash is not None:
-            meta["index_hash"] = index_hash
-        if index_fingerprint is not None:
-            meta["index_fingerprint"] = index_fingerprint
-        payload["_pg_essay_feeds"] = meta
+    if snapshot.feed_url is not None:
+        payload["feed_url"] = snapshot.feed_url
+
+    meta: dict = {
+        "generator": snapshot.generator,
+        "item_count": len(items),
+        "logical_updated_at": rfc3339(snapshot.logical_updated_at),
+    }
+    if snapshot.index_hash is not None:
+        meta["index_hash"] = snapshot.index_hash
+    if snapshot.index_fingerprint is not None:
+        meta["index_fingerprint"] = snapshot.index_fingerprint
+    payload["_pg_essay_feeds"] = meta
     return (json.dumps(payload, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
-
-
-def _atomic_write(path: Path, data: bytes) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.")
-    try:
-        with os.fdopen(fd, "wb") as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(tmp, path)
-    except Exception:
-        with contextlib.suppress(OSError):
-            os.unlink(tmp)
-        raise
 
 
 def feeds_exist(root: Path) -> bool:
     """True when all three feed artifacts exist under ``root``."""
     return all(p.is_file() for p in feed_paths(root).values())
-
-
-def load_index_skip_state(root: Path) -> tuple[str, str, int] | None:
-    """Return ``(index_hash, index_fingerprint, item_count)`` from ``feed.json`` when present."""
-    path = feed_paths(root)["json"]
-    if not path.is_file():
-        return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        logger.warning("Ignoring unreadable feed.json skip state {}: {}", path, exc)
-        return None
-    if not isinstance(payload, dict):
-        return None
-    meta = payload.get("_pg_essay_feeds")
-    if not isinstance(meta, dict):
-        return None
-    index_hash = meta.get("index_hash")
-    fingerprint = meta.get("index_fingerprint")
-    item_count = meta.get("item_count")
-    if (
-        not isinstance(index_hash, str)
-        or not index_hash
-        or not isinstance(fingerprint, str)
-        or not fingerprint
-        or not isinstance(item_count, int)
-    ):
-        return None
-    return index_hash, fingerprint, item_count
 
 
 def write_feeds(
@@ -227,7 +268,7 @@ def write_feeds(
     reporter: ProgressReporter | None = None,
     file_mode: int = 0o644,
 ) -> None:
-    """Stage then publish ``feeds/rss.xml``, ``atom.xml``, and ``feed.json``."""
+    """Atomically publish ``feeds/rss.xml``, ``atom.xml``, and ``feed.json``."""
     progress = reporter or NULL_REPORTER
     feeds_dir = root / "feeds"
     feeds_dir.mkdir(parents=True, exist_ok=True)
@@ -238,90 +279,18 @@ def write_feeds(
         ("feed.json", feeds_dir / "feed.json", json_feed),
     ]
 
-    staged: list[tuple[Path, str, bytes]] = []  # (final, tmp, blob)
-    try:
-        for name, final, blob in progress.track(artifacts, desc="Stage feeds", unit="file"):
-            fd, tmp = tempfile.mkstemp(dir=str(feeds_dir), prefix=f".{name}.")
-            try:
-                with os.fdopen(fd, "wb") as handle:
-                    handle.write(blob)
-                    handle.flush()
-                    os.fsync(handle.fileno())
-                # Explicit readable mode (F-013); subject to process umask.
-                os.chmod(tmp, file_mode)
-            except Exception:
-                with contextlib.suppress(OSError):
-                    os.unlink(tmp)
-                raise
-            staged.append((final, tmp, blob))
-
-        # Tear window: after replaces begin, on-disk feeds may disagree briefly.
-        for final, tmp, blob in staged:
-            os.replace(tmp, final)
-            logger.debug("Wrote {} ({} bytes)", final, len(blob))
-        staged.clear()
-        logger.info("Wrote {} feed files → {}", len(artifacts), feeds_dir)
-    except Exception:
-        for _final, tmp, _blob in staged:
-            with contextlib.suppress(OSError):
-                os.unlink(tmp)
-        raise
+    # Tear window: after the first replace, on-disk feeds may disagree briefly.
+    for _name, final, blob in progress.track(artifacts, desc="Write feeds", unit="file"):
+        atomic_write_bytes(final, blob, mode=file_mode)
+        logger.debug("Wrote {} ({} bytes)", final, len(blob))
+    logger.info("Wrote {} feed files → {}", len(artifacts), feeds_dir)
 
 
 def verify_feed_artifacts(root: Path, *, min_items: int) -> None:
-    """Validate on-disk feeds against each other.
+    """Deep-validate on-disk ``feeds/`` (structure + cross-format parity)."""
+    from paul_graham_essay_feeds.verify import raise_on_failure, verify_feed_dir
 
-    Checks item-count parity across RSS/Atom/JSON (and ``≥ min_items``), and that
-    each JSON Feed item has ``content_text == summary`` within
-    ``[1, FEED_SUMMARY_CHARS]``. Raises :class:`FeedError` on failure.
-    """
-    paths = feed_paths(root)
-    for path in paths.values():
-        if not path.is_file():
-            raise FeedError(f"Missing feed artifact: {path}")
-
-    try:
-        rss_root = ET.parse(paths["rss"]).getroot()
-    except ET.ParseError as exc:
-        raise FeedError(f"rss.xml is not valid XML: {exc}") from exc
-    rss_count = len(rss_root.findall(".//item"))
-
-    try:
-        atom_root = ET.parse(paths["atom"]).getroot()
-    except ET.ParseError as exc:
-        raise FeedError(f"atom.xml is not valid XML: {exc}") from exc
-    atom_count = len(atom_root.findall(f".//{{{ATOM_NS}}}entry"))
-
-    try:
-        payload = json.loads(paths["json"].read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise FeedError(f"feed.json is not valid JSON: {exc}") from exc
-    if not isinstance(payload, dict):
-        raise FeedError("feed.json root must be an object")
-    items = payload.get("items")
-    if not isinstance(items, list):
-        raise FeedError("feed.json missing items array")
-    json_count = len(items)
-
-    if rss_count != atom_count or rss_count != json_count:
-        raise FeedError(f"Feed count mismatch: RSS={rss_count} Atom={atom_count} JSON={json_count}")
-    if rss_count < min_items:
-        raise FeedError(f"Feed item count {rss_count} below floor {min_items}")
-
-    for i, item in enumerate(items):
-        if not isinstance(item, dict):
-            raise FeedError(f"feed.json items[{i}] must be an object")
-        content_text = item.get("content_text")
-        summary = item.get("summary")
-        if not isinstance(content_text, str) or not isinstance(summary, str):
-            raise FeedError(f"feed.json items[{i}] requires string content_text and summary")
-        if content_text != summary:
-            raise FeedError(f"feed.json items[{i}]: content_text must equal summary")
-        n = len(content_text)
-        if not (1 <= n <= FEED_SUMMARY_CHARS):
-            raise FeedError(
-                f"feed.json items[{i}]: content_text length {n} not in [1, {FEED_SUMMARY_CHARS}]"
-            )
+    raise_on_failure(verify_feed_dir(root, min_items=min_items))
 
 
 def feed_paths(root: Path) -> dict[str, Path]:
@@ -331,3 +300,17 @@ def feed_paths(root: Path) -> dict[str, Path]:
         "atom": feeds_dir / "atom.xml",
         "json": feeds_dir / "feed.json",
     }
+
+
+def _entry_summary(summary: str | None, title: str) -> str:
+    """Short feed summary: source text when present, else title blurb."""
+    text = summary if summary else blurb(title)
+    out = truncate_text(text, FEED_SUMMARY_CHARS)
+    if out:
+        return out
+    return truncate_text(blurb(title), FEED_SUMMARY_CHARS)
+
+
+def _is_permalink(entry: FeedEntrySnapshot) -> bool:
+    """True when the stable id is the essay URL (paulgraham.com permalinks)."""
+    return entry.id == entry.url

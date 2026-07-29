@@ -7,25 +7,26 @@ anomaly reporting (F-025 / F-026), and an ``ExtractionReport``.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import StrEnum
-from html.parser import HTMLParser
 from urllib.parse import urlsplit
 
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field
+from selectolax.parser import HTMLParser, Node
 
-from paul_graham_essay_feeds.model import (
+from paul_graham_essay_feeds.models import (
     MIN_ITEMS,
     PROTECTED_PATHS,
     SOURCE_URL,
-    Essay,
+    DiscoveryItem,
     FeedError,
     canonicalize_url,
+    discovery_item_to_essay,
     is_content_candidate,
     make_stable_id,
     normalize_text,
 )
-from paul_graham_essay_feeds.validate import validate_essays_structural
 
 # Marker gif used on paulgraham.com essay-index rows.
 _MARKER_SUFFIX = "/the-reddits-2.gif"
@@ -110,13 +111,13 @@ class ExtractionReport(BaseModel):
 
 
 class DiscoverySnapshot(BaseModel):
-    """Ordered discovery result: essays and/or intermediate candidates."""
+    """Ordered discovery result: items and/or intermediate candidates."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    essays: list[Essay] = Field(
+    items: list[DiscoveryItem] = Field(
         default_factory=list,
-        description="Final newest→oldest essays when discovery succeeded.",
+        description="Final newest→oldest discovery items when discovery succeeded.",
     )
     candidates: list[DiscoveryCandidate] = Field(
         default_factory=list,
@@ -127,81 +128,82 @@ class DiscoverySnapshot(BaseModel):
     )
 
 
-class _IndexParser(HTMLParser):
-    """Collect anchors; bind marker gifs to anchors within the same row/cell.
+@dataclass(slots=True)
+class _MarkerWalkState:
+    """Mutable marker→anchor binding state for a document-order DOM walk."""
 
-    Improves on sticky ``_pending`` by clearing pending when the structural
-    scope that contained the marker (tr/td/li/…) is closed, so a marker cannot
-    leak across table rows into unrelated anchors.
-    """
+    pending: bool = False
+    marker_depth: int | None = None
+    scope_depth: int = 0
 
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.anchors: list[tuple[str, str, bool]] = []
-        self._href: str | None = None
-        self._parts: list[str] = []
-        self._marked = False
-        self._pending = False
-        self._scope_stack: list[str] = []
-        # Depth of ``_scope_stack`` when the pending marker was seen (0 = flat).
-        self._marker_depth: int | None = None
 
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        tag = tag.lower()
-        if tag in _SCOPE_TAGS:
-            self._scope_stack.append(tag)
-            return
-        amap = {k.lower(): v for k, v in attrs}
-        if tag == "img":
-            src = amap.get("src") or ""
-            if urlsplit(src).path.endswith(_MARKER_SUFFIX):
-                self._pending = True
-                self._marker_depth = len(self._scope_stack)
-            return
-        if tag != "a":
-            return
-        href = amap.get("href")
-        if href is None:
-            return
-        self._href = href.strip()
-        self._parts = []
-        self._marked = False
-        if self._pending and self._marker_in_scope():
-            self._marked = True
-            self._clear_pending()
-        elif self._pending and not self._marker_in_scope():
-            # Scope already left (should be rare if endtag handling ran).
-            self._clear_pending()
+def _clear_pending(state: _MarkerWalkState) -> None:
+    state.pending = False
+    state.marker_depth = None
 
-    def handle_data(self, data: str) -> None:
-        if self._href is not None:
-            self._parts.append(data)
 
-    def handle_endtag(self, tag: str) -> None:
-        tag = tag.lower()
-        if tag in _SCOPE_TAGS and self._scope_stack and self._scope_stack[-1] == tag:
-            new_depth = len(self._scope_stack) - 1
-            if self._pending and self._marker_depth is not None and new_depth < self._marker_depth:
-                # Left the row/cell that held the marker without binding an anchor.
-                self._clear_pending()
-            self._scope_stack.pop()
-        if tag != "a" or self._href is None:
-            return
-        title = normalize_text("".join(self._parts))
-        self.anchors.append((self._href, title, self._marked))
-        self._href = None
-        self._parts = []
-        self._marked = False
+def _walk_index_node(
+    node: Node,
+    state: _MarkerWalkState,
+    anchors: list[tuple[str, str, bool]],
+) -> None:
+    """Document-order walk: scope-bounded marker binding (anti cross-row leak)."""
+    tag = node.tag
+    if tag is None:
+        return
+    tag_l = tag.lower()
 
-    def _marker_in_scope(self) -> bool:
-        if self._marker_depth is None:
-            return False
-        # Marker applies while we remain at or inside the marker's scope depth.
-        return len(self._scope_stack) >= self._marker_depth
+    if tag_l in _SCOPE_TAGS:
+        state.scope_depth += 1
+        for child in node.iter(include_text=False):
+            _walk_index_node(child, state, anchors)
+        new_depth = state.scope_depth - 1
+        if state.pending and state.marker_depth is not None and new_depth < state.marker_depth:
+            # Left the row/cell that held the marker without binding an anchor.
+            _clear_pending(state)
+        state.scope_depth -= 1
+        return
 
-    def _clear_pending(self) -> None:
-        self._pending = False
-        self._marker_depth = None
+    if tag_l == "img":
+        attrs = node.attributes or {}
+        src = attrs.get("src") or ""
+        if urlsplit(src).path.endswith(_MARKER_SUFFIX):
+            state.pending = True
+            state.marker_depth = state.scope_depth
+        return
+
+    if tag_l == "a":
+        attrs = node.attributes or {}
+        href = attrs.get("href")
+        if href is not None:
+            marked = False
+            if (
+                state.pending
+                and state.marker_depth is not None
+                and state.scope_depth >= state.marker_depth
+            ):
+                marked = True
+                _clear_pending(state)
+            elif state.pending:
+                _clear_pending(state)
+            title = normalize_text(node.text(separator=" "))
+            anchors.append((href.strip(), title, marked))
+        # Do not walk into <a> children (nested anchors are invalid HTML).
+        return
+
+    for child in node.iter(include_text=False):
+        _walk_index_node(child, state, anchors)
+
+
+def _collect_index_anchors(html: str) -> list[tuple[str, str, bool]]:
+    """Parse index HTML with selectolax; return ``(href, title, marked)`` rows."""
+    tree = HTMLParser(html)
+    root = tree.root
+    if root is None:
+        return []
+    anchors: list[tuple[str, str, bool]] = []
+    _walk_index_node(root, _MarkerWalkState(), anchors)
+    return anchors
 
 
 def _rejection_record(href: str, reason: str) -> str:
@@ -279,13 +281,13 @@ def _dedupe_first(
     return kept, duplicates
 
 
-def _to_essays(accepted: list[DiscoveryCandidate]) -> list[Essay]:
-    essays: list[Essay] = []
+def _to_discovery_items(accepted: list[DiscoveryCandidate]) -> list[DiscoveryItem]:
+    items: list[DiscoveryItem] = []
     for i, cand in enumerate(accepted, start=1):
         if cand.url is None or cand.stable_id is None or cand.is_permalink is None:
             raise FeedError(f"Internal: accepted candidate incomplete: {cand.href!r}")
-        essays.append(
-            Essay(
+        items.append(
+            DiscoveryItem(
                 position=i,
                 title=cand.title,
                 url=cand.url,
@@ -293,7 +295,7 @@ def _to_essays(accepted: list[DiscoveryCandidate]) -> list[Essay]:
                 is_permalink=cand.is_permalink,
             )
         )
-    return essays
+    return items
 
 
 def _drift_score(
@@ -335,11 +337,11 @@ def _rejections_from(candidates: list[DiscoveryCandidate]) -> list[str]:
     ]
 
 
-def _require_protected(essays: list[Essay]) -> None:
+def _require_protected(items: list[DiscoveryItem]) -> None:
     paths = {
-        urlsplit(e.url).path
-        for e in essays
-        if (urlsplit(e.url).hostname or "") == "sep.turbifycdn.com"
+        urlsplit(item.url).path
+        for item in items
+        if (urlsplit(item.url).hostname or "") == "sep.turbifycdn.com"
     }
     missing = sorted(PROTECTED_PATHS - paths)
     if missing:
@@ -352,8 +354,8 @@ def discover_essays(
     base_url: str = SOURCE_URL,
     min_items: int = MIN_ITEMS,
     allow_fallback: bool = False,
-) -> tuple[list[Essay], ExtractionReport]:
-    """Discover newest→oldest essays from index HTML with typed diagnostics.
+) -> tuple[list[DiscoveryItem], ExtractionReport]:
+    """Discover newest→oldest index items from HTML with typed diagnostics.
 
     Marker strategy (default): bind ``the-reddits-2.gif`` to the next anchor
     within the same structural row/cell when possible.
@@ -364,17 +366,15 @@ def discover_essays(
     Duplicates keep the first structurally valid occurrence and are recorded
     on the report (not silent last-wins).
     """
-    parser = _IndexParser()
-    parser.feed(html)
-    parser.close()
-    logger.debug("Discovery parsed {} anchors", len(parser.anchors))
+    rows = _collect_index_anchors(html)
+    logger.debug("Discovery parsed {} anchors", len(rows))
 
-    all_candidates = _collect_candidates(parser.anchors, base_url=base_url)
+    all_candidates = _collect_candidates(rows, base_url=base_url)
     marked_count = sum(1 for c in all_candidates if c.marked)
-    marked_rows = [(h, t, m) for h, t, m in parser.anchors if m]
+    marked_rows = [(h, t, m) for h, t, m in rows if m]
     marked_candidates = _collect_candidates(marked_rows, base_url=base_url)
     marked_accepted, marked_dups = _dedupe_first(marked_candidates)
-    marked_essays = _to_essays(marked_accepted)
+    marked_items = _to_discovery_items(marked_accepted)
 
     fallback_used = False
     strategy = ExtractionStrategy.MARKER
@@ -382,32 +382,35 @@ def discover_essays(
     # Rejections from the strategy that actually produced the set.
     working_candidates = marked_candidates
 
-    if len(marked_essays) < min_items:
+    if len(marked_items) < min_items:
         if not allow_fallback:
             raise FeedError(
-                f"Only {len(marked_essays)} essays from markers "
+                f"Only {len(marked_items)} essays from markers "
                 f"(need ≥ {min_items}); fallback disabled"
             )
         logger.warning(
             "Marked rows only yielded {}; falling back to filtered anchors",
-            len(marked_essays),
+            len(marked_items),
         )
         fallback_used = True
         strategy = ExtractionStrategy.FALLBACK
         working_candidates = all_candidates
         accepted, duplicates = _dedupe_first(all_candidates)
-        essays = _to_essays(accepted)
+        items = _to_discovery_items(accepted)
     else:
-        essays = marked_essays
+        items = marked_items
 
     rejections = _rejections_from(working_candidates)
     marked_accepted_count = len(marked_accepted)
 
-    if len(essays) < min_items:
-        raise FeedError(f"Only {len(essays)} essays (need ≥ {min_items})")
+    if len(items) < min_items:
+        raise FeedError(f"Only {len(items)} essays (need ≥ {min_items})")
 
-    _require_protected(essays)
-    validate_essays_structural(essays)
+    _require_protected(items)
+    # Lazy import: enrich absorbs validate helpers (T7); avoid import cycle at module load.
+    from paul_graham_essay_feeds.enrich import validate_essays_structural
+
+    validate_essays_structural([discovery_item_to_essay(item) for item in items])
 
     report = ExtractionReport(
         strategy=strategy,
@@ -417,7 +420,7 @@ def discover_essays(
         rejections=rejections,
         drift_score=_drift_score(
             marked_accepted=marked_accepted_count,
-            final_count=len(essays),
+            final_count=len(items),
             fallback_used=fallback_used,
             duplicate_count=len(duplicates),
             rejection_count=len(rejections),
@@ -425,12 +428,12 @@ def discover_essays(
     )
     logger.info(
         "Discovered {} essays (strategy={}, fallback={}, drift={})",
-        len(essays),
+        len(items),
         strategy,
         fallback_used,
         report.drift_score,
     )
-    return essays, report
+    return items, report
 
 
 def build_discovery_snapshot(
@@ -440,15 +443,12 @@ def build_discovery_snapshot(
     min_items: int = MIN_ITEMS,
     allow_fallback: bool = False,
 ) -> DiscoverySnapshot:
-    """Run discovery and wrap essays + all candidates into a snapshot."""
-    parser = _IndexParser()
-    parser.feed(html)
-    parser.close()
-    candidates = _collect_candidates(parser.anchors, base_url=base_url)
-    essays, report = discover_essays(
+    """Run discovery and wrap items + all candidates into a snapshot."""
+    candidates = _collect_candidates(_collect_index_anchors(html), base_url=base_url)
+    items, report = discover_essays(
         html,
         base_url=base_url,
         min_items=min_items,
         allow_fallback=allow_fallback,
     )
-    return DiscoverySnapshot(essays=essays, candidates=candidates, report=report)
+    return DiscoverySnapshot(items=items, candidates=candidates, report=report)

@@ -7,7 +7,7 @@ from pathlib import Path
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from paul_graham_essay_feeds.model import MAX_BYTES, MIN_ITEMS, SOURCE_URL
+from paul_graham_essay_feeds.models import MAX_BYTES, MIN_ITEMS, SOURCE_URL
 
 
 class Settings(BaseSettings):
@@ -49,8 +49,12 @@ class Settings(BaseSettings):
         description="Max response/source body size in bytes (index, pages, local file).",
     )
     validate_links: bool = Field(
-        default=False,
-        description="HEAD/GET each essay URL after generation (slow; intentional).",
+        default=True,
+        description=(
+            "Live HEAD/GET each essay URL during update (default on). "
+            "Failures are reported only — essays are never dropped. "
+            "Opt out with --no-validate-links or PG_ESSAY_FEEDS_VALIDATE_LINKS=false."
+        ),
     )
     link_timeout: float = Field(
         default=10.0,
@@ -92,6 +96,19 @@ class Settings(BaseSettings):
     verbose: bool = Field(
         default=False,
         description="Debug-level logging.",
+    )
+    public_base_url: str | None = Field(
+        default=None,
+        description="Optional public base URL for feed self links / feed_url (https).",
+    )
+    stale_after_days: int = Field(
+        default=30,
+        ge=1,
+        description="Refresh planner: re-fetch page metadata after this many days.",
+    )
+    allow_discovery_fallback: bool = Field(
+        default=True,
+        description="Allow discovery fallback extraction when markers are sparse.",
     )
 
     @field_validator("repo_root", mode="before")

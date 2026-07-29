@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, cast
 
-from paul_graham_essay_feeds.model import (
+from paul_graham_essay_feeds.models import (
     ATOM_NS,
     FEED_SUMMARY_CHARS,
     FeedError,
