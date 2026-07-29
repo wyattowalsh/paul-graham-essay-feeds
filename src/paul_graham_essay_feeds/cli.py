@@ -171,7 +171,7 @@ def update_cmd(
     from_feeds: Annotated[
         bool,
         typer.Option(
-            "--from-feeds",
+            "--from-feeds/--no-from-feeds",
             help="Bootstrap durable catalog from existing feeds/ before update",
         ),
     ] = False,
