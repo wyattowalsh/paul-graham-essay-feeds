@@ -83,7 +83,7 @@ ci-local: sync
     {{ uv }} run ruff format --check .
     {{ uv }} run ruff check .
     {{ uv }} run ty check
-    {{ uv }} run pytest
+    {{ uv }} run pytest --cov-fail-under=90
     {{ uv }} run pg-essay-feeds check --quiet
     {{ uv }} build --no-sources
 alias cil := ci-local
@@ -96,7 +96,7 @@ alias cil := ci-local
 [group("test")]
 [doc("Offline tests (unit + integration + e2e + smoke) + coverage ≥ 90%")]
 @test *args:
-    {{ uv }} run pytest {{ args }}
+    {{ uv }} run pytest --cov-fail-under=90 {{ args }}
 alias t := test
 
 # Coverage report only (same suite, fail-under 90%)
@@ -153,8 +153,14 @@ smoke:
     set -euo pipefail
     ROOT="$(mktemp -d)"
     {{ uv }} run python -c "from pathlib import Path; from tests.html_samples import synthetic_index_html; import sys; Path(sys.argv[1]).write_text(synthetic_index_html(), encoding='utf-8')" "$ROOT/articles.html"
-    {{ uv }} run pg-essay-feeds update --repo-root "$ROOT" --quiet --no-enrich --source-file "$ROOT/articles.html"
+    {{ uv }} run pg-essay-feeds update --repo-root "$ROOT" --quiet --no-enrich --no-validate-links --source-file "$ROOT/articles.html"
     {{ uv }} run pg-essay-feeds check --repo-root "$ROOT" --quiet
+    test -f "$ROOT/catalog.json"
+    test ! -f "$ROOT/state/current.json"
+    test ! -d "$ROOT/state/generations"
+    # Second pass: early-exit unchanged (exit 0, no tracked churn expected)
+    {{ uv }} run pg-essay-feeds update --repo-root "$ROOT" --quiet --no-enrich --no-validate-links --source-file "$ROOT/articles.html" --result-file "$ROOT/result.txt"
+    grep -q 'action=unchanged' "$ROOT/result.txt"
 alias sm := smoke
 
 # Live fetch + write feeds/ (uses PG_ESSAY_FEEDS_* / .env)

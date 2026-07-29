@@ -24,6 +24,8 @@ articles.html
 .publish-staging-*/
 **/.publish-staging-*/
 
+# HTTP validator sidecar between publishes — never tracked
+.cache/
+
 # Local program evidence / agent ledgers (not source of truth)
 /audit/
-

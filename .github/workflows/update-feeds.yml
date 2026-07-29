@@ -5,10 +5,6 @@ on:
     - cron: "17 6 * * *"
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pull-requests: write
-
 concurrency:
   group: feed-update
   cancel-in-progress: false
@@ -17,27 +13,72 @@ jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      action: ${{ steps.update.outputs.action }}
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          version: "0.11.29"
+          version: "0.12.0"
           enable-cache: true
 
       - name: Sync
         run: uv sync --locked --all-groups
 
       - name: Update feeds
+        id: update
         env:
-          # Keep enrich on for quality snapshots; cap concurrency for site politeness.
+          # Keep enrich on for quality snapshots; cap concurrency for host politeness.
           PG_ESSAY_FEEDS_ENRICH_WORKERS: "4"
           PG_ESSAY_FEEDS_LINK_WORKERS: "4"
-        run: uv run pg-essay-feeds update
+          # Daily no-op budget: avoid day-31 mass re-fetch when index is unchanged.
+          PG_ESSAY_FEEDS_STALE_AFTER_DAYS: "90"
+        run: uv run pg-essay-feeds update --quiet
+
+      - name: Upload workspace when updated
+        if: steps.update.outputs.action == 'updated'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: feed-update-workspace
+          path: |
+            feeds
+            catalog.json
+          if-no-files-found: error
+
+  publish:
+    needs: update
+    if: needs.update.outputs.action == 'updated'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download updated workspace
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: feed-update-workspace
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.0"
+          enable-cache: true
+
+      - name: Sync
+        run: uv sync --locked --all-groups
 
       - name: Validate feeds
         run: uv run pg-essay-feeds check
@@ -46,8 +87,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if git diff --quiet -- feeds; then
-            echo "No feed changes."
+          if git diff --quiet -- feeds catalog.json; then
+            echo "No feed/catalog changes."
             exit 0
           fi
           branch="automation/feed-update"
@@ -62,7 +103,7 @@ jobs:
           fi
           # Branch from current HEAD so updated feeds stay in the worktree (not reset).
           git checkout -B "$branch"
-          git add feeds
+          git add feeds catalog.json
           if git diff --cached --quiet; then
             echo "Nothing staged."
             exit 0
@@ -78,11 +119,13 @@ jobs:
             gh pr create \
               --title "chore: refresh Paul Graham essay feeds" \
               --body "$(printf '%s\n' \
-                'Automated feed snapshot update from the official essays index (local files under `feeds/` only).' \
+                'Automated snapshot update (`feeds/` + `catalog.json`) from the official essays index.' \
                 '' \
-                'Validated by `pg-essay-feeds check` (structure + item floor) before opening this PR.' \
+                'Validated by `pg-essay-feeds check` (feed structure + optional catalog integrity) before opening this PR.' \
                 '' \
-                'Enrichment ran with capped workers (`PG_ESSAY_FEEDS_ENRICH_WORKERS=4`) for politeness toward paulgraham.com — expect a longer job than a no-enrich run, in exchange for higher-quality short summaries in the snapshot.')" \
+                'Reader impact: Atom entry `updated` and JSON `date_modified` use truthful observation clocks (no 1970 sentinel on the catalog path).' \
+                '' \
+                'Enrichment ran with capped workers (`PG_ESSAY_FEEDS_ENRICH_WORKERS=4`) for politeness toward paulgraham.com.')" \
               --base main \
               --head "$branch"
           else
