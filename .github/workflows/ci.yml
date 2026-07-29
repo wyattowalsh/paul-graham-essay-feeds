@@ -15,36 +15,44 @@ concurrency:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          version: "0.11.29"
+          version: "0.12.0"
           enable-cache: true
+          python-version: ${{ matrix.python-version }}
 
       - name: Sync
         run: uv sync --locked --all-groups
 
       - name: Format
+        if: matrix.python-version == '3.13'
         run: uv run ruff format --check .
 
       - name: Lint
+        if: matrix.python-version == '3.13'
         run: uv run ruff check .
 
       - name: Type check
+        if: matrix.python-version == '3.13'
         run: uv run ty check
 
       - name: Tests
-        run: uv run pytest --cov-report=xml:coverage.xml
+        run: uv run pytest --cov-fail-under=90 --cov-report=xml:coverage.xml
 
       - name: Upload coverage XML
-        if: always()
+        if: always() && matrix.python-version == '3.13'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-xml
@@ -56,6 +64,7 @@ jobs:
 
       - name: Offline pipeline smoke
         run: |
+          set -euo pipefail
           ROOT="${RUNNER_TEMP}/pg-smoke"
           mkdir -p "$ROOT"
           uv run python -c "
@@ -69,3 +78,44 @@ jobs:
           test -f "$ROOT/feeds/rss.xml"
           test -f "$ROOT/feeds/atom.xml"
           test -f "$ROOT/feeds/feed.json"
+          test -f "$ROOT/catalog.json"
+          test ! -d "$ROOT/state/generations"
+          test ! -f "$ROOT/state/current.json"
+          test ! -d "$ROOT/site"
+
+  dist:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.0"
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Build
+        run: uv build --no-sources
+
+      - name: Wheel contains py.typed
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import zipfile, pathlib
+          wheels = list(pathlib.Path("dist").glob("*.whl"))
+          assert wheels, "no wheel"
+          with zipfile.ZipFile(wheels[0]) as zf:
+              assert "paul_graham_essay_feeds/py.typed" in zf.namelist()
+          print("ok", wheels[0].name)
+          PY
+
+      - name: Wheel smoke
+        run: |
+          set -euo pipefail
+          wheel="$(echo dist/*.whl)"
+          uv run --isolated --no-project --with "$wheel" pg-essay-feeds --help
