@@ -3,7 +3,7 @@ name = "paul-graham-essay-feeds"
 dynamic = ["version"]
 description = "Unofficial multi-format metadata feeds for Paul Graham's essays"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Wyatt" }]
@@ -16,7 +16,9 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: Communications",
     "Typing :: Typed",
@@ -27,8 +29,9 @@ dependencies = [
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.2",
     "rich>=15.0.0",
+    "selectolax>=0.4.11",
     "tenacity>=9.1.4",
-    "tqdm>=4.68.4",
+    "tqdm>=4.70.0",
     "typer>=0.27.0",
 ]
 
@@ -49,12 +52,13 @@ dev = [
   "pytest>=9.1.1",
   "pytest-cov>=7.1.0",
   "respx>=0.23.1",
-  "ruff>=0.15.22",
-  "ty>=0.0.60",
+  "ruff>=0.16.0",
+  "ty>=0.0.64",
 ]
 
 [tool.uv]
 package = true
+required-version = ">=0.12.0"
 
 [tool.hatch.version]
 path = "src/paul_graham_essay_feeds/__init__.py"
@@ -77,6 +81,9 @@ exclude = [
 
 [tool.pytest.ini_options]
 # Default: offline unit + integration + e2e + smoke. Opt in: pytest -m live
+# Coverage is always reported. Fail-under (≥90%) is enforced only on full-suite
+# entrypoints (CI, `just test`, `just ci-local`, `just cov`) so partial path
+# selection (e.g. modified-file stop hooks) does not false-fail package total.
 addopts = [
   "-ra",
   "--strict-markers",
@@ -84,7 +91,6 @@ addopts = [
   "not live",
   "--cov=paul_graham_essay_feeds",
   "--cov-report=term-missing",
-  "--cov-fail-under=90",
 ]
 testpaths = ["tests"]
 markers = [
@@ -104,7 +110,6 @@ source = ["paul_graham_essay_feeds"]
 precision = 1
 show_missing = true
 skip_empty = true
-fail_under = 90
 
 [tool.ruff]
 target-version = "py313"

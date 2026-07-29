@@ -1,8 +1,9 @@
-"""Typer CLI: update / check Paul Graham essay feeds."""
+"""Typer CLI: update / check for Paul Graham essay feeds."""
 
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -13,43 +14,32 @@ from pydantic import ValidationError
 from rich.console import Console
 from rich.logging import RichHandler
 
-from paul_graham_essay_feeds.enrich import enrich_essays
-from paul_graham_essay_feeds.errors import (
+from paul_graham_essay_feeds.catalog import default_catalog_path, load_catalog
+from paul_graham_essay_feeds.feeds import verify_feed_artifacts
+from paul_graham_essay_feeds.models import (
     ExitCode,
+    FeedError,
+    OutputPolicy,
+    ProgressReporter,
     format_validation_error,
 )
-from paul_graham_essay_feeds.extract import extract_essays
-from paul_graham_essay_feeds.feeds import (
-    feed_paths,
-    feeds_exist,
-    load_index_skip_state,
-    render_atom,
-    render_json,
-    render_rss,
-    verify_feed_artifacts,
-)
-from paul_graham_essay_feeds.fetch import decode_html, fetch_html
-from paul_graham_essay_feeds.model import Essay, FeedError, content_sha256, utc_now
-from paul_graham_essay_feeds.presentation import OutputPolicy, ProgressReporter
-from paul_graham_essay_feeds.publication import publish_feed_bundle
+from paul_graham_essay_feeds.pipeline import run_catalog_pipeline
 from paul_graham_essay_feeds.settings import Settings
-from paul_graham_essay_feeds.validate import validate_essays_live
 
 console = Console(stderr=True)
 
 
-def _read_source_file(path: Path, *, max_bytes: int) -> str:
-    """Read local index HTML, enforcing the same size cap as network fetches."""
-    try:
-        size = path.stat().st_size
-    except OSError:
-        size = -1
-    if size > max_bytes:
-        raise FeedError(f"Source file over {max_bytes} bytes: {path}")
-    raw = path.read_bytes()
-    if len(raw) > max_bytes:
-        raise FeedError(f"Source file over {max_bytes} bytes: {path}")
-    return decode_html(raw)
+def _emit_update_action(action: str, *, result_file: Path | None) -> None:
+    """Append ``action=unchanged|updated`` to ``--result-file`` and/or ``$GITHUB_OUTPUT``."""
+    line = f"action={action}\n"
+    if result_file is not None:
+        result_file.parent.mkdir(parents=True, exist_ok=True)
+        with result_file.open("a", encoding="utf-8") as handle:
+            handle.write(line)
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output:
+        with Path(github_output).open("a", encoding="utf-8") as handle:
+            handle.write(line)
 
 
 def configure_logging(*, verbose: bool = False, quiet: bool = False) -> None:
@@ -91,6 +81,7 @@ def _settings(
     validate_links: bool | None = None,
     enrich: bool | None = None,
     force: bool | None = None,
+    public_base_url: str | None = None,
 ) -> Settings:
     """Merge CLI overrides onto pydantic-settings (COMMANDLINE > env/.env > defaults)."""
     try:
@@ -114,6 +105,8 @@ def _settings(
             data["quiet"] = quiet
         if verbose is not None:
             data["verbose"] = verbose
+        if public_base_url is not None:
+            data["public_base_url"] = public_base_url
         # Prefer quiet when both end up true (CLI quiet wins over verbose).
         if data.get("quiet") and data.get("verbose"):
             data["verbose"] = False
@@ -122,34 +115,6 @@ def _settings(
         # Concise expected-config failure (no traceback) — F-014 / ADR-006.
         print(format_validation_error(exc), file=sys.stderr)
         raise typer.Exit(code=int(ExitCode.USAGE)) from None
-
-
-def _index_fingerprint(essays: list[Essay]) -> str:
-    """Stable index-only fingerprint for no-op detection."""
-    return "\n".join(e.index_fingerprint() for e in essays)
-
-
-def _should_skip_update(
-    *,
-    root: Path,
-    index_hash: str,
-    essays: list[Essay],
-    force: bool,
-) -> bool:
-    """True when index hash/fingerprint match ``feed.json`` and feeds already exist."""
-    if force:
-        return False
-    if not feeds_exist(root):
-        return False
-    prior = load_index_skip_state(root)
-    if prior is None:
-        return False
-    prior_hash, prior_fp, prior_count = prior
-    if prior_hash != index_hash:
-        return False
-    if prior_count != len(essays):
-        return False
-    return prior_fp == _index_fingerprint(essays)
 
 
 app = typer.Typer(
@@ -186,20 +151,41 @@ def update_cmd(
         bool | None,
         typer.Option(
             "--force/--no-force",
-            help="Bypass hash skip when index is unchanged",
+            help="Bypass refresh planner no-op when nothing is due",
         ),
     ] = None,
     validate_links: Annotated[
         bool | None,
         typer.Option(
             "--validate-links/--no-validate-links",
-            help="Live HEAD/GET each essay URL",
+            help=(
+                "Live HEAD/GET each essay URL (default on; report-only). "
+                "Use --no-validate-links to skip probes."
+            ),
+        ),
+    ] = None,
+    public_base_url: Annotated[
+        str | None,
+        typer.Option("--public-base-url", help="Public base URL for feed self links"),
+    ] = None,
+    from_feeds: Annotated[
+        bool,
+        typer.Option(
+            "--from-feeds",
+            help="Bootstrap durable catalog from existing feeds/ before update",
+        ),
+    ] = False,
+    result_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--result-file",
+            help="Append action=unchanged|updated for machine consumers",
         ),
     ] = None,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Errors only")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Debug logs")] = False,
 ) -> None:
-    """Fetch index, extract essays, enrich from each page, write feeds/."""
+    """Fetch index, reconcile catalog, enrich as planned, publish catalog + feeds."""
     settings = _settings(
         repo_root=repo_root,
         min_items=min_items,
@@ -207,103 +193,35 @@ def update_cmd(
         verbose=verbose if _is_cmdline(ctx, "verbose") else None,
         timeout=timeout,
         retries=retries,
-        validate_links=validate_links,
+        validate_links=(validate_links if _is_cmdline(ctx, "validate_links") else None),
         enrich=enrich,
         force=force,
+        public_base_url=public_base_url,
     )
     configure_logging(verbose=settings.verbose, quiet=settings.quiet)
     try:
-        if source_file is not None:
-            logger.info("Reading local HTML {}", source_file)
-            html = _read_source_file(source_file, max_bytes=settings.max_bytes)
-        else:
-            logger.info("Fetching {}", settings.source_url)
-            html = fetch_html(
-                settings.source_url,
-                timeout=settings.timeout,
-                retries=settings.retries,
-                max_bytes=settings.max_bytes,
-            )
-
-        index_hash = content_sha256(html)
-        essays = extract_essays(
-            html,
-            base_url=settings.source_url,
-            min_items=settings.min_items,
-        )
-
-        if _should_skip_update(
-            root=settings.repo_root,
-            index_hash=index_hash,
-            essays=essays,
-            force=settings.force,
-        ):
-            logger.info(
-                "Index unchanged (hash {}); skipping enrich/write",
-                index_hash[:12],
-            )
-            if not settings.quiet:
-                console.print(
-                    f"[yellow]UNCHANGED[/yellow] index hash {index_hash[:12]}… "
-                    f"— skipped ({len(essays)} essays)"
-                )
-            return
-
-        if settings.enrich:
-            logger.info("Enriching {} essays from page metadata…", len(essays))
-            essays = enrich_essays(
-                essays,
-                timeout=settings.enrich_timeout,
-                workers=settings.enrich_workers,
-                retries=settings.retries,
-                max_bytes=settings.max_bytes,
-                quiet=settings.quiet,
-            )
-        if settings.validate_links:
-            validate_essays_live(
-                essays,
-                timeout=settings.link_timeout,
-                retries=settings.retries,
-                workers=settings.link_workers,
-                max_bytes=settings.max_bytes,
-                quiet=settings.quiet,
-            )
-
-        now = utc_now()
-        fingerprint = _index_fingerprint(essays)
         reporter = ProgressReporter(
             OutputPolicy(quiet=settings.quiet, machine=not sys.stderr.isatty())
         )
-        render_steps = (
-            ("rss", lambda: render_rss(essays, built_at=now)),
-            ("atom", lambda: render_atom(essays, built_at=now)),
-            (
-                "json",
-                lambda: render_json(
-                    essays,
-                    built_at=now,
-                    index_hash=index_hash,
-                    index_fingerprint=fingerprint,
-                ),
-            ),
-        )
-        rendered: dict[str, bytes] = {}
-        for name, fn in reporter.track(render_steps, desc="Render", unit="fmt", total=3):
-            rendered[name] = fn()
-        rss, atom, jf = rendered["rss"], rendered["atom"], rendered["json"]
-
-        # F-008: deep-verify in memory before any on-disk replace (ADR-005).
-        publish_feed_bundle(
-            settings.repo_root,
-            rss=rss,
-            atom=atom,
-            json_feed=jf,
-            min_items=settings.min_items,
+        result = run_catalog_pipeline(
+            settings,
+            source_file=source_file,
             reporter=reporter,
+            from_feeds=from_feeds,
         )
-        if not settings.quiet:
+        action = result.action
+        count = result.essay_count
+
+        _emit_update_action(action, result_file=result_file)
+        if settings.quiet:
+            return
+        if action == "unchanged":
             console.print(
-                f"[green]UPDATED[/green] {len(essays)} essays → "
+                f"[yellow]UNCHANGED[/yellow] — skipped write ({count} essays; refresh not due)"
+            )
+        else:
+            console.print(
+                f"[green]UPDATED[/green] {count} essays → "
                 f"[bold]{settings.repo_root / 'feeds'}[/bold]"
             )
     except FeedError as exc:
@@ -319,13 +237,13 @@ def check_cmd(
     ctx: typer.Context,
     repo_root: Annotated[
         Path | None,
-        typer.Option("--repo-root", help="Root containing feeds/"),
+        typer.Option("--repo-root", help="Root containing feeds/ (+ optional catalog.json)"),
     ] = None,
     min_items: Annotated[int | None, typer.Option("--min-items")] = None,
     quiet: Annotated[bool, typer.Option("--quiet", "-q")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
 ) -> None:
-    """Sanity-check feeds under the repo root via ``verify_feed_artifacts``."""
+    """Deep-verify ``feeds/``; validate root ``catalog.json`` when present."""
     settings = _settings(
         repo_root=repo_root,
         min_items=min_items,
@@ -334,13 +252,20 @@ def check_cmd(
     )
     configure_logging(verbose=settings.verbose, quiet=settings.quiet)
     try:
-        verify_feed_artifacts(settings.repo_root, min_items=settings.min_items)
+        root = settings.repo_root
+        feeds = root / "feeds"
+        if not feeds.is_dir():
+            raise FeedError(f"Missing feeds directory: {feeds}")
+        verify_feed_artifacts(root, min_items=settings.min_items)
+        catalog_path = default_catalog_path(root)
+        if catalog_path.is_file():
+            catalog = load_catalog(catalog_path)
+            if catalog is None:
+                raise FeedError(f"Unable to load catalog: {catalog_path}")
         if not settings.quiet:
-            payload = json.loads(feed_paths(settings.repo_root)["json"].read_text(encoding="utf-8"))
+            payload = json.loads((feeds / "feed.json").read_text(encoding="utf-8"))
             count = len(payload["items"])
-            console.print(
-                f"[green]VALID[/green] {count} items in [bold]{settings.repo_root / 'feeds'}[/bold]"
-            )
+            console.print(f"[green]VALID[/green] {count} items in [bold]{feeds}[/bold]")
     except FeedError as exc:
         logger.error("{}", exc)
         raise typer.Exit(code=1) from exc
