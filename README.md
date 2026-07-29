@@ -10,7 +10,7 @@ correct `https` links, short descriptions, guids, and clean Turbify chapter URLs
 
 [![CI](https://github.com/wyattowalsh/paul-graham-essay-feeds/actions/workflows/ci.yml/badge.svg?style=flat-square)](https://github.com/wyattowalsh/paul-graham-essay-feeds/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](./LICENSE)
-[![Python](https://img.shields.io/badge/python-3.13%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.12%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
 <!-- BADGES:END -->
@@ -23,7 +23,9 @@ correct `https` links, short descriptions, guids, and clean Turbify chapter URLs
 
 **Open in Colab → Runtime → Run all → download `feeds.zip`.**
 
-No local Python, no `uv`, no clone. Live-generates RSS / Atom / JSON on Colab.
+Beautiful public notebook: short HTML intro, one dial (enrich on/off), then
+`uvx … update` + `check` → zip RSS / Atom / JSON (live link probes on;
+report-only status panel). No local clone required.
 
 </div>
 
@@ -33,7 +35,7 @@ No local Python, no `uv`, no clone. Live-generates RSS / Atom / JSON on Colab.
 
 | Path | When |
 | :--- | :--- |
-| **[Open in Colab](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)** | Try now — zero install |
+| **[Open in Colab](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)** | Try now — Run all → `feeds.zip` |
 | Local `uvx` below | Keep feeds on disk / automate |
 | [DOCS.md](./DOCS.md) | Architecture, tests, CI |
 
@@ -65,9 +67,9 @@ Writes `feeds/` into the current directory. Point a feed reader at the local fil
 | `feeds/feed.json` | JSON Feed 1.1 | same + short `summary` / `content_text` |
 
 > [!IMPORTANT]
-> **Not included:** full essay bodies, OPML, or a hosted site. Index skip state
-> lives in `feed.json` under `_pg_essay_feeds` — there is no
-> `feeds/.manifest.json` and no `data/essays.json`.
+> **Not included:** full essay bodies or OPML. Durable catalog SSOT is
+> `catalog.json` (repo root). Public projections live in `feeds/` — the GitHub repo
+> *is* the published product (no separate `site/` or publish command).
 
 ---
 
@@ -86,20 +88,15 @@ Writes `feeds/` into the current directory. Point a feed reader at the local fil
 
 ## Notebook (Colab / Jupyter)
 
-[`notebook.ipynb`](./notebook.ipynb) — form UI + hidden code. **Run all** to
-live-generate feeds (`uvx` fetch → parse → validate → write) and download
-`feeds.zip`.
+[`notebook.ipynb`](./notebook.ipynb) — public-facing Colab for feed-reader users.
+**Run all** → HTML intro + one form cell (`uvx` update/check → `feeds.zip`).
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)
 
-1. Open the notebook in Colab  
-2. Set options (output dir, enrich, link probes)  
-3. **Runtime → Run all** → save `feeds.zip`
-
-> [!NOTE]
-> Generate uses `uvx --from git+…` on the default branch (`main`). For
-> reproducible runs, pin a **release tag** or **commit SHA** in the notebook
-> `PKG` line — do not assume a fixed `@v0.1.0` until you choose one.
+Only dial most people need: **Enrich** (default on; ~1 GET/essay for short
+summaries). Live link checks stay on (report-only); probe issues show in an
+amber status panel without blocking the zip. Output path is under Advanced
+(`/content/pg-feeds`).
 
 ---
 
@@ -118,8 +115,8 @@ pg-essay-feeds update --force
 # verify feeds (parity + content_text)
 pg-essay-feeds check
 
-# optional live HEAD/GET of every essay URL
-pg-essay-feeds update --validate-links -v
+# skip live link probes (default on; failures are report-only)
+pg-essay-feeds update --no-validate-links
 ```
 
 > [!NOTE]
@@ -159,7 +156,7 @@ Environment prefix: `PG_ESSAY_FEEDS_` ([pydantic-settings](https://docs.pydantic
 | `PG_ESSAY_FEEDS_MIN_ITEMS` | safety floor (see Settings) |
 | `PG_ESSAY_FEEDS_TIMEOUT` | `30` |
 | `PG_ESSAY_FEEDS_ENRICH` | `true` |
-| `PG_ESSAY_FEEDS_VALIDATE_LINKS` | `false` |
+| `PG_ESSAY_FEEDS_VALIDATE_LINKS` | `true` |
 | `PG_ESSAY_FEEDS_LINK_WORKERS` | `4` |
 | `PG_ESSAY_FEEDS_ENRICH_WORKERS` | `4` |
 
@@ -178,7 +175,7 @@ export PG_ESSAY_FEEDS_ENRICH=false   # optional: skip per-page scrapes
 | `PG_ESSAY_FEEDS_TIMEOUT` | `30` | Index fetch timeout |
 | `PG_ESSAY_FEEDS_RETRIES` | `3` | Tenacity attempts = retries+1 |
 | `PG_ESSAY_FEEDS_MAX_BYTES` | 5 MiB | Response size cap |
-| `PG_ESSAY_FEEDS_VALIDATE_LINKS` | `false` | Live probes |
+| `PG_ESSAY_FEEDS_VALIDATE_LINKS` | `true` | Live probes (report-only; set `false` to skip) |
 | `PG_ESSAY_FEEDS_LINK_TIMEOUT` | `10` | Per-probe timeout |
 | `PG_ESSAY_FEEDS_LINK_WORKERS` | `4` | Live-probe thread pool (not enrich) |
 | `PG_ESSAY_FEEDS_ENRICH` | `true` | Per-page short summary scrape |
@@ -207,7 +204,7 @@ just all    # lint + types + tests (≥90% cov) + check
 | [README.md](./README.md) | Users |
 | [DOCS.md](./DOCS.md) | Developers |
 | [AGENTS.md](./AGENTS.md) | Coding agents |
-| [notebook.ipynb](./notebook.ipynb) | Colab / Jupyter |
+| [notebook.ipynb](./notebook.ipynb) | Public Colab — Run all → `feeds.zip` |
 
 ---
 
