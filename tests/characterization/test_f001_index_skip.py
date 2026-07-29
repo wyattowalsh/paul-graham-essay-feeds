@@ -15,7 +15,6 @@ from paul_graham_essay_feeds.models import (
     Essay,
     FeedEntrySnapshot,
     FeedSnapshot,
-    Lifecycle,
     ResourceState,
     content_sha256,
 )
@@ -67,6 +66,9 @@ def test_page_only_summary_change_must_not_skip(tmp_path: Path) -> None:
         rss=render_rss(snap),
         atom=render_atom(snap),
         json_feed=render_json(snap),
+        simple_rss=render_rss(snap),
+        simple_atom=render_atom(snap),
+        simple_json_feed=render_json(snap),
     )
     e2 = _essay(summary="Updated page-derived summary that should publish.")
     assert e2.index_fingerprint() == fp  # index fields unchanged
@@ -81,7 +83,6 @@ def test_page_only_summary_change_must_not_skip(tmp_path: Path) -> None:
                 url=e1.url,
                 title=e1.title,
                 position=0,
-                lifecycle=Lifecycle.ACTIVE,
                 first_seen_at=now,
                 last_seen_at=now,
                 observed_updated_at=now,

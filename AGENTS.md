@@ -25,14 +25,16 @@ There is **no** `docs/` tree. Normative architecture decisions live in
 ## Target architecture
 
 ```text
-raw fetch → decode → discovery → catalog reconcile → refresh plan
-  → live-probe (non-enrich URLs) → prior-good enrich → FeedSnapshot → RSS/Atom/JSON
-  → deep verify → project feeds/ + durable catalog
+raw fetch → decode → discover → catalog reconcile → refresh plan
+  → fetch pages (enrich GET = check+summary; probe only non-enrich URLs)
+  → FeedSnapshot (enriched + simple) → RSS/Atom/JSON ×2
+  → deep verify → project feeds/ (6 files) + durable catalog
 ```
 
 ```text
-catalog.json         # durable SSOT (repo root)
-feeds/*              # public feed projections (the published product)
+catalog.json              # durable SSOT (repo root) — mirrors current index
+feeds/rss.xml|atom.xml|feed.json                 # enriched
+feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 # no site/*
 ```
 
@@ -42,7 +44,7 @@ feeds/*              # public feed projections (the published product)
 
 | Area | Responsibility |
 | :--- | :--- |
-| `src/paul_graham_essay_feeds/` | Domain package (~10 modules: cli, settings, pipeline, http, discovery, enrich, catalog, feeds, verify, models) |
+| `src/paul_graham_essay_feeds/` | Domain package (~10 modules: cli, settings, pipeline, http, discover, enrich, catalog, feeds, verify, models) |
 | `tests/` | unit / integration / e2e / smoke / live / characterization |
 | `DOCS.md` | Developer + architecture decision SSOT |
 
@@ -61,20 +63,21 @@ feeds/*              # public feed projections (the published product)
 | Dates | month+year → `published_hint` only; no invented day-1 dates; no 1970 Atom sentinel |
 | State | Durable **catalog** is SSOT; feeds are projections |
 | Product | Repo `feeds/` + `catalog.json` — no `publish.py`, no `site/` |
-| CLI | `update` + `check` only; flags override Settings only when explicit; quiet success → zero bytes |
+| CLI | `update` + `check` only; flags override Settings only when explicit; quiet success → zero stdout+stderr; success-only side-channels (--result-file, $GITHUB_OUTPUT) allowed |
 | Models | Every Field has a description; `extra="forbid"` where durable; aware UTC |
 | Docs | Fold maintainer guidance into `DOCS.md` only — do not recreate `docs/` |
 
 ### Authorized
 
 - Schema-versioned durable catalog (not flat `data/essays.json`)
-- Deterministic feed projections under `feeds/`
+- Deterministic flat feed projections under `feeds/` (enriched + simple)
 - Configurable public base URL for feed self links
 
 ### Forbidden
 
 - OPML · full essay bodies · invented publication dates · LLM summaries by default
 - `site/` / `publish.py` / legacy pipeline CLI escape hatches
+- Soft-retain / lifecycle / tombstone catalog states; feed subdirectories
 - Parallel `docs/` or JSON Schema trees as second SSOT
 
 ---

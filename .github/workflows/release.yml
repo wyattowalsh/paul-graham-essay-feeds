@@ -55,7 +55,16 @@ jobs:
         run: uv run pytest --cov-fail-under=90
 
       - name: Check committed feeds
-        run: uv run pg-essay-feeds check --quiet
+        run: |
+          set -euo pipefail
+          uv run pg-essay-feeds check --quiet
+          test -f feeds/rss.xml
+          test -f feeds/atom.xml
+          test -f feeds/feed.json
+          test -f feeds/rss.simple.xml
+          test -f feeds/atom.simple.xml
+          test -f feeds/feed.simple.json
+          test ! -d feeds/validated
 
   build:
     needs: quality

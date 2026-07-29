@@ -67,10 +67,37 @@ def test_pipeline_publish_creates_catalog_and_feeds(tmp_path: Path) -> None:
     assert result.action == "updated"
     assert result.skipped is False
     assert (tmp_path / "feeds" / "feed.json").is_file()
+    assert (tmp_path / "feeds" / "feed.simple.json").is_file()
     assert default_catalog_path(tmp_path).is_file()
     assert not (tmp_path / "state" / "current.json").exists()
     assert not (tmp_path / "state" / "generations").exists()
     assert len(result.catalog.entry_order) >= MIN_ITEMS
+
+
+def test_pipeline_enriched_summaries_when_enrich_on(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Enriched feeds include catalog summaries (not title blurbs only)."""
+    import json
+
+    from paul_graham_essay_feeds.models import MIN_ITEMS, blurb
+
+    html = synthetic_index_html()
+    enrich = MagicMock(side_effect=_stable_enrich)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.enrich_essays", enrich)
+    settings = _settings(tmp_path, min_items=MIN_ITEMS, enrich=True)
+    result = run_catalog_pipeline(settings, html=html, now=T0)
+    assert result.action == "updated"
+
+    enriched = json.loads((tmp_path / "feeds" / "feed.json").read_text(encoding="utf-8"))
+    assert enriched["items"]
+    for e_item in enriched["items"]:
+        summary = e_item.get("summary") or e_item.get("content_text")
+        assert summary is not None
+        assert summary.startswith("Stable summary for")
+        assert summary != blurb(e_item["title"])
+    assert (tmp_path / "feeds" / "feed.simple.json").is_file()
 
 
 def test_live_probes_skip_urls_due_for_enrich(
@@ -78,6 +105,8 @@ def test_live_probes_skip_urls_due_for_enrich(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """When enrich will GET a URL, dedicated probes skip it (enrich implies reachability)."""
+    from loguru import logger
+
     from paul_graham_essay_feeds.models import MIN_ITEMS
 
     html = synthetic_index_html()
@@ -86,14 +115,20 @@ def test_live_probes_skip_urls_due_for_enrich(
     monkeypatch.setattr("paul_graham_essay_feeds.pipeline.validate_essays_live", validate)
     monkeypatch.setattr("paul_graham_essay_feeds.pipeline.enrich_essays", enrich)
 
-    settings = _settings(
-        tmp_path,
-        min_items=MIN_ITEMS,
-        enrich=True,
-        validate_links=True,
-        force=True,
-    )
-    result = run_catalog_pipeline(settings, html=html, now=T0)
+    messages: list[str] = []
+    sink_id = logger.add(lambda m: messages.append(str(m)), level="INFO")
+    try:
+        settings = _settings(
+            tmp_path,
+            min_items=MIN_ITEMS,
+            enrich=True,
+            validate_links=True,
+            force=True,
+        )
+        result = run_catalog_pipeline(settings, html=html, now=T0)
+    finally:
+        logger.remove(sink_id)
+
     assert result.action == "updated"
     enrich.assert_called_once()
     validate.assert_called_once()
@@ -104,6 +139,9 @@ def test_live_probes_skip_urls_due_for_enrich(
     assert probed_ids.isdisjoint(enriched_ids)
     # First force+enrich run: every essay is typically due → probe list empty.
     assert probed_ids == set() or enriched_ids
+    joined = "\n".join(messages)
+    assert "Skipping dedicated" not in joined
+    assert "Checking and enriching" in joined
 
 
 def test_live_probes_cover_all_when_enrich_off(
@@ -176,11 +214,14 @@ def test_pipeline_unchanged_zero_tracked_writes(tmp_path: Path) -> None:
     assert rss_path.stat().st_mtime_ns == rss_mtime
 
 
-def test_post_enrich_material_noop_zero_tracked_writes(
+def test_post_enrich_material_noop_persists_clocks_feeds_unchanged(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """STALE enrich with identical material → unchanged, zero tracked writes."""
+    """STALE enrich with identical material → catalog clocks saved; feed bytes untouched.
+
+    A third pass with fresh clocks must not re-fetch (planner sees FRESH).
+    """
     from paul_graham_essay_feeds.models import MIN_ITEMS
 
     html = synthetic_index_html()
@@ -218,24 +259,92 @@ def test_post_enrich_material_noop_zero_tracked_writes(
     atom_path = tmp_path / "feeds" / "atom.xml"
     json_path = tmp_path / "feeds" / "feed.json"
 
-    catalog_bytes = catalog_path.read_bytes()
     rss_bytes = rss_path.read_bytes()
     atom_bytes = atom_path.read_bytes()
     json_bytes = json_path.read_bytes()
-    catalog_mtime = catalog_path.stat().st_mtime_ns
     rss_mtime = rss_path.stat().st_mtime_ns
 
     second = run_catalog_pipeline(settings, html=html, now=T_LATER)
     assert second.action == "unchanged"
     assert second.skipped is True
     assert enrich.call_count > first_calls
+    second_calls = enrich.call_count
 
-    assert catalog_path.read_bytes() == catalog_bytes
+    # Clocks persisted to catalog; feed projection bytes unchanged.
+    reloaded = load_catalog(catalog_path)
+    assert reloaded is not None
+    for entry in reloaded.entries.values():
+        assert entry.page.last_checked_at is not None
+        assert entry.page.last_checked_at >= T_LATER - timedelta(days=1)
     assert rss_path.read_bytes() == rss_bytes
     assert atom_path.read_bytes() == atom_bytes
     assert json_path.read_bytes() == json_bytes
-    assert catalog_path.stat().st_mtime_ns == catalog_mtime
     assert rss_path.stat().st_mtime_ns == rss_mtime
+
+    # Fresh clocks → multi-pass must not re-enrich.
+    third = run_catalog_pipeline(settings, html=html, now=T_LATER)
+    assert third.action == "unchanged"
+    assert third.skipped is True
+    assert enrich.call_count == second_calls
+
+
+def test_hard_delete_then_rediscover_republishes(tmp_path: Path) -> None:
+    """Essay leaving then returning to the index must republish feeds."""
+    import json
+
+    from paul_graham_essay_feeds.models import make_stable_id
+    from tests.html_samples import MARKER
+
+    settings = _settings(tmp_path, min_items=3, enrich=False)
+    target_sid, _ = make_stable_id("https://paulgraham.com/essay-0.html")
+    protected = (
+        f'<img src="{MARKER}">'
+        '<a href="https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt?t=1">'
+        "Chapter 1 of Ansi Common Lisp</a>"
+        f'<img src="{MARKER}">'
+        '<a href="https://sep.turbifycdn.com/ty/cdn/paulgraham/acl2.txt?t=1">'
+        "Chapter 2 of Ansi Common Lisp</a>"
+    )
+
+    full_html = (
+        f'<img src="{MARKER}"><a href="essay-0.html">Essay 0</a>'
+        f'<img src="{MARKER}"><a href="essay-1.html">Essay 1</a>'
+        f"{protected}"
+    )
+    reduced_html = (
+        f'<img src="{MARKER}"><a href="essay-1.html">Essay 1</a>'
+        f'<img src="{MARKER}"><a href="essay-2.html">Essay 2</a>'
+        f"{protected}"
+    )
+
+    first = run_catalog_pipeline(settings, html=full_html, now=T0)
+    assert first.action == "updated"
+    assert target_sid in first.catalog.entry_order
+
+    second = run_catalog_pipeline(settings, html=reduced_html, now=T0)
+    assert second.action == "updated"
+    assert target_sid not in second.catalog.entries
+    assert target_sid in second.changeset.removed
+    feed_ids = {
+        item["id"]
+        for item in json.loads((tmp_path / "feeds" / "feed.json").read_text(encoding="utf-8"))[
+            "items"
+        ]
+    }
+    assert target_sid not in feed_ids
+    assert (tmp_path / "feeds" / "feed.simple.json").is_file()
+
+    third = run_catalog_pipeline(settings, html=full_html, now=T_LATER)
+    assert third.action == "updated"
+    assert third.skipped is False
+    assert target_sid in third.changeset.added
+    feed_ids = {
+        item["id"]
+        for item in json.loads((tmp_path / "feeds" / "feed.json").read_text(encoding="utf-8"))[
+            "items"
+        ]
+    }
+    assert target_sid in feed_ids
 
 
 def test_post_enrich_material_change_still_publishes(
@@ -308,9 +417,56 @@ def test_material_unchanged_helper_false_without_catalog(tmp_path: Path) -> None
             rss=b"<rss/>",
             atom=b"<feed/>",
             json_feed=b"{}",
+            simple_rss=b"<rss/>",
+            simple_atom=b"<feed/>",
+            simple_json_feed=b"{}",
         )
         is False
     )
+
+
+def test_material_unchanged_false_when_feeds_missing(tmp_path: Path) -> None:
+    """Missing feeds/ must not be treated as unchanged."""
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+
+    html = synthetic_index_html()
+    settings = _settings(tmp_path, min_items=MIN_ITEMS, enrich=False)
+    result = run_catalog_pipeline(settings, html=html, now=T0)
+    assert result.action == "updated"
+
+    import shutil
+
+    shutil.rmtree(tmp_path / "feeds")
+    assert (
+        _material_unchanged_vs_disk(
+            tmp_path,
+            catalog=result.catalog,
+            rss=b"<rss/>",
+            atom=b"<feed/>",
+            json_feed=b"{}",
+            simple_rss=b"<rss/>",
+            simple_atom=b"<feed/>",
+            simple_json_feed=b"{}",
+        )
+        is False
+    )
+
+
+def test_missing_feeds_prevents_pre_enrich_skip(tmp_path: Path) -> None:
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+
+    html = synthetic_index_html()
+    settings = _settings(tmp_path, min_items=MIN_ITEMS, enrich=False)
+    first = run_catalog_pipeline(settings, html=html, now=T0)
+    assert first.action == "updated"
+
+    import shutil
+
+    shutil.rmtree(tmp_path / "feeds")
+    second = run_catalog_pipeline(settings, html=html, now=T0)
+    assert second.action == "updated"
+    assert second.skipped is False
+    assert (tmp_path / "feeds" / "feed.json").is_file()
 
 
 def test_f001_missing_metadata_does_not_skip_when_enrich_on(tmp_path: Path) -> None:
@@ -386,8 +542,8 @@ def test_pipeline_force_bypasses_pre_enrich_skip(tmp_path: Path) -> None:
     assert default_catalog_path(tmp_path).is_file()
 
 
-def test_pipeline_tombstone_prevents_skip(tmp_path: Path) -> None:
-    """Index losing an essay yields tombstone candidates → must not pre-skip."""
+def test_pipeline_removed_prevents_skip(tmp_path: Path) -> None:
+    """Index losing an essay yields changeset.removed → must not pre-skip."""
     settings = _settings(tmp_path, min_items=3, enrich=False)
     html3 = synthetic_index_html(essay_count=1)
     first = run_catalog_pipeline(settings, html=html3, now=T0)
@@ -417,7 +573,8 @@ def test_pipeline_tombstone_prevents_skip(tmp_path: Path) -> None:
     )
 
     second = run_catalog_pipeline(settings, html=html3, now=T0)
-    assert ghost_id in second.changeset.tombstone_candidates
+    assert ghost_id in second.changeset.removed
+    assert ghost_id not in second.catalog.entries
     assert second.action == "updated"
     assert second.skipped is False
 
@@ -487,7 +644,14 @@ def test_prior_good_retained_when_enrich_returns_fffd(
 def test_pipeline_force_true_in_should_skip_helper(tmp_path: Path) -> None:
     plan = RefreshPlan(fetch_index=False, decisions=[])
     (tmp_path / "feeds").mkdir()
-    for name in ("rss.xml", "atom.xml", "feed.json"):
+    for name in (
+        "rss.xml",
+        "atom.xml",
+        "feed.json",
+        "rss.simple.xml",
+        "atom.simple.xml",
+        "feed.simple.json",
+    ):
         (tmp_path / "feeds" / name).write_text("x", encoding="utf-8")
     default_catalog_path(tmp_path).write_text(
         '{"schema_version": 1, "material_config_fingerprint": "x", '

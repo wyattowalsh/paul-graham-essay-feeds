@@ -1,4 +1,4 @@
-"""Unit tests for discovery.py (marker strategy, fail-closed fallback, dups)."""
+"""Unit tests for discover.py (marker strategy, fail-closed fallback, dups)."""
 
 from __future__ import annotations
 

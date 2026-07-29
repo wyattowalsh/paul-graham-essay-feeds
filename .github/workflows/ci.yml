@@ -60,7 +60,15 @@ jobs:
           if-no-files-found: ignore
 
       - name: Check committed feeds
-        run: uv run pg-essay-feeds check --quiet
+        run: |
+          set -euo pipefail
+          uv run pg-essay-feeds check --quiet
+          test -f feeds/rss.xml
+          test -f feeds/atom.xml
+          test -f feeds/feed.json
+          test -f feeds/rss.simple.xml
+          test -f feeds/atom.simple.xml
+          test -f feeds/feed.simple.json
 
       - name: Offline pipeline smoke
         run: |
@@ -78,6 +86,10 @@ jobs:
           test -f "$ROOT/feeds/rss.xml"
           test -f "$ROOT/feeds/atom.xml"
           test -f "$ROOT/feeds/feed.json"
+          test -f "$ROOT/feeds/rss.simple.xml"
+          test -f "$ROOT/feeds/atom.simple.xml"
+          test -f "$ROOT/feeds/feed.simple.json"
+          test ! -d "$ROOT/feeds/validated"
           test -f "$ROOT/catalog.json"
           test ! -d "$ROOT/state/generations"
           test ! -f "$ROOT/state/current.json"

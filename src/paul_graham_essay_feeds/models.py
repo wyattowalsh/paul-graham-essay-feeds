@@ -18,8 +18,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import format_datetime
-from enum import IntEnum, StrEnum
-from typing import Any, Final, TypeVar
+from enum import IntEnum
+from typing import Any, Final, Literal, TypeVar
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from pydantic import (
@@ -31,6 +31,7 @@ from pydantic import (
     TypeAdapter,
     ValidationError,
     field_validator,
+    model_validator,
 )
 from pydantic_core import core_schema
 from tqdm import tqdm
@@ -239,12 +240,6 @@ class ProgressReporter:
 NULL_REPORTER = ProgressReporter(OutputPolicy(quiet=True))
 
 
-class Lifecycle(StrEnum):
-    ACTIVE = "active"
-    MISSING_CANDIDATE = "missing_candidate"
-    TOMBSTONED = "tombstoned"
-
-
 class _StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
@@ -281,7 +276,6 @@ class CatalogEntry(_StrictModel):
     url: str = Field(min_length=1, description="Normalized absolute allowlisted URL.")
     title: str = Field(min_length=1, description="Display title from discovery or page.")
     position: int = Field(ge=0, description="0-based catalog order (newest first).")
-    lifecycle: Lifecycle = Field(description="Catalog lifecycle state.")
     first_seen_at: datetime | None = Field(
         default=None, description="First successful index observation (UTC)."
     )
@@ -325,7 +319,7 @@ class CatalogEntry(_StrictModel):
 class Catalog(_StrictModel):
     """Schema-versioned durable catalog (SSOT for generation inputs)."""
 
-    schema_version: int = Field(ge=1, description="Catalog schema version.")
+    schema_version: Literal[1] = Field(description="Catalog schema version (currently 1).")
     material_config_fingerprint: str = Field(
         min_length=1, description="Fingerprint of material generator settings."
     )
@@ -348,6 +342,16 @@ class Catalog(_StrictModel):
     migration_history: list[dict[str, Any]] = Field(
         default_factory=list, description="Idempotent migration records."
     )
+
+    @model_validator(mode="after")
+    def _entry_order_subset_of_entries(self) -> Catalog:
+        missing = [sid for sid in self.entry_order if sid not in self.entries]
+        if missing:
+            raise ValueError(
+                "entry_order references stable_ids missing from entries: "
+                + ", ".join(repr(s) for s in missing[:5])
+            )
+        return self
 
 
 class FeedEntrySnapshot(_StrictModel):

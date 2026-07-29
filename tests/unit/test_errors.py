@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, ValidationError
 
+from paul_graham_essay_feeds.http import is_retryable_exception
 from paul_graham_essay_feeds.models import (
+    ConfigurationError,
     ExitCode,
     FeedError,
+    NetworkSourceError,
     UserFacingError,
+    VerificationError,
     exit_code_for_exception,
     format_validation_error,
 )
@@ -30,15 +34,17 @@ def test_exit_code_mapping() -> None:
     assert exit_code_for_exception(UserFacingError("x", exit_code=ExitCode.NETWORK)) == 3
     assert exit_code_for_exception(FeedError("y")) == 1
     assert exit_code_for_exception(RuntimeError("z")) == 4
+    assert exit_code_for_exception(OSError("x")) == 4  # INTERNAL fallthrough
 
 
 def test_typed_user_errors() -> None:
-    from paul_graham_essay_feeds.models import (
-        ConfigurationError,
-        NetworkSourceError,
-        VerificationError,
-    )
-
     assert ConfigurationError("a").exit_code is ExitCode.USAGE
     assert VerificationError("b").exit_code is ExitCode.VERIFICATION
     assert NetworkSourceError("c").exit_code is ExitCode.NETWORK
+    assert exit_code_for_exception(ConfigurationError("a")) == 1
+    assert exit_code_for_exception(VerificationError("b")) == 2
+    assert exit_code_for_exception(NetworkSourceError("c")) == 3
+
+
+def test_network_source_error_not_retryable() -> None:
+    assert is_retryable_exception(NetworkSourceError("x")) is False

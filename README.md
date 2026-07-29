@@ -23,8 +23,8 @@ correct `https` links, short descriptions, guids, and clean Turbify chapter URLs
 
 **Open in Colab → Runtime → Run all → download `feeds.zip`.**
 
-Beautiful public notebook: short HTML intro, one dial (enrich on/off), then
-`uvx … update` + `check` → zip RSS / Atom / JSON (live link probes on;
+Beautiful public notebook: HTML intro, Enrich / auto-download dials, then
+`uvx … update` + `check` → zip all six feeds (reachability issues in a
 report-only status panel). No local clone required.
 
 </div>
@@ -60,16 +60,27 @@ Writes `feeds/` into the current directory. Point a feed reader at the local fil
 
 ## What you get
 
-| File | Format | Contents |
+| Path | Format | Contents |
 | :--- | :--- | :--- |
-| `feeds/rss.xml` | RSS 2.0 | title, link, guid, short description |
-| `feeds/atom.xml` | Atom 1.0 | same, Atom shape |
-| `feeds/feed.json` | JSON Feed 1.1 | same + short `summary` / `content_text` |
+| `feeds/rss.xml` | RSS 2.0 | **enriched** — title, link, guid, short description |
+| `feeds/atom.xml` | Atom 1.0 | enriched, Atom shape |
+| `feeds/feed.json` | JSON Feed 1.1 | enriched + short `summary` / `content_text` |
+| `feeds/rss.simple.xml` | RSS 2.0 | **simple** — title/link blurbs only |
+| `feeds/atom.simple.xml` | Atom 1.0 | simple |
+| `feeds/feed.simple.json` | JSON Feed 1.1 | simple |
+| `catalog.json` | JSON | durable catalog SSOT (current index mirror) |
 
 > [!IMPORTANT]
 > **Not included:** full essay bodies or OPML. Durable catalog SSOT is
-> `catalog.json` (repo root). Public projections live in `feeds/` — the GitHub repo
-> *is* the published product (no separate `site/` or publish command).
+> `catalog.json` (repo root). Public projections live flat in `feeds/` — the GitHub
+> repo *is* the published product (no separate `site/` or publish command).
+
+Raw URLs (point a reader at these):
+
+| Kind | RSS | Atom | JSON |
+| :--- | :--- | :--- | :--- |
+| Enriched | [`rss.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.xml) | [`atom.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/atom.xml) | [`feed.json`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/feed.json) |
+| Simple | [`rss.simple.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.simple.xml) | [`atom.simple.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/atom.simple.xml) | [`feed.simple.json`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/feed.simple.json) |
 
 ---
 
@@ -93,10 +104,11 @@ Writes `feeds/` into the current directory. Point a feed reader at the local fil
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)
 
-Only dial most people need: **Enrich** (default on; ~1 GET/essay for short
-summaries). Live link checks stay on (report-only); probe issues show in an
-amber status panel without blocking the zip. Output path is under Advanced
-(`/content/pg-feeds`).
+Dials: **Enrich** (default on; ~1 GET/essay for short summaries),
+**Auto-download** (browser download after zip). Zips all six
+`feeds/{rss,atom,feed}{,.simple}.*` files. Reachability issues show in a
+report-only status panel without blocking the zip. Output path is under
+Advanced (`/content/pg-feeds`).
 
 ---
 
@@ -109,8 +121,15 @@ pg-essay-feeds update --no-enrich
 # offline HTML file
 pg-essay-feeds update --source-file articles.html --no-enrich
 
-# force rewrite even when index hash is unchanged
+# bootstrap durable catalog from existing feeds/ before update
+pg-essay-feeds update --from-feeds
+
+# bypass refresh-planner no-op (rewrite even when nothing is due)
 pg-essay-feeds update --force
+
+# quiet success → zero bytes on stdout/stderr; machine sinks still get action=
+pg-essay-feeds update -q --result-file /tmp/pg-action.txt
+# ($GITHUB_OUTPUT also receives action=unchanged|updated when set)
 
 # verify feeds (parity + content_text)
 pg-essay-feeds check
@@ -159,6 +178,9 @@ Environment prefix: `PG_ESSAY_FEEDS_` ([pydantic-settings](https://docs.pydantic
 | `PG_ESSAY_FEEDS_VALIDATE_LINKS` | `true` |
 | `PG_ESSAY_FEEDS_LINK_WORKERS` | `4` |
 | `PG_ESSAY_FEEDS_ENRICH_WORKERS` | `4` |
+| `PG_ESSAY_FEEDS_STALE_AFTER_DAYS` | `30` |
+| `PG_ESSAY_FEEDS_PUBLIC_BASE_URL` | unset |
+| `PG_ESSAY_FEEDS_ALLOW_DISCOVERY_FALLBACK` | `true` |
 
 ```bash
 export PG_ESSAY_FEEDS_ENRICH=false   # optional: skip per-page scrapes
@@ -181,7 +203,10 @@ export PG_ESSAY_FEEDS_ENRICH=false   # optional: skip per-page scrapes
 | `PG_ESSAY_FEEDS_ENRICH` | `true` | Per-page short summary scrape |
 | `PG_ESSAY_FEEDS_ENRICH_WORKERS` | `4` | Enrich thread pool |
 | `PG_ESSAY_FEEDS_ENRICH_TIMEOUT` | `15` | Per-page timeout |
-| `PG_ESSAY_FEEDS_FORCE` | `false` | Bypass hash skip when index unchanged |
+| `PG_ESSAY_FEEDS_FORCE` | `false` | Bypass refresh-planner no-op |
+| `PG_ESSAY_FEEDS_PUBLIC_BASE_URL` | unset | Public base for feed self links |
+| `PG_ESSAY_FEEDS_STALE_AFTER_DAYS` | `30` | Re-fetch page metadata after N days |
+| `PG_ESSAY_FEEDS_ALLOW_DISCOVERY_FALLBACK` | `true` | Sparse-marker discovery fallback |
 | `PG_ESSAY_FEEDS_QUIET` / `PG_ESSAY_FEEDS_VERBOSE` | `false` | Log levels |
 
 See also: [DOCS.md → Configuration](./DOCS.md#configuration).
@@ -219,8 +244,8 @@ just all    # lint + types + tests (≥90% cov) + check
 - Month+year on a page is a hint only — it does **not** become `pubDate` /
   `published` / `date_published`.
 - Stable ids from URLs; Turbify chapters use a UUID derived from the path.
-- Unchanged index → skip enrich/write when `feed.json` `_pg_essay_feeds`
-  `index_hash` + fingerprint match (unless `--force`).
+- Catalog refresh planner (F-001): skip enrich/write when the planner says
+  nothing is due (unless `--force`). Index hash alone is not a skip reason.
 
 ---
 

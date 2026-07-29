@@ -84,10 +84,7 @@ class Settings(BaseSettings):
     )
     force: bool = Field(
         default=False,
-        description=(
-            "Bypass hash-based no-op skip when index/pages are unchanged "
-            "(always re-enrich and rewrite)."
-        ),
+        description="Bypass refresh planner no-op when nothing is due",
     )
     quiet: bool = Field(
         default=False,

@@ -15,27 +15,27 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Final, Literal
 
 from pydantic import ValidationError
 
 from paul_graham_essay_feeds.models import (
     Catalog,
     CatalogEntry,
+    ConfigurationError,
     DiscoveryItem,
     FeedError,
-    Lifecycle,
     require_aware_utc,
 )
 
 DEFAULT_CATALOG_REL: Path = Path("catalog.json")
 """Default catalog path relative to a repository root (repo-root SSOT)."""
 
-CATALOG_SCHEMA_VERSION: int = 1
+CATALOG_SCHEMA_VERSION: Final[Literal[1]] = 1
 """Current durable catalog schema version written by this module."""
 
 _FILE_MODE: int = 0o644
-_DEFAULT_SCHEMA_VERSION = 1
+_DEFAULT_SCHEMA_VERSION: Final[Literal[1]] = 1
 _DEFAULT_FINGERPRINT = "default"
 
 
@@ -109,7 +109,7 @@ def bootstrap_catalog_from_feeds(
 ) -> Catalog:
     """Build a catalog from ``root/feeds/feed.json`` if it exists.
 
-    Missing ``feed.json`` → empty catalog. Items become ``ACTIVE`` entries with
+    Missing ``feed.json`` → empty catalog. Items become catalog entries with
     observation clocks set to ``now`` (never invent 1970). Non-empty summaries
     copy into both ``summary`` and ``prior_good_summary``.
     """
@@ -121,15 +121,15 @@ def bootstrap_catalog_from_feeds(
     try:
         payload: Any = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise FeedError(f"Unable to read bootstrap feed.json: {exc}") from exc
+        raise ConfigurationError(f"Unable to read bootstrap feed.json: {exc}") from exc
 
     if not isinstance(payload, dict):
-        raise FeedError("feed.json root must be an object")
+        raise ConfigurationError("feed.json root must be an object")
     raw_items = payload.get("items")
     if raw_items is None:
         raw_items = []
     if not isinstance(raw_items, list):
-        raise FeedError("feed.json missing items array")
+        raise ConfigurationError("feed.json missing items array")
 
     entry_order: list[str] = []
     entries: dict[str, CatalogEntry] = {}
@@ -151,7 +151,6 @@ def bootstrap_catalog_from_feeds(
             url=url,
             title=title,
             position=position,
-            lifecycle=Lifecycle.ACTIVE,
             first_seen_at=observed_at,
             last_seen_at=observed_at,
             observed_updated_at=observed_at,
@@ -187,28 +186,33 @@ def migrate_catalog(data: dict[str, Any]) -> Catalog:
 
     Currently only schema version 1 is accepted. Missing ``schema_version`` is
     treated as invalid (no silent upgrade of unknown layouts). Unknown future
-    versions fail closed.
+    versions fail closed. Legacy per-entry ``lifecycle`` keys are stripped.
     """
     if not isinstance(data, dict):
-        raise FeedError("Catalog root must be an object")
+        raise ConfigurationError("Catalog root must be an object")
     if "schema_version" not in data:
-        raise FeedError("Catalog missing schema_version")
+        raise ConfigurationError("Catalog missing schema_version")
     version = data.get("schema_version")
     if version != CATALOG_SCHEMA_VERSION:
-        raise FeedError(
+        raise ConfigurationError(
             f"Unsupported catalog schema_version={version!r}; expected {CATALOG_SCHEMA_VERSION}"
         )
+    entries = data.get("entries")
+    if isinstance(entries, dict):
+        for raw_entry in entries.values():
+            if isinstance(raw_entry, dict):
+                raw_entry.pop("lifecycle", None)
     try:
         return Catalog.model_validate(data)
     except ValidationError as exc:
-        raise FeedError(f"Invalid catalog: {exc}") from exc
+        raise ConfigurationError(f"Invalid catalog: {exc}") from exc
 
 
 def load_catalog(path: Path) -> Catalog | None:
     """Load and validate a catalog from ``path``.
 
     Returns ``None`` when the file is missing. Corrupt or invalid content raises
-    :class:`FeedError` (never returns a partial catalog).
+    :class:`ConfigurationError` (never returns a partial catalog).
     """
     path = Path(path)
     if not path.is_file():
@@ -217,13 +221,13 @@ def load_catalog(path: Path) -> Catalog | None:
         raw = path.read_text(encoding="utf-8")
         data = json.loads(raw)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise FeedError(f"Corrupt catalog at {path}: {exc}") from exc
+        raise ConfigurationError(f"Corrupt catalog at {path}: {exc}") from exc
     if not isinstance(data, dict):
-        raise FeedError(f"Corrupt catalog at {path}: root must be an object")
+        raise ConfigurationError(f"Corrupt catalog at {path}: root must be an object")
     try:
         return migrate_catalog(data)
     except FeedError as exc:
-        raise FeedError(f"Corrupt catalog at {path}: {exc}") from exc
+        raise ConfigurationError(f"Corrupt catalog at {path}: {exc}") from exc
 
 
 def save_catalog(path: Path, catalog: Catalog) -> None:
@@ -245,7 +249,6 @@ class ChangeSet:
     removed: list[str] = field(default_factory=list)
     updated: list[str] = field(default_factory=list)
     unchanged: list[str] = field(default_factory=list)
-    tombstone_candidates: list[str] = field(default_factory=list)
 
 
 def reconcile_discovery(
@@ -255,6 +258,10 @@ def reconcile_discovery(
     now: datetime,
 ) -> tuple[Catalog, ChangeSet]:
     """Reconcile discovered index items against a prior durable catalog.
+
+    Catalog membership mirrors the current index only: essays absent from
+    ``items`` are hard-deleted (not soft-retained). Prior enrichment is reused
+    when a rediscovered id still exists in ``prior.entries``.
 
     Parameters
     ----------
@@ -273,12 +280,12 @@ def reconcile_discovery(
     """
     observed_at = require_aware_utc(now)
     prior_entries = dict(prior.entries) if prior is not None else {}
+    prior_order = set(prior.entry_order) if prior is not None else set()
     discovered_ids = {item.stable_id for item in items}
 
     added: list[str] = []
     updated: list[str] = []
     unchanged: list[str] = []
-    tombstone_candidates: list[str] = []
     next_entries: dict[str, CatalogEntry] = {}
     entry_order: list[str] = []
 
@@ -292,7 +299,6 @@ def reconcile_discovery(
                 url=item.url,
                 title=item.title,
                 position=position,
-                lifecycle=Lifecycle.ACTIVE,
                 first_seen_at=observed_at,
                 last_seen_at=observed_at,
                 observed_updated_at=observed_at,
@@ -312,7 +318,6 @@ def reconcile_discovery(
                 "url": item.url,
                 "title": item.title,
                 "position": position,
-                "lifecycle": Lifecycle.ACTIVE,
                 "last_seen_at": observed_at,
                 "observed_updated_at": (
                     observed_at if material_changed else existing.observed_updated_at
@@ -324,17 +329,7 @@ def reconcile_discovery(
         else:
             unchanged.append(stable_id)
 
-    # Soft-mark prior actives that vanished; never hard-delete any prior entry.
-    for stable_id, existing in prior_entries.items():
-        if stable_id in discovered_ids:
-            continue
-        if existing.lifecycle is Lifecycle.ACTIVE:
-            next_entries[stable_id] = existing.model_copy(
-                update={"lifecycle": Lifecycle.MISSING_CANDIDATE}
-            )
-            tombstone_candidates.append(stable_id)
-        else:
-            next_entries[stable_id] = existing
+    removed = sorted(prior_order - discovered_ids)
 
     if prior is None:
         catalog = Catalog(
@@ -358,10 +353,9 @@ def reconcile_discovery(
 
     changeset = ChangeSet(
         added=added,
-        removed=[],
+        removed=removed,
         updated=updated,
         unchanged=unchanged,
-        tombstone_candidates=tombstone_candidates,
     )
     return catalog, changeset
 

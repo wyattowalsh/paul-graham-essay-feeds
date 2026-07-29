@@ -74,6 +74,9 @@ def test_cli_update_then_check(repo_root: Path, sample_html_path: Path) -> None:
     assert (feeds / "rss.xml").is_file()
     assert (feeds / "atom.xml").is_file()
     assert (feeds / "feed.json").is_file()
+    assert (feeds / "rss.simple.xml").is_file()
+    assert (feeds / "atom.simple.xml").is_file()
+    assert (feeds / "feed.simple.json").is_file()
     assert (repo_root / "catalog.json").is_file()
     assert not (repo_root / "state" / "current.json").exists()
     assert not (repo_root / "data" / "essays.json").exists()
@@ -241,7 +244,7 @@ def test_cli_update_probe_failure_still_publishes(repo_root: Path) -> None:
     assert "essay-0.html" in feed_json
 
 
-def test_cli_update_oserror_exits_1(
+def test_cli_update_oserror_exits_4(
     repo_root: Path,
     sample_html_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -262,15 +265,17 @@ def test_cli_update_oserror_exits_1(
             str(sample_html_path),
         ],
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 4
 
 
-def test_cli_check_oserror_exits_1(
+def test_cli_check_oserror_exits_4(
     repo_root: Path,
     sample_html_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Seed feeds/ so check reaches feed I/O (not missing-feeds).
+    # Seed feeds/ so check reaches verify (not missing-feeds).
+    # verify_feed_dir swallows Path OSError into VerificationError (exit 2);
+    # raise OSError from verify_feed_artifacts so CLI maps it to exit 4.
     seeded = runner.invoke(
         app,
         [
@@ -285,16 +290,31 @@ def test_cli_check_oserror_exits_1(
     )
     assert seeded.exit_code == 0, seeded.output
 
-    real_read_bytes = Path.read_bytes
-
-    def flaky_read_bytes(self: Path) -> bytes:
-        if self.name == "rss.xml":
-            raise OSError("permission denied")
-        return real_read_bytes(self)
-
-    monkeypatch.setattr(Path, "read_bytes", flaky_read_bytes)
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.cli.verify_feed_artifacts",
+        MagicMock(side_effect=OSError("permission denied")),
+    )
     result = runner.invoke(
         app,
         ["check", "--repo-root", str(repo_root), "--quiet"],
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 4
+
+
+@respx.mock
+def test_cli_update_network_transport_fail_exits_3(repo_root: Path) -> None:
+    """Index fetch ConnectError → NetworkSourceError → exit 3."""
+    respx.get(SOURCE_URL).mock(side_effect=httpx.ConnectError("boom"))
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--retries",
+            "0",
+        ],
+    )
+    assert result.exit_code == 3

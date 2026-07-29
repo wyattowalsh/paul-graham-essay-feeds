@@ -49,8 +49,18 @@ def test_written_feeds_are_group_and_other_readable(tmp_path: Path) -> None:
         rss=render_rss(snap),
         atom=render_atom(snap),
         json_feed=render_json(snap),
+        simple_rss=render_rss(snap),
+        simple_atom=render_atom(snap),
+        simple_json_feed=render_json(snap),
     )
-    for name in ("rss.xml", "atom.xml", "feed.json"):
+    for name in (
+        "rss.xml",
+        "atom.xml",
+        "feed.json",
+        "rss.simple.xml",
+        "atom.simple.xml",
+        "feed.simple.json",
+    ):
         mode = (tmp_path / "feeds" / name).stat().st_mode
         assert mode & stat.S_IRGRP, f"{name} not group-readable: {oct(mode)}"
         assert mode & stat.S_IROTH, f"{name} not other-readable: {oct(mode)}"

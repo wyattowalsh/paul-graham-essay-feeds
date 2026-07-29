@@ -29,7 +29,13 @@ from tenacity import (
     stop_after_attempt,
 )
 
-from paul_graham_essay_feeds.models import MAX_BYTES, SOURCE_URL, FeedError, user_agent
+from paul_graham_essay_feeds.models import (
+    MAX_BYTES,
+    SOURCE_URL,
+    FeedError,
+    NetworkSourceError,
+    user_agent,
+)
 
 # --- Decoding (absorbed) ---
 
@@ -1110,7 +1116,7 @@ def fetch_index(
                     raw_sha256=None,
                 )
             if result.response is None:
-                raise FeedError(ev.error_message or f"Fetch failed for {url}")
+                raise NetworkSourceError(ev.error_message or f"Fetch failed for {url}")
             result.response.raise_for_status()
             html = decode_html(result.body, transport_charset=ev.charset)
             return IndexFetchResult(
@@ -1162,7 +1168,7 @@ def retrying(*, attempts: int, reraise: bool = True) -> Retrying:
 
 
 def run_with_retry[T](fn: Callable[[], T], *, attempts: int, what: str) -> T:
-    """Execute ``fn`` with tenacity; wrap exhausted retries as FeedError."""
+    """Execute ``fn`` with tenacity; wrap exhausted retries as NetworkSourceError."""
     try:
         for attempt in retrying(attempts=attempts, reraise=False):
             with attempt:
@@ -1172,17 +1178,17 @@ def run_with_retry[T](fn: Callable[[], T], *, attempts: int, what: str) -> T:
         if isinstance(last, FeedError):
             raise last from exc
         if isinstance(last, httpx.HTTPStatusError):
-            raise FeedError(
+            raise NetworkSourceError(
                 f"HTTP {last.response.status_code} for {what} after {attempts} attempt(s)"
             ) from last
-        raise FeedError(f"{what} failed after {attempts} attempt(s): {last}") from last
+        raise NetworkSourceError(f"{what} failed after {attempts} attempt(s): {last}") from last
     except FeedError:
         raise
     except httpx.HTTPStatusError as exc:
-        raise FeedError(f"HTTP {exc.response.status_code} for {what}") from exc
+        raise NetworkSourceError(f"HTTP {exc.response.status_code} for {what}") from exc
     except httpx.HTTPError as exc:
-        raise FeedError(f"{what} failed: {exc}") from exc
-    raise FeedError(f"{what} failed")  # pragma: no cover
+        raise NetworkSourceError(f"{what} failed: {exc}") from exc
+    raise NetworkSourceError(f"{what} failed")  # pragma: no cover
 
 
 __all__ = [

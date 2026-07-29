@@ -1,0 +1,1885 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "Paul Graham: Essays",
+  "home_page_url": "https://paulgraham.com/articles.html",
+  "description": "Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.",
+  "authors": [
+    {
+      "name": "Paul Graham",
+      "url": "https://paulgraham.com/"
+    }
+  ],
+  "language": "en-US",
+  "items": [
+    {
+      "id": "https://paulgraham.com/earn.html",
+      "url": "https://paulgraham.com/earn.html",
+      "title": "How to Earn a Billion Dollars",
+      "summary": "Read “How to Earn a Billion Dollars” by Paul Graham.",
+      "content_text": "Read “How to Earn a Billion Dollars” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/winc.html",
+      "url": "https://paulgraham.com/winc.html",
+      "title": "How to Convert Between Wealth and Income Tax",
+      "summary": "Read “How to Convert Between Wealth and Income Tax” by Paul Graham.",
+      "content_text": "Read “How to Convert Between Wealth and Income Tax” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/brandage.html",
+      "url": "https://paulgraham.com/brandage.html",
+      "title": "The Brand Age",
+      "summary": "Read “The Brand Age” by Paul Graham.",
+      "content_text": "Read “The Brand Age” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/field.html",
+      "url": "https://paulgraham.com/field.html",
+      "title": "The Shape of the Essay Field",
+      "summary": "Read “The Shape of the Essay Field” by Paul Graham.",
+      "content_text": "Read “The Shape of the Essay Field” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/goodwriting.html",
+      "url": "https://paulgraham.com/goodwriting.html",
+      "title": "Good Writing",
+      "summary": "Read “Good Writing” by Paul Graham.",
+      "content_text": "Read “Good Writing” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/do.html",
+      "url": "https://paulgraham.com/do.html",
+      "title": "What to Do",
+      "summary": "Read “What to Do” by Paul Graham.",
+      "content_text": "Read “What to Do” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/woke.html",
+      "url": "https://paulgraham.com/woke.html",
+      "title": "The Origins of Wokeness",
+      "summary": "Read “The Origins of Wokeness” by Paul Graham.",
+      "content_text": "Read “The Origins of Wokeness” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/writes.html",
+      "url": "https://paulgraham.com/writes.html",
+      "title": "Writes and Write-Nots",
+      "summary": "Read “Writes and Write-Nots” by Paul Graham.",
+      "content_text": "Read “Writes and Write-Nots” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/when.html",
+      "url": "https://paulgraham.com/when.html",
+      "title": "When To Do What You Love",
+      "summary": "Read “When To Do What You Love” by Paul Graham.",
+      "content_text": "Read “When To Do What You Love” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/foundermode.html",
+      "url": "https://paulgraham.com/foundermode.html",
+      "title": "Founder Mode",
+      "summary": "Read “Founder Mode” by Paul Graham.",
+      "content_text": "Read “Founder Mode” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/persistence.html",
+      "url": "https://paulgraham.com/persistence.html",
+      "title": "The Right Kind of Stubborn",
+      "summary": "Read “The Right Kind of Stubborn” by Paul Graham.",
+      "content_text": "Read “The Right Kind of Stubborn” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/reddits.html",
+      "url": "https://paulgraham.com/reddits.html",
+      "title": "The Reddits",
+      "summary": "Read “The Reddits” by Paul Graham.",
+      "content_text": "Read “The Reddits” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/google.html",
+      "url": "https://paulgraham.com/google.html",
+      "title": "How to Start Google",
+      "summary": "Read “How to Start Google” by Paul Graham.",
+      "content_text": "Read “How to Start Google” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/best.html",
+      "url": "https://paulgraham.com/best.html",
+      "title": "The Best Essay",
+      "summary": "Read “The Best Essay” by Paul Graham.",
+      "content_text": "Read “The Best Essay” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/superlinear.html",
+      "url": "https://paulgraham.com/superlinear.html",
+      "title": "Superlinear Returns",
+      "summary": "Read “Superlinear Returns” by Paul Graham.",
+      "content_text": "Read “Superlinear Returns” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/greatwork.html",
+      "url": "https://paulgraham.com/greatwork.html",
+      "title": "How to Do Great Work",
+      "summary": "Read “How to Do Great Work” by Paul Graham.",
+      "content_text": "Read “How to Do Great Work” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/getideas.html",
+      "url": "https://paulgraham.com/getideas.html",
+      "title": "How to Get New Ideas",
+      "summary": "Read “How to Get New Ideas” by Paul Graham.",
+      "content_text": "Read “How to Get New Ideas” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/read.html",
+      "url": "https://paulgraham.com/read.html",
+      "title": "The Need to Read",
+      "summary": "Read “The Need to Read” by Paul Graham.",
+      "content_text": "Read “The Need to Read” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/want.html",
+      "url": "https://paulgraham.com/want.html",
+      "title": "What You (Want to)* Want",
+      "summary": "Read “What You (Want to)* Want” by Paul Graham.",
+      "content_text": "Read “What You (Want to)* Want” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/alien.html",
+      "url": "https://paulgraham.com/alien.html",
+      "title": "Alien Truth",
+      "summary": "Read “Alien Truth” by Paul Graham.",
+      "content_text": "Read “Alien Truth” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/users.html",
+      "url": "https://paulgraham.com/users.html",
+      "title": "What I've Learned from Users",
+      "summary": "Read “What I've Learned from Users” by Paul Graham.",
+      "content_text": "Read “What I've Learned from Users” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/heresy.html",
+      "url": "https://paulgraham.com/heresy.html",
+      "title": "Heresy",
+      "summary": "Read “Heresy” by Paul Graham.",
+      "content_text": "Read “Heresy” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/words.html",
+      "url": "https://paulgraham.com/words.html",
+      "title": "Putting Ideas into Words",
+      "summary": "Read “Putting Ideas into Words” by Paul Graham.",
+      "content_text": "Read “Putting Ideas into Words” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/goodtaste.html",
+      "url": "https://paulgraham.com/goodtaste.html",
+      "title": "Is There Such a Thing as Good Taste?",
+      "summary": "Read “Is There Such a Thing as Good Taste?” by Paul Graham.",
+      "content_text": "Read “Is There Such a Thing as Good Taste?” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/smart.html",
+      "url": "https://paulgraham.com/smart.html",
+      "title": "Beyond Smart",
+      "summary": "Read “Beyond Smart” by Paul Graham.",
+      "content_text": "Read “Beyond Smart” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/weird.html",
+      "url": "https://paulgraham.com/weird.html",
+      "title": "Weird Languages",
+      "summary": "Read “Weird Languages” by Paul Graham.",
+      "content_text": "Read “Weird Languages” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/hwh.html",
+      "url": "https://paulgraham.com/hwh.html",
+      "title": "How to Work Hard",
+      "summary": "Read “How to Work Hard” by Paul Graham.",
+      "content_text": "Read “How to Work Hard” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/own.html",
+      "url": "https://paulgraham.com/own.html",
+      "title": "A Project of One's Own",
+      "summary": "Read “A Project of One's Own” by Paul Graham.",
+      "content_text": "Read “A Project of One's Own” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/fn.html",
+      "url": "https://paulgraham.com/fn.html",
+      "title": "Fierce Nerds",
+      "summary": "Read “Fierce Nerds” by Paul Graham.",
+      "content_text": "Read “Fierce Nerds” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/newideas.html",
+      "url": "https://paulgraham.com/newideas.html",
+      "title": "Crazy New Ideas",
+      "summary": "Read “Crazy New Ideas” by Paul Graham.",
+      "content_text": "Read “Crazy New Ideas” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/nft.html",
+      "url": "https://paulgraham.com/nft.html",
+      "title": "An NFT That Saves Lives",
+      "summary": "Read “An NFT That Saves Lives” by Paul Graham.",
+      "content_text": "Read “An NFT That Saves Lives” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/real.html",
+      "url": "https://paulgraham.com/real.html",
+      "title": "The Real Reason to End the Death Penalty",
+      "summary": "Read “The Real Reason to End the Death Penalty” by Paul Graham.",
+      "content_text": "Read “The Real Reason to End the Death Penalty” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/richnow.html",
+      "url": "https://paulgraham.com/richnow.html",
+      "title": "How People Get Rich Now",
+      "summary": "Read “How People Get Rich Now” by Paul Graham.",
+      "content_text": "Read “How People Get Rich Now” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/simply.html",
+      "url": "https://paulgraham.com/simply.html",
+      "title": "Write Simply",
+      "summary": "Read “Write Simply” by Paul Graham.",
+      "content_text": "Read “Write Simply” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/donate.html",
+      "url": "https://paulgraham.com/donate.html",
+      "title": "Donate Unrestricted",
+      "summary": "Read “Donate Unrestricted” by Paul Graham.",
+      "content_text": "Read “Donate Unrestricted” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/worked.html",
+      "url": "https://paulgraham.com/worked.html",
+      "title": "What I Worked On",
+      "summary": "Read “What I Worked On” by Paul Graham.",
+      "content_text": "Read “What I Worked On” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/earnest.html",
+      "url": "https://paulgraham.com/earnest.html",
+      "title": "Earnestness",
+      "summary": "Read “Earnestness” by Paul Graham.",
+      "content_text": "Read “Earnestness” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ace.html",
+      "url": "https://paulgraham.com/ace.html",
+      "title": "Billionaires Build",
+      "summary": "Read “Billionaires Build” by Paul Graham.",
+      "content_text": "Read “Billionaires Build” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/airbnbs.html",
+      "url": "https://paulgraham.com/airbnbs.html",
+      "title": "The Airbnbs",
+      "summary": "Read “The Airbnbs” by Paul Graham.",
+      "content_text": "Read “The Airbnbs” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/think.html",
+      "url": "https://paulgraham.com/think.html",
+      "title": "How to Think for Yourself",
+      "summary": "Read “How to Think for Yourself” by Paul Graham.",
+      "content_text": "Read “How to Think for Yourself” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/early.html",
+      "url": "https://paulgraham.com/early.html",
+      "title": "Early Work",
+      "summary": "Read “Early Work” by Paul Graham.",
+      "content_text": "Read “Early Work” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/wtax.html",
+      "url": "https://paulgraham.com/wtax.html",
+      "title": "Modeling a Wealth Tax",
+      "summary": "Read “Modeling a Wealth Tax” by Paul Graham.",
+      "content_text": "Read “Modeling a Wealth Tax” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/conformism.html",
+      "url": "https://paulgraham.com/conformism.html",
+      "title": "The Four Quadrants of Conformism",
+      "summary": "Read “The Four Quadrants of Conformism” by Paul Graham.",
+      "content_text": "Read “The Four Quadrants of Conformism” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/orth.html",
+      "url": "https://paulgraham.com/orth.html",
+      "title": "Orthodox Privilege",
+      "summary": "Read “Orthodox Privilege” by Paul Graham.",
+      "content_text": "Read “Orthodox Privilege” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/cred.html",
+      "url": "https://paulgraham.com/cred.html",
+      "title": "Coronavirus and Credibility",
+      "summary": "Read “Coronavirus and Credibility” by Paul Graham.",
+      "content_text": "Read “Coronavirus and Credibility” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/useful.html",
+      "url": "https://paulgraham.com/useful.html",
+      "title": "How to Write Usefully",
+      "summary": "Read “How to Write Usefully” by Paul Graham.",
+      "content_text": "Read “How to Write Usefully” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/noob.html",
+      "url": "https://paulgraham.com/noob.html",
+      "title": "Being a Noob",
+      "summary": "Read “Being a Noob” by Paul Graham.",
+      "content_text": "Read “Being a Noob” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/fh.html",
+      "url": "https://paulgraham.com/fh.html",
+      "title": "Haters",
+      "summary": "Read “Haters” by Paul Graham.",
+      "content_text": "Read “Haters” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/mod.html",
+      "url": "https://paulgraham.com/mod.html",
+      "title": "The Two Kinds of Moderate",
+      "summary": "Read “The Two Kinds of Moderate” by Paul Graham.",
+      "content_text": "Read “The Two Kinds of Moderate” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/fp.html",
+      "url": "https://paulgraham.com/fp.html",
+      "title": "Fashionable Problems",
+      "summary": "Read “Fashionable Problems” by Paul Graham.",
+      "content_text": "Read “Fashionable Problems” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/kids.html",
+      "url": "https://paulgraham.com/kids.html",
+      "title": "Having Kids",
+      "summary": "Read “Having Kids” by Paul Graham.",
+      "content_text": "Read “Having Kids” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/lesson.html",
+      "url": "https://paulgraham.com/lesson.html",
+      "title": "The Lesson to Unlearn",
+      "summary": "Read “The Lesson to Unlearn” by Paul Graham.",
+      "content_text": "Read “The Lesson to Unlearn” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/nov.html",
+      "url": "https://paulgraham.com/nov.html",
+      "title": "Novelty and Heresy",
+      "summary": "Read “Novelty and Heresy” by Paul Graham.",
+      "content_text": "Read “Novelty and Heresy” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/genius.html",
+      "url": "https://paulgraham.com/genius.html",
+      "title": "The Bus Ticket Theory of Genius",
+      "summary": "Read “The Bus Ticket Theory of Genius” by Paul Graham.",
+      "content_text": "Read “The Bus Ticket Theory of Genius” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/sun.html",
+      "url": "https://paulgraham.com/sun.html",
+      "title": "General and Surprising",
+      "summary": "Read “General and Surprising” by Paul Graham.",
+      "content_text": "Read “General and Surprising” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/pow.html",
+      "url": "https://paulgraham.com/pow.html",
+      "title": "Charisma / Power",
+      "summary": "Read “Charisma / Power” by Paul Graham.",
+      "content_text": "Read “Charisma / Power” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/disc.html",
+      "url": "https://paulgraham.com/disc.html",
+      "title": "The Risk of Discovery",
+      "summary": "Read “The Risk of Discovery” by Paul Graham.",
+      "content_text": "Read “The Risk of Discovery” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/pgh.html",
+      "url": "https://paulgraham.com/pgh.html",
+      "title": "How to Make Pittsburgh a Startup Hub",
+      "summary": "Read “How to Make Pittsburgh a Startup Hub” by Paul Graham.",
+      "content_text": "Read “How to Make Pittsburgh a Startup Hub” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/vb.html",
+      "url": "https://paulgraham.com/vb.html",
+      "title": "Life is Short",
+      "summary": "Read “Life is Short” by Paul Graham.",
+      "content_text": "Read “Life is Short” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ineq.html",
+      "url": "https://paulgraham.com/ineq.html",
+      "title": "Economic Inequality",
+      "summary": "Read “Economic Inequality” by Paul Graham.",
+      "content_text": "Read “Economic Inequality” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/re.html",
+      "url": "https://paulgraham.com/re.html",
+      "title": "The Refragmentation",
+      "summary": "Read “The Refragmentation” by Paul Graham.",
+      "content_text": "Read “The Refragmentation” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/jessica.html",
+      "url": "https://paulgraham.com/jessica.html",
+      "title": "Jessica Livingston",
+      "summary": "Read “Jessica Livingston” by Paul Graham.",
+      "content_text": "Read “Jessica Livingston” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/bias.html",
+      "url": "https://paulgraham.com/bias.html",
+      "title": "A Way to Detect Bias",
+      "summary": "Read “A Way to Detect Bias” by Paul Graham.",
+      "content_text": "Read “A Way to Detect Bias” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/talk.html",
+      "url": "https://paulgraham.com/talk.html",
+      "title": "Write Like You Talk",
+      "summary": "Read “Write Like You Talk” by Paul Graham.",
+      "content_text": "Read “Write Like You Talk” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/aord.html",
+      "url": "https://paulgraham.com/aord.html",
+      "title": "Default Alive or Default Dead?",
+      "summary": "Read “Default Alive or Default Dead?” by Paul Graham.",
+      "content_text": "Read “Default Alive or Default Dead?” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/safe.html",
+      "url": "https://paulgraham.com/safe.html",
+      "title": "Why It's Safe for Founders to Be Nice",
+      "summary": "Read “Why It's Safe for Founders to Be Nice” by Paul Graham.",
+      "content_text": "Read “Why It's Safe for Founders to Be Nice” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/name.html",
+      "url": "https://paulgraham.com/name.html",
+      "title": "Change Your Name",
+      "summary": "Read “Change Your Name” by Paul Graham.",
+      "content_text": "Read “Change Your Name” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/altair.html",
+      "url": "https://paulgraham.com/altair.html",
+      "title": "What Microsoft Is this the Altair Basic of?",
+      "summary": "Read “What Microsoft Is this the Altair Basic of?” by Paul Graham.",
+      "content_text": "Read “What Microsoft Is this the Altair Basic of?” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ronco.html",
+      "url": "https://paulgraham.com/ronco.html",
+      "title": "The Ronco Principle",
+      "summary": "Read “The Ronco Principle” by Paul Graham.",
+      "content_text": "Read “The Ronco Principle” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/work.html",
+      "url": "https://paulgraham.com/work.html",
+      "title": "What Doesn't Seem Like Work?",
+      "summary": "Read “What Doesn't Seem Like Work?” by Paul Graham.",
+      "content_text": "Read “What Doesn't Seem Like Work?” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/corpdev.html",
+      "url": "https://paulgraham.com/corpdev.html",
+      "title": "Don't Talk to Corp Dev",
+      "summary": "Read “Don't Talk to Corp Dev” by Paul Graham.",
+      "content_text": "Read “Don't Talk to Corp Dev” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/95.html",
+      "url": "https://paulgraham.com/95.html",
+      "title": "Let the Other 95% of Great Programmers In",
+      "summary": "Read “Let the Other 95% of Great Programmers In” by Paul Graham.",
+      "content_text": "Read “Let the Other 95% of Great Programmers In” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ecw.html",
+      "url": "https://paulgraham.com/ecw.html",
+      "title": "How to Be an Expert in a Changing World",
+      "summary": "Read “How to Be an Expert in a Changing World” by Paul Graham.",
+      "content_text": "Read “How to Be an Expert in a Changing World” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/know.html",
+      "url": "https://paulgraham.com/know.html",
+      "title": "How You Know",
+      "summary": "Read “How You Know” by Paul Graham.",
+      "content_text": "Read “How You Know” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/pinch.html",
+      "url": "https://paulgraham.com/pinch.html",
+      "title": "The Fatal Pinch",
+      "summary": "Read “The Fatal Pinch” by Paul Graham.",
+      "content_text": "Read “The Fatal Pinch” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/mean.html",
+      "url": "https://paulgraham.com/mean.html",
+      "title": "Mean People Fail",
+      "summary": "Read “Mean People Fail” by Paul Graham.",
+      "content_text": "Read “Mean People Fail” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/before.html",
+      "url": "https://paulgraham.com/before.html",
+      "title": "Before the Startup",
+      "summary": "Read “Before the Startup” by Paul Graham.",
+      "content_text": "Read “Before the Startup” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/fr.html",
+      "url": "https://paulgraham.com/fr.html",
+      "title": "How to Raise Money",
+      "summary": "Read “How to Raise Money” by Paul Graham.",
+      "content_text": "Read “How to Raise Money” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/herd.html",
+      "url": "https://paulgraham.com/herd.html",
+      "title": "Investor Herd Dynamics",
+      "summary": "Read “Investor Herd Dynamics” by Paul Graham.",
+      "content_text": "Read “Investor Herd Dynamics” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/convince.html",
+      "url": "https://paulgraham.com/convince.html",
+      "title": "How to Convince Investors",
+      "summary": "Read “How to Convince Investors” by Paul Graham.",
+      "content_text": "Read “How to Convince Investors” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ds.html",
+      "url": "https://paulgraham.com/ds.html",
+      "title": "Do Things that Don't Scale",
+      "summary": "Read “Do Things that Don't Scale” by Paul Graham.",
+      "content_text": "Read “Do Things that Don't Scale” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/invtrend.html",
+      "url": "https://paulgraham.com/invtrend.html",
+      "title": "Startup Investing Trends",
+      "summary": "Read “Startup Investing Trends” by Paul Graham.",
+      "content_text": "Read “Startup Investing Trends” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/startupideas.html",
+      "url": "https://paulgraham.com/startupideas.html",
+      "title": "How to Get Startup Ideas",
+      "summary": "Read “How to Get Startup Ideas” by Paul Graham.",
+      "content_text": "Read “How to Get Startup Ideas” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/hw.html",
+      "url": "https://paulgraham.com/hw.html",
+      "title": "The Hardware Renaissance",
+      "summary": "Read “The Hardware Renaissance” by Paul Graham.",
+      "content_text": "Read “The Hardware Renaissance” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/growth.html",
+      "url": "https://paulgraham.com/growth.html",
+      "title": "Startup = Growth",
+      "summary": "Read “Startup = Growth” by Paul Graham.",
+      "content_text": "Read “Startup = Growth” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/swan.html",
+      "url": "https://paulgraham.com/swan.html",
+      "title": "Black Swan Farming",
+      "summary": "Read “Black Swan Farming” by Paul Graham.",
+      "content_text": "Read “Black Swan Farming” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/todo.html",
+      "url": "https://paulgraham.com/todo.html",
+      "title": "The Top of My Todo List",
+      "summary": "Read “The Top of My Todo List” by Paul Graham.",
+      "content_text": "Read “The Top of My Todo List” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/speak.html",
+      "url": "https://paulgraham.com/speak.html",
+      "title": "Writing and Speaking",
+      "summary": "Read “Writing and Speaking” by Paul Graham.",
+      "content_text": "Read “Writing and Speaking” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ycstart.html",
+      "url": "https://paulgraham.com/ycstart.html",
+      "title": "How Y Combinator Started",
+      "summary": "Read “How Y Combinator Started” by Paul Graham.",
+      "content_text": "Read “How Y Combinator Started” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/property.html",
+      "url": "https://paulgraham.com/property.html",
+      "title": "Defining Property",
+      "summary": "Read “Defining Property” by Paul Graham.",
+      "content_text": "Read “Defining Property” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ambitious.html",
+      "url": "https://paulgraham.com/ambitious.html",
+      "title": "Frighteningly Ambitious Startup Ideas",
+      "summary": "Read “Frighteningly Ambitious Startup Ideas” by Paul Graham.",
+      "content_text": "Read “Frighteningly Ambitious Startup Ideas” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/word.html",
+      "url": "https://paulgraham.com/word.html",
+      "title": "A Word to the Resourceful",
+      "summary": "Read “A Word to the Resourceful” by Paul Graham.",
+      "content_text": "Read “A Word to the Resourceful” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/schlep.html",
+      "url": "https://paulgraham.com/schlep.html",
+      "title": "Schlep Blindness",
+      "summary": "Read “Schlep Blindness” by Paul Graham.",
+      "content_text": "Read “Schlep Blindness” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/vw.html",
+      "url": "https://paulgraham.com/vw.html",
+      "title": "Snapshot: Viaweb, June 1998",
+      "summary": "Read “Snapshot: Viaweb, June 1998” by Paul Graham.",
+      "content_text": "Read “Snapshot: Viaweb, June 1998” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/hubs.html",
+      "url": "https://paulgraham.com/hubs.html",
+      "title": "Why Startup Hubs Work",
+      "summary": "Read “Why Startup Hubs Work” by Paul Graham.",
+      "content_text": "Read “Why Startup Hubs Work” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/patentpledge.html",
+      "url": "https://paulgraham.com/patentpledge.html",
+      "title": "The Patent Pledge",
+      "summary": "Read “The Patent Pledge” by Paul Graham.",
+      "content_text": "Read “The Patent Pledge” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/airbnb.html",
+      "url": "https://paulgraham.com/airbnb.html",
+      "title": "Subject: Airbnb",
+      "summary": "Read “Subject: Airbnb” by Paul Graham.",
+      "content_text": "Read “Subject: Airbnb” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/control.html",
+      "url": "https://paulgraham.com/control.html",
+      "title": "Founder Control",
+      "summary": "Read “Founder Control” by Paul Graham.",
+      "content_text": "Read “Founder Control” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/tablets.html",
+      "url": "https://paulgraham.com/tablets.html",
+      "title": "Tablets",
+      "summary": "Read “Tablets” by Paul Graham.",
+      "content_text": "Read “Tablets” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/founders.html",
+      "url": "https://paulgraham.com/founders.html",
+      "title": "What We Look for in Founders",
+      "summary": "Read “What We Look for in Founders” by Paul Graham.",
+      "content_text": "Read “What We Look for in Founders” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/superangels.html",
+      "url": "https://paulgraham.com/superangels.html",
+      "title": "The New Funding Landscape",
+      "summary": "Read “The New Funding Landscape” by Paul Graham.",
+      "content_text": "Read “The New Funding Landscape” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/seesv.html",
+      "url": "https://paulgraham.com/seesv.html",
+      "title": "Where to See Silicon Valley",
+      "summary": "Read “Where to See Silicon Valley” by Paul Graham.",
+      "content_text": "Read “Where to See Silicon Valley” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/hiresfund.html",
+      "url": "https://paulgraham.com/hiresfund.html",
+      "title": "High Resolution Fundraising",
+      "summary": "Read “High Resolution Fundraising” by Paul Graham.",
+      "content_text": "Read “High Resolution Fundraising” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/yahoo.html",
+      "url": "https://paulgraham.com/yahoo.html",
+      "title": "What Happened to Yahoo",
+      "summary": "Read “What Happened to Yahoo” by Paul Graham.",
+      "content_text": "Read “What Happened to Yahoo” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/future.html",
+      "url": "https://paulgraham.com/future.html",
+      "title": "The Future of Startup Funding",
+      "summary": "Read “The Future of Startup Funding” by Paul Graham.",
+      "content_text": "Read “The Future of Startup Funding” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/addiction.html",
+      "url": "https://paulgraham.com/addiction.html",
+      "title": "The Acceleration of Addictiveness",
+      "summary": "Read “The Acceleration of Addictiveness” by Paul Graham.",
+      "content_text": "Read “The Acceleration of Addictiveness” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/top.html",
+      "url": "https://paulgraham.com/top.html",
+      "title": "The Top Idea in Your Mind",
+      "summary": "Read “The Top Idea in Your Mind” by Paul Graham.",
+      "content_text": "Read “The Top Idea in Your Mind” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/selfindulgence.html",
+      "url": "https://paulgraham.com/selfindulgence.html",
+      "title": "How to Lose Time and Money",
+      "summary": "Read “How to Lose Time and Money” by Paul Graham.",
+      "content_text": "Read “How to Lose Time and Money” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/organic.html",
+      "url": "https://paulgraham.com/organic.html",
+      "title": "Organic Startup Ideas",
+      "summary": "Read “Organic Startup Ideas” by Paul Graham.",
+      "content_text": "Read “Organic Startup Ideas” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/apple.html",
+      "url": "https://paulgraham.com/apple.html",
+      "title": "Apple's Mistake",
+      "summary": "Read “Apple's Mistake” by Paul Graham.",
+      "content_text": "Read “Apple's Mistake” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/really.html",
+      "url": "https://paulgraham.com/really.html",
+      "title": "What Startups Are Really Like",
+      "summary": "Read “What Startups Are Really Like” by Paul Graham.",
+      "content_text": "Read “What Startups Are Really Like” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/discover.html",
+      "url": "https://paulgraham.com/discover.html",
+      "title": "Persuade xor Discover",
+      "summary": "Read “Persuade xor Discover” by Paul Graham.",
+      "content_text": "Read “Persuade xor Discover” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/publishing.html",
+      "url": "https://paulgraham.com/publishing.html",
+      "title": "Post-Medium Publishing",
+      "summary": "Read “Post-Medium Publishing” by Paul Graham.",
+      "content_text": "Read “Post-Medium Publishing” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/nthings.html",
+      "url": "https://paulgraham.com/nthings.html",
+      "title": "The List of N Things",
+      "summary": "Read “The List of N Things” by Paul Graham.",
+      "content_text": "Read “The List of N Things” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/determination.html",
+      "url": "https://paulgraham.com/determination.html",
+      "title": "The Anatomy of Determination",
+      "summary": "Read “The Anatomy of Determination” by Paul Graham.",
+      "content_text": "Read “The Anatomy of Determination” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/kate.html",
+      "url": "https://paulgraham.com/kate.html",
+      "title": "What Kate Saw in Silicon Valley",
+      "summary": "Read “What Kate Saw in Silicon Valley” by Paul Graham.",
+      "content_text": "Read “What Kate Saw in Silicon Valley” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/segway.html",
+      "url": "https://paulgraham.com/segway.html",
+      "title": "The Trouble with the Segway",
+      "summary": "Read “The Trouble with the Segway” by Paul Graham.",
+      "content_text": "Read “The Trouble with the Segway” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ramenprofitable.html",
+      "url": "https://paulgraham.com/ramenprofitable.html",
+      "title": "Ramen Profitable",
+      "summary": "Read “Ramen Profitable” by Paul Graham.",
+      "content_text": "Read “Ramen Profitable” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/makersschedule.html",
+      "url": "https://paulgraham.com/makersschedule.html",
+      "title": "Maker's Schedule, Manager's Schedule",
+      "summary": "Read “Maker's Schedule, Manager's Schedule” by Paul Graham.",
+      "content_text": "Read “Maker's Schedule, Manager's Schedule” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/revolution.html",
+      "url": "https://paulgraham.com/revolution.html",
+      "title": "A Local Revolution?",
+      "summary": "Read “A Local Revolution?” by Paul Graham.",
+      "content_text": "Read “A Local Revolution?” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/twitter.html",
+      "url": "https://paulgraham.com/twitter.html",
+      "title": "Why Twitter is a Big Deal",
+      "summary": "Read “Why Twitter is a Big Deal” by Paul Graham.",
+      "content_text": "Read “Why Twitter is a Big Deal” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/foundervisa.html",
+      "url": "https://paulgraham.com/foundervisa.html",
+      "title": "The Founder Visa",
+      "summary": "Read “The Founder Visa” by Paul Graham.",
+      "content_text": "Read “The Founder Visa” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/5founders.html",
+      "url": "https://paulgraham.com/5founders.html",
+      "title": "Five Founders",
+      "summary": "Read “Five Founders” by Paul Graham.",
+      "content_text": "Read “Five Founders” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/relres.html",
+      "url": "https://paulgraham.com/relres.html",
+      "title": "Relentlessly Resourceful",
+      "summary": "Read “Relentlessly Resourceful” by Paul Graham.",
+      "content_text": "Read “Relentlessly Resourceful” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/angelinvesting.html",
+      "url": "https://paulgraham.com/angelinvesting.html",
+      "title": "How to Be an Angel Investor",
+      "summary": "Read “How to Be an Angel Investor” by Paul Graham.",
+      "content_text": "Read “How to Be an Angel Investor” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/convergence.html",
+      "url": "https://paulgraham.com/convergence.html",
+      "title": "Why TV Lost",
+      "summary": "Read “Why TV Lost” by Paul Graham.",
+      "content_text": "Read “Why TV Lost” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/maybe.html",
+      "url": "https://paulgraham.com/maybe.html",
+      "title": "Can You Buy a Silicon Valley? Maybe.",
+      "summary": "Read “Can You Buy a Silicon Valley? Maybe.” by Paul Graham.",
+      "content_text": "Read “Can You Buy a Silicon Valley? Maybe.” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/hackernews.html",
+      "url": "https://paulgraham.com/hackernews.html",
+      "title": "What I've Learned from Hacker News",
+      "summary": "Read “What I've Learned from Hacker News” by Paul Graham.",
+      "content_text": "Read “What I've Learned from Hacker News” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/13sentences.html",
+      "url": "https://paulgraham.com/13sentences.html",
+      "title": "Startups in 13 Sentences",
+      "summary": "Read “Startups in 13 Sentences” by Paul Graham.",
+      "content_text": "Read “Startups in 13 Sentences” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/identity.html",
+      "url": "https://paulgraham.com/identity.html",
+      "title": "Keep Your Identity Small",
+      "summary": "Read “Keep Your Identity Small” by Paul Graham.",
+      "content_text": "Read “Keep Your Identity Small” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/credentials.html",
+      "url": "https://paulgraham.com/credentials.html",
+      "title": "After Credentials",
+      "summary": "Read “After Credentials” by Paul Graham.",
+      "content_text": "Read “After Credentials” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/divergence.html",
+      "url": "https://paulgraham.com/divergence.html",
+      "title": "Could VC be a Casualty of the Recession?",
+      "summary": "Read “Could VC be a Casualty of the Recession?” by Paul Graham.",
+      "content_text": "Read “Could VC be a Casualty of the Recession?” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/highres.html",
+      "url": "https://paulgraham.com/highres.html",
+      "title": "The High-Res Society",
+      "summary": "Read “The High-Res Society” by Paul Graham.",
+      "content_text": "Read “The High-Res Society” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/artistsship.html",
+      "url": "https://paulgraham.com/artistsship.html",
+      "title": "The Other Half of \"Artists Ship\"",
+      "summary": "Read “The Other Half of \"Artists Ship\"” by Paul Graham.",
+      "content_text": "Read “The Other Half of \"Artists Ship\"” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/badeconomy.html",
+      "url": "https://paulgraham.com/badeconomy.html",
+      "title": "Why to Start a Startup in a Bad Economy",
+      "summary": "Read “Why to Start a Startup in a Bad Economy” by Paul Graham.",
+      "content_text": "Read “Why to Start a Startup in a Bad Economy” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/fundraising.html",
+      "url": "https://paulgraham.com/fundraising.html",
+      "title": "A Fundraising Survival Guide",
+      "summary": "Read “A Fundraising Survival Guide” by Paul Graham.",
+      "content_text": "Read “A Fundraising Survival Guide” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/prcmc.html",
+      "url": "https://paulgraham.com/prcmc.html",
+      "title": "The Pooled-Risk Company Management Company",
+      "summary": "Read “The Pooled-Risk Company Management Company” by Paul Graham.",
+      "content_text": "Read “The Pooled-Risk Company Management Company” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/cities.html",
+      "url": "https://paulgraham.com/cities.html",
+      "title": "Cities and Ambition",
+      "summary": "Read “Cities and Ambition” by Paul Graham.",
+      "content_text": "Read “Cities and Ambition” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/distraction.html",
+      "url": "https://paulgraham.com/distraction.html",
+      "title": "Disconnecting Distraction",
+      "summary": "Read “Disconnecting Distraction” by Paul Graham.",
+      "content_text": "Read “Disconnecting Distraction” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/lies.html",
+      "url": "https://paulgraham.com/lies.html",
+      "title": "Lies We Tell Kids",
+      "summary": "Read “Lies We Tell Kids” by Paul Graham.",
+      "content_text": "Read “Lies We Tell Kids” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/good.html",
+      "url": "https://paulgraham.com/good.html",
+      "title": "Be Good",
+      "summary": "Read “Be Good” by Paul Graham.",
+      "content_text": "Read “Be Good” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/googles.html",
+      "url": "https://paulgraham.com/googles.html",
+      "title": "Why There Aren't More Googles",
+      "summary": "Read “Why There Aren't More Googles” by Paul Graham.",
+      "content_text": "Read “Why There Aren't More Googles” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/heroes.html",
+      "url": "https://paulgraham.com/heroes.html",
+      "title": "Some Heroes",
+      "summary": "Read “Some Heroes” by Paul Graham.",
+      "content_text": "Read “Some Heroes” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/disagree.html",
+      "url": "https://paulgraham.com/disagree.html",
+      "title": "How to Disagree",
+      "summary": "Read “How to Disagree” by Paul Graham.",
+      "content_text": "Read “How to Disagree” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/boss.html",
+      "url": "https://paulgraham.com/boss.html",
+      "title": "You Weren't Meant to Have a Boss",
+      "summary": "Read “You Weren't Meant to Have a Boss” by Paul Graham.",
+      "content_text": "Read “You Weren't Meant to Have a Boss” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ycombinator.html",
+      "url": "https://paulgraham.com/ycombinator.html",
+      "title": "A New Venture Animal",
+      "summary": "Read “A New Venture Animal” by Paul Graham.",
+      "content_text": "Read “A New Venture Animal” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/trolls.html",
+      "url": "https://paulgraham.com/trolls.html",
+      "title": "Trolls",
+      "summary": "Read “Trolls” by Paul Graham.",
+      "content_text": "Read “Trolls” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/newthings.html",
+      "url": "https://paulgraham.com/newthings.html",
+      "title": "Six Principles for Making New Things",
+      "summary": "Read “Six Principles for Making New Things” by Paul Graham.",
+      "content_text": "Read “Six Principles for Making New Things” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/startuphubs.html",
+      "url": "https://paulgraham.com/startuphubs.html",
+      "title": "Why to Move to a Startup Hub",
+      "summary": "Read “Why to Move to a Startup Hub” by Paul Graham.",
+      "content_text": "Read “Why to Move to a Startup Hub” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/webstartups.html",
+      "url": "https://paulgraham.com/webstartups.html",
+      "title": "The Future of Web Startups",
+      "summary": "Read “The Future of Web Startups” by Paul Graham.",
+      "content_text": "Read “The Future of Web Startups” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/philosophy.html",
+      "url": "https://paulgraham.com/philosophy.html",
+      "title": "How to Do Philosophy",
+      "summary": "Read “How to Do Philosophy” by Paul Graham.",
+      "content_text": "Read “How to Do Philosophy” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/colleges.html",
+      "url": "https://paulgraham.com/colleges.html",
+      "title": "News from the Front",
+      "summary": "Read “News from the Front” by Paul Graham.",
+      "content_text": "Read “News from the Front” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/die.html",
+      "url": "https://paulgraham.com/die.html",
+      "title": "How Not to Die",
+      "summary": "Read “How Not to Die” by Paul Graham.",
+      "content_text": "Read “How Not to Die” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/head.html",
+      "url": "https://paulgraham.com/head.html",
+      "title": "Holding a Program in One's Head",
+      "summary": "Read “Holding a Program in One's Head” by Paul Graham.",
+      "content_text": "Read “Holding a Program in One's Head” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/stuff.html",
+      "url": "https://paulgraham.com/stuff.html",
+      "title": "Stuff",
+      "summary": "Read “Stuff” by Paul Graham.",
+      "content_text": "Read “Stuff” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/equity.html",
+      "url": "https://paulgraham.com/equity.html",
+      "title": "The Equity Equation",
+      "summary": "Read “The Equity Equation” by Paul Graham.",
+      "content_text": "Read “The Equity Equation” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/unions.html",
+      "url": "https://paulgraham.com/unions.html",
+      "title": "An Alternative Theory of Unions",
+      "summary": "Read “An Alternative Theory of Unions” by Paul Graham.",
+      "content_text": "Read “An Alternative Theory of Unions” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/guidetoinvestors.html",
+      "url": "https://paulgraham.com/guidetoinvestors.html",
+      "title": "The Hacker's Guide to Investors",
+      "summary": "Read “The Hacker's Guide to Investors” by Paul Graham.",
+      "content_text": "Read “The Hacker's Guide to Investors” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/judgement.html",
+      "url": "https://paulgraham.com/judgement.html",
+      "title": "Two Kinds of Judgement",
+      "summary": "Read “Two Kinds of Judgement” by Paul Graham.",
+      "content_text": "Read “Two Kinds of Judgement” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/microsoft.html",
+      "url": "https://paulgraham.com/microsoft.html",
+      "title": "Microsoft is Dead",
+      "summary": "Read “Microsoft is Dead” by Paul Graham.",
+      "content_text": "Read “Microsoft is Dead” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/notnot.html",
+      "url": "https://paulgraham.com/notnot.html",
+      "title": "Why to Not Not Start a Startup",
+      "summary": "Read “Why to Not Not Start a Startup” by Paul Graham.",
+      "content_text": "Read “Why to Not Not Start a Startup” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/wisdom.html",
+      "url": "https://paulgraham.com/wisdom.html",
+      "title": "Is It Worth Being Wise?",
+      "summary": "Read “Is It Worth Being Wise?” by Paul Graham.",
+      "content_text": "Read “Is It Worth Being Wise?” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/foundersatwork.html",
+      "url": "https://paulgraham.com/foundersatwork.html",
+      "title": "Learning from Founders",
+      "summary": "Read “Learning from Founders” by Paul Graham.",
+      "content_text": "Read “Learning from Founders” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/goodart.html",
+      "url": "https://paulgraham.com/goodart.html",
+      "title": "How Art Can Be Good",
+      "summary": "Read “How Art Can Be Good” by Paul Graham.",
+      "content_text": "Read “How Art Can Be Good” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/startupmistakes.html",
+      "url": "https://paulgraham.com/startupmistakes.html",
+      "title": "The 18 Mistakes That Kill Startups",
+      "summary": "Read “The 18 Mistakes That Kill Startups” by Paul Graham.",
+      "content_text": "Read “The 18 Mistakes That Kill Startups” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/mit.html",
+      "url": "https://paulgraham.com/mit.html",
+      "title": "A Student's Guide to Startups",
+      "summary": "Read “A Student's Guide to Startups” by Paul Graham.",
+      "content_text": "Read “A Student's Guide to Startups” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/investors.html",
+      "url": "https://paulgraham.com/investors.html",
+      "title": "How to Present to Investors",
+      "summary": "Read “How to Present to Investors” by Paul Graham.",
+      "content_text": "Read “How to Present to Investors” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/copy.html",
+      "url": "https://paulgraham.com/copy.html",
+      "title": "Copy What You Like",
+      "summary": "Read “Copy What You Like” by Paul Graham.",
+      "content_text": "Read “Copy What You Like” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/island.html",
+      "url": "https://paulgraham.com/island.html",
+      "title": "The Island Test",
+      "summary": "Read “The Island Test” by Paul Graham.",
+      "content_text": "Read “The Island Test” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/marginal.html",
+      "url": "https://paulgraham.com/marginal.html",
+      "title": "The Power of the Marginal",
+      "summary": "Read “The Power of the Marginal” by Paul Graham.",
+      "content_text": "Read “The Power of the Marginal” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/america.html",
+      "url": "https://paulgraham.com/america.html",
+      "title": "Why Startups Condense in America",
+      "summary": "Read “Why Startups Condense in America” by Paul Graham.",
+      "content_text": "Read “Why Startups Condense in America” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/siliconvalley.html",
+      "url": "https://paulgraham.com/siliconvalley.html",
+      "title": "How to Be Silicon Valley",
+      "summary": "Read “How to Be Silicon Valley” by Paul Graham.",
+      "content_text": "Read “How to Be Silicon Valley” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/startuplessons.html",
+      "url": "https://paulgraham.com/startuplessons.html",
+      "title": "The Hardest Lessons for Startups to Learn",
+      "summary": "Read “The Hardest Lessons for Startups to Learn” by Paul Graham.",
+      "content_text": "Read “The Hardest Lessons for Startups to Learn” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/randomness.html",
+      "url": "https://paulgraham.com/randomness.html",
+      "title": "See Randomness",
+      "summary": "Read “See Randomness” by Paul Graham.",
+      "content_text": "Read “See Randomness” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/softwarepatents.html",
+      "url": "https://paulgraham.com/softwarepatents.html",
+      "title": "Are Software Patents Evil?",
+      "summary": "Read “Are Software Patents Evil?” by Paul Graham.",
+      "content_text": "Read “Are Software Patents Evil?” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/6631327.html",
+      "url": "https://paulgraham.com/6631327.html",
+      "title": "6,631,372",
+      "summary": "Read “6,631,372” by Paul Graham.",
+      "content_text": "Read “6,631,372” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/whyyc.html",
+      "url": "https://paulgraham.com/whyyc.html",
+      "title": "Why YC",
+      "summary": "Read “Why YC” by Paul Graham.",
+      "content_text": "Read “Why YC” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/love.html",
+      "url": "https://paulgraham.com/love.html",
+      "title": "How to Do What You Love",
+      "summary": "Read “How to Do What You Love” by Paul Graham.",
+      "content_text": "Read “How to Do What You Love” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/procrastination.html",
+      "url": "https://paulgraham.com/procrastination.html",
+      "title": "Good and Bad Procrastination",
+      "summary": "Read “Good and Bad Procrastination” by Paul Graham.",
+      "content_text": "Read “Good and Bad Procrastination” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/web20.html",
+      "url": "https://paulgraham.com/web20.html",
+      "title": "Web 2.0",
+      "summary": "Read “Web 2.0” by Paul Graham.",
+      "content_text": "Read “Web 2.0” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/startupfunding.html",
+      "url": "https://paulgraham.com/startupfunding.html",
+      "title": "How to Fund a Startup",
+      "summary": "Read “How to Fund a Startup” by Paul Graham.",
+      "content_text": "Read “How to Fund a Startup” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/vcsqueeze.html",
+      "url": "https://paulgraham.com/vcsqueeze.html",
+      "title": "The Venture Capital Squeeze",
+      "summary": "Read “The Venture Capital Squeeze” by Paul Graham.",
+      "content_text": "Read “The Venture Capital Squeeze” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ideas.html",
+      "url": "https://paulgraham.com/ideas.html",
+      "title": "Ideas for Startups",
+      "summary": "Read “Ideas for Startups” by Paul Graham.",
+      "content_text": "Read “Ideas for Startups” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/sfp.html",
+      "url": "https://paulgraham.com/sfp.html",
+      "title": "What I Did this Summer",
+      "summary": "Read “What I Did this Summer” by Paul Graham.",
+      "content_text": "Read “What I Did this Summer” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/inequality.html",
+      "url": "https://paulgraham.com/inequality.html",
+      "title": "Inequality and Risk",
+      "summary": "Read “Inequality and Risk” by Paul Graham.",
+      "content_text": "Read “Inequality and Risk” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ladder.html",
+      "url": "https://paulgraham.com/ladder.html",
+      "title": "After the Ladder",
+      "summary": "Read “After the Ladder” by Paul Graham.",
+      "content_text": "Read “After the Ladder” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/opensource.html",
+      "url": "https://paulgraham.com/opensource.html",
+      "title": "What Business Can Learn from Open Source",
+      "summary": "Read “What Business Can Learn from Open Source” by Paul Graham.",
+      "content_text": "Read “What Business Can Learn from Open Source” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/hiring.html",
+      "url": "https://paulgraham.com/hiring.html",
+      "title": "Hiring is Obsolete",
+      "summary": "Read “Hiring is Obsolete” by Paul Graham.",
+      "content_text": "Read “Hiring is Obsolete” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/submarine.html",
+      "url": "https://paulgraham.com/submarine.html",
+      "title": "The Submarine",
+      "summary": "Read “The Submarine” by Paul Graham.",
+      "content_text": "Read “The Submarine” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/bronze.html",
+      "url": "https://paulgraham.com/bronze.html",
+      "title": "Why Smart People Have Bad Ideas",
+      "summary": "Read “Why Smart People Have Bad Ideas” by Paul Graham.",
+      "content_text": "Read “Why Smart People Have Bad Ideas” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/mac.html",
+      "url": "https://paulgraham.com/mac.html",
+      "title": "Return of the Mac",
+      "summary": "Read “Return of the Mac” by Paul Graham.",
+      "content_text": "Read “Return of the Mac” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/writing44.html",
+      "url": "https://paulgraham.com/writing44.html",
+      "title": "Writing, Briefly",
+      "summary": "Read “Writing, Briefly” by Paul Graham.",
+      "content_text": "Read “Writing, Briefly” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/college.html",
+      "url": "https://paulgraham.com/college.html",
+      "title": "Undergraduation",
+      "summary": "Read “Undergraduation” by Paul Graham.",
+      "content_text": "Read “Undergraduation” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/venturecapital.html",
+      "url": "https://paulgraham.com/venturecapital.html",
+      "title": "A Unified Theory of VC Suckage",
+      "summary": "Read “A Unified Theory of VC Suckage” by Paul Graham.",
+      "content_text": "Read “A Unified Theory of VC Suckage” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/start.html",
+      "url": "https://paulgraham.com/start.html",
+      "title": "How to Start a Startup",
+      "summary": "Read “How to Start a Startup” by Paul Graham.",
+      "content_text": "Read “How to Start a Startup” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/hs.html",
+      "url": "https://paulgraham.com/hs.html",
+      "title": "What You'll Wish You'd Known",
+      "summary": "Read “What You'll Wish You'd Known” by Paul Graham.",
+      "content_text": "Read “What You'll Wish You'd Known” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/usa.html",
+      "url": "https://paulgraham.com/usa.html",
+      "title": "Made in USA",
+      "summary": "Read “Made in USA” by Paul Graham.",
+      "content_text": "Read “Made in USA” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/charisma.html",
+      "url": "https://paulgraham.com/charisma.html",
+      "title": "It's Charisma, Stupid",
+      "summary": "Read “It's Charisma, Stupid” by Paul Graham.",
+      "content_text": "Read “It's Charisma, Stupid” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/polls.html",
+      "url": "https://paulgraham.com/polls.html",
+      "title": "Bradley's Ghost",
+      "summary": "Read “Bradley's Ghost” by Paul Graham.",
+      "content_text": "Read “Bradley's Ghost” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/laundry.html",
+      "url": "https://paulgraham.com/laundry.html",
+      "title": "A Version 1.0",
+      "summary": "Read “A Version 1.0” by Paul Graham.",
+      "content_text": "Read “A Version 1.0” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/bubble.html",
+      "url": "https://paulgraham.com/bubble.html",
+      "title": "What the Bubble Got Right",
+      "summary": "Read “What the Bubble Got Right” by Paul Graham.",
+      "content_text": "Read “What the Bubble Got Right” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/essay.html",
+      "url": "https://paulgraham.com/essay.html",
+      "title": "The Age of the Essay",
+      "summary": "Read “The Age of the Essay” by Paul Graham.",
+      "content_text": "Read “The Age of the Essay” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/pypar.html",
+      "url": "https://paulgraham.com/pypar.html",
+      "title": "The Python Paradox",
+      "summary": "Read “The Python Paradox” by Paul Graham.",
+      "content_text": "Read “The Python Paradox” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/gh.html",
+      "url": "https://paulgraham.com/gh.html",
+      "title": "Great Hackers",
+      "summary": "Read “Great Hackers” by Paul Graham.",
+      "content_text": "Read “Great Hackers” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/gap.html",
+      "url": "https://paulgraham.com/gap.html",
+      "title": "Mind the Gap",
+      "summary": "Read “Mind the Gap” by Paul Graham.",
+      "content_text": "Read “Mind the Gap” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/wealth.html",
+      "url": "https://paulgraham.com/wealth.html",
+      "title": "How to Make Wealth",
+      "summary": "Read “How to Make Wealth” by Paul Graham.",
+      "content_text": "Read “How to Make Wealth” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/gba.html",
+      "url": "https://paulgraham.com/gba.html",
+      "title": "The Word \"Hacker\"",
+      "summary": "Read “The Word \"Hacker\"” by Paul Graham.",
+      "content_text": "Read “The Word \"Hacker\"” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/say.html",
+      "url": "https://paulgraham.com/say.html",
+      "title": "What You Can't Say",
+      "summary": "Read “What You Can't Say” by Paul Graham.",
+      "content_text": "Read “What You Can't Say” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/ffb.html",
+      "url": "https://paulgraham.com/ffb.html",
+      "title": "Filters that Fight Back",
+      "summary": "Read “Filters that Fight Back” by Paul Graham.",
+      "content_text": "Read “Filters that Fight Back” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/hp.html",
+      "url": "https://paulgraham.com/hp.html",
+      "title": "Hackers and Painters",
+      "summary": "Read “Hackers and Painters” by Paul Graham.",
+      "content_text": "Read “Hackers and Painters” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/iflisp.html",
+      "url": "https://paulgraham.com/iflisp.html",
+      "title": "If Lisp is So Great",
+      "summary": "Read “If Lisp is So Great” by Paul Graham.",
+      "content_text": "Read “If Lisp is So Great” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/hundred.html",
+      "url": "https://paulgraham.com/hundred.html",
+      "title": "The Hundred-Year Language",
+      "summary": "Read “The Hundred-Year Language” by Paul Graham.",
+      "content_text": "Read “The Hundred-Year Language” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/nerds.html",
+      "url": "https://paulgraham.com/nerds.html",
+      "title": "Why Nerds are Unpopular",
+      "summary": "Read “Why Nerds are Unpopular” by Paul Graham.",
+      "content_text": "Read “Why Nerds are Unpopular” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/better.html",
+      "url": "https://paulgraham.com/better.html",
+      "title": "Better Bayesian Filtering",
+      "summary": "Read “Better Bayesian Filtering” by Paul Graham.",
+      "content_text": "Read “Better Bayesian Filtering” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/desres.html",
+      "url": "https://paulgraham.com/desres.html",
+      "title": "Design and Research",
+      "summary": "Read “Design and Research” by Paul Graham.",
+      "content_text": "Read “Design and Research” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/spam.html",
+      "url": "https://paulgraham.com/spam.html",
+      "title": "A Plan for Spam",
+      "summary": "Read “A Plan for Spam” by Paul Graham.",
+      "content_text": "Read “A Plan for Spam” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/icad.html",
+      "url": "https://paulgraham.com/icad.html",
+      "title": "Revenge of the Nerds",
+      "summary": "Read “Revenge of the Nerds” by Paul Graham.",
+      "content_text": "Read “Revenge of the Nerds” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/power.html",
+      "url": "https://paulgraham.com/power.html",
+      "title": "Succinctness is Power",
+      "summary": "Read “Succinctness is Power” by Paul Graham.",
+      "content_text": "Read “Succinctness is Power” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/fix.html",
+      "url": "https://paulgraham.com/fix.html",
+      "title": "What Languages Fix",
+      "summary": "Read “What Languages Fix” by Paul Graham.",
+      "content_text": "Read “What Languages Fix” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/taste.html",
+      "url": "https://paulgraham.com/taste.html",
+      "title": "Taste for Makers",
+      "summary": "Read “Taste for Makers” by Paul Graham.",
+      "content_text": "Read “Taste for Makers” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/noop.html",
+      "url": "https://paulgraham.com/noop.html",
+      "title": "Why Arc Isn't Especially Object-Oriented",
+      "summary": "Read “Why Arc Isn't Especially Object-Oriented” by Paul Graham.",
+      "content_text": "Read “Why Arc Isn't Especially Object-Oriented” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/diff.html",
+      "url": "https://paulgraham.com/diff.html",
+      "title": "What Made Lisp Different",
+      "summary": "Read “What Made Lisp Different” by Paul Graham.",
+      "content_text": "Read “What Made Lisp Different” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/road.html",
+      "url": "https://paulgraham.com/road.html",
+      "title": "The Other Road Ahead",
+      "summary": "Read “The Other Road Ahead” by Paul Graham.",
+      "content_text": "Read “The Other Road Ahead” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/rootsoflisp.html",
+      "url": "https://paulgraham.com/rootsoflisp.html",
+      "title": "The Roots of Lisp",
+      "summary": "Read “The Roots of Lisp” by Paul Graham.",
+      "content_text": "Read “The Roots of Lisp” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/langdes.html",
+      "url": "https://paulgraham.com/langdes.html",
+      "title": "Five Questions about Language Design",
+      "summary": "Read “Five Questions about Language Design” by Paul Graham.",
+      "content_text": "Read “Five Questions about Language Design” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/popular.html",
+      "url": "https://paulgraham.com/popular.html",
+      "title": "Being Popular",
+      "summary": "Read “Being Popular” by Paul Graham.",
+      "content_text": "Read “Being Popular” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/javacover.html",
+      "url": "https://paulgraham.com/javacover.html",
+      "title": "Java's Cover",
+      "summary": "Read “Java's Cover” by Paul Graham.",
+      "content_text": "Read “Java's Cover” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/avg.html",
+      "url": "https://paulgraham.com/avg.html",
+      "title": "Beating the Averages",
+      "summary": "Read “Beating the Averages” by Paul Graham.",
+      "content_text": "Read “Beating the Averages” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/lwba.html",
+      "url": "https://paulgraham.com/lwba.html",
+      "title": "Lisp for Web-Based Applications",
+      "summary": "Read “Lisp for Web-Based Applications” by Paul Graham.",
+      "content_text": "Read “Lisp for Web-Based Applications” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "urn:uuid:77a51534-f696-5417-aa1a-564e98a6901a",
+      "url": "https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt",
+      "title": "Chapter 1 of Ansi Common Lisp",
+      "summary": "Read “Chapter 1 of Ansi Common Lisp” by Paul Graham.",
+      "content_text": "Read “Chapter 1 of Ansi Common Lisp” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "urn:uuid:054911bb-a08d-5f02-9bd2-0db708539fbc",
+      "url": "https://sep.turbifycdn.com/ty/cdn/paulgraham/acl2.txt",
+      "title": "Chapter 2 of Ansi Common Lisp",
+      "summary": "Read “Chapter 2 of Ansi Common Lisp” by Paul Graham.",
+      "content_text": "Read “Chapter 2 of Ansi Common Lisp” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/progbot.html",
+      "url": "https://paulgraham.com/progbot.html",
+      "title": "Programming Bottom-Up",
+      "summary": "Read “Programming Bottom-Up” by Paul Graham.",
+      "content_text": "Read “Programming Bottom-Up” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    },
+    {
+      "id": "https://paulgraham.com/prop62.html",
+      "url": "https://paulgraham.com/prop62.html",
+      "title": "This Year We Can End the Death Penalty in California",
+      "summary": "Read “This Year We Can End the Death Penalty in California” by Paul Graham.",
+      "content_text": "Read “This Year We Can End the Death Penalty in California” by Paul Graham.",
+      "date_modified": "2026-07-29T07:00:54Z"
+    }
+  ],
+  "feed_url": "https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/feed.simple.json",
+  "_pg_essay_feeds": {
+    "generator": "pg-essay-feeds/0.1.0",
+    "item_count": 233,
+    "logical_updated_at": "2026-07-29T07:00:54Z"
+  }
+}

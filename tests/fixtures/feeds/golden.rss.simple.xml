@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+  <channel>
+    <title>Paul Graham: Essays</title>
+    <link>https://paulgraham.com/articles.html</link>
+    <description>Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.</description>
+    <language>en-US</language>
+    <lastBuildDate>Sat, 01 Jun 2024 12:00:00 GMT</lastBuildDate>
+    <category>Essays</category>
+    <generator>pg-essay-feeds/0.1.0</generator>
+    <docs>https://www.rssboard.org/rss-specification</docs>
+    <ttl>1440</ttl>
+    <item>
+      <title>Alpha</title>
+      <link>https://paulgraham.com/a.html</link>
+      <description>Read “Alpha” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/a.html</guid>
+    </item>
+    <item>
+      <title>Beta</title>
+      <link>https://paulgraham.com/b.html</link>
+      <description>Read “Beta” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/b.html</guid>
+    </item>
+    <item>
+      <title>Chapter 1</title>
+      <link>https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt</link>
+      <description>Read “Chapter 1” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="false">urn:uuid:11111111-1111-5111-8111-111111111111</guid>
+    </item>
+  </channel>
+</rss>

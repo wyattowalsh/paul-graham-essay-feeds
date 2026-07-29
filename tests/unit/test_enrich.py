@@ -365,7 +365,6 @@ def test_apply_enrichment_304_retains_prior_good() -> None:
     from paul_graham_essay_feeds.models import (
         Catalog,
         CatalogEntry,
-        Lifecycle,
         ResourceState,
     )
     from paul_graham_essay_feeds.pipeline import _apply_enrichment
@@ -377,7 +376,6 @@ def test_apply_enrichment_304_retains_prior_good() -> None:
         url=sid,
         title="How to Earn a Billion Dollars",
         position=0,
-        lifecycle=Lifecycle.ACTIVE,
         summary="prior good summary",
         prior_good_summary="prior good summary",
         page=ResourceState(
@@ -421,7 +419,6 @@ def test_apply_enrichment_200_persists_validators() -> None:
     from paul_graham_essay_feeds.models import (
         Catalog,
         CatalogEntry,
-        Lifecycle,
         ResourceState,
     )
     from paul_graham_essay_feeds.pipeline import _apply_enrichment
@@ -433,7 +430,6 @@ def test_apply_enrichment_200_persists_validators() -> None:
         url=sid,
         title="How to Earn a Billion Dollars",
         position=0,
-        lifecycle=Lifecycle.ACTIVE,
         page=ResourceState(etag='"old"', status_code=200),
     )
     catalog = Catalog(

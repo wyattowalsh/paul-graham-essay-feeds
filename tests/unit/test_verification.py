@@ -21,6 +21,7 @@ from paul_graham_essay_feeds.models import (
     FeedEntrySnapshot,
     FeedError,
     FeedSnapshot,
+    VerificationError,
 )
 from paul_graham_essay_feeds.verify import (
     BELOW_MIN_ITEMS,
@@ -186,6 +187,9 @@ def test_verify_feed_dir_happy_and_missing(tmp_path: Path) -> None:
         rss=render_rss(snap),
         atom=render_atom(snap),
         json_feed=render_json(snap),
+        simple_rss=render_rss(snap),
+        simple_atom=render_atom(snap),
+        simple_json_feed=render_json(snap),
     )
     ok = verify_feed_dir(tmp_path, min_items=2)
     assert ok.ok is True
@@ -205,7 +209,7 @@ def test_raise_on_failure_and_assert_verified() -> None:
     assert_verified(rss=rss, atom=atom, json_feed=jf, min_items=2)
 
     bad = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=99)
-    with pytest.raises(FeedError, match="BELOW_MIN_ITEMS"):
+    with pytest.raises(VerificationError, match="BELOW_MIN_ITEMS"):
         raise_on_failure(bad)
 
 
@@ -344,6 +348,9 @@ def test_assert_verified_root_and_mode_errors(tmp_path: Path) -> None:
         rss=render_rss(snap),
         atom=render_atom(snap),
         json_feed=render_json(snap),
+        simple_rss=render_rss(snap),
+        simple_atom=render_atom(snap),
+        simple_json_feed=render_json(snap),
     )
     report = assert_verified(root=tmp_path, min_items=2)
     assert report.ok is True
@@ -421,6 +428,9 @@ def test_verify_feed_dir_unreadable_file(tmp_path: Path, monkeypatch: pytest.Mon
         rss=render_rss(snap),
         atom=render_atom(snap),
         json_feed=render_json(snap),
+        simple_rss=render_rss(snap),
+        simple_atom=render_atom(snap),
+        simple_json_feed=render_json(snap),
     )
     feeds = tmp_path / "feeds"
     real_read = Path.read_bytes

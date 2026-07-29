@@ -63,7 +63,7 @@ def test_update_missing_source(repo_root: Path) -> None:
             str(repo_root / "nope.html"),
         ],
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 4
 
 
 def _seed_bad_feeds(repo_root: Path) -> Path:
@@ -79,7 +79,7 @@ def test_check_bad_rss(repo_root: Path) -> None:
     (feeds / "atom.xml").write_text("<feed><entry/></feed>", encoding="utf-8")
     (feeds / "feed.json").write_text('{"version":"x","items":[]}', encoding="utf-8")
     result = runner.invoke(app, ["check", "--repo-root", str(repo_root), "--quiet"])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
 
 
 def test_check_bad_atom(repo_root: Path) -> None:
@@ -88,7 +88,7 @@ def test_check_bad_atom(repo_root: Path) -> None:
     (feeds / "atom.xml").write_text("<notfeed/>", encoding="utf-8")
     (feeds / "feed.json").write_text('{"version":"x","items":[]}', encoding="utf-8")
     result = runner.invoke(app, ["check", "--repo-root", str(repo_root), "--quiet"])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
 
 
 def test_check_bad_json(repo_root: Path) -> None:
@@ -97,7 +97,7 @@ def test_check_bad_json(repo_root: Path) -> None:
     (feeds / "atom.xml").write_text("<feed><entry/></feed>", encoding="utf-8")
     (feeds / "feed.json").write_text("{}", encoding="utf-8")
     result = runner.invoke(app, ["check", "--repo-root", str(repo_root), "--quiet"])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
 
 
 def test_check_below_min_items(repo_root: Path) -> None:
@@ -112,7 +112,7 @@ def test_check_below_min_items(repo_root: Path) -> None:
         app,
         ["check", "--repo-root", str(repo_root), "--min-items", "5", "--quiet"],
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 2
 
 
 def test_check_count_parity_mismatch(repo_root: Path) -> None:
@@ -131,7 +131,7 @@ def test_check_count_parity_mismatch(repo_root: Path) -> None:
         app,
         ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 2
 
 
 def test_check_invalid_json_items(repo_root: Path) -> None:
@@ -146,7 +146,7 @@ def test_check_invalid_json_items(repo_root: Path) -> None:
         app,
         ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 2
 
 
 def test_check_corrupt_catalog(repo_root: Path) -> None:
@@ -160,6 +160,40 @@ def test_check_corrupt_catalog(repo_root: Path) -> None:
         ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
     )
     assert result.exit_code == 1
+
+
+def test_check_catalog_feed_id_mismatch(repo_root: Path) -> None:
+    """Catalog entry_order must match enriched and simple JSON feed ids."""
+    from datetime import UTC, datetime
+
+    from paul_graham_essay_feeds.catalog import save_catalog
+    from paul_graham_essay_feeds.models import Catalog, CatalogEntry
+
+    _write_one_essay(repo_root)
+    t0 = datetime(2024, 1, 1, tzinfo=UTC)
+    # Catalog entry_order id differs from the on-disk feed item id.
+    catalog = Catalog(
+        schema_version=1,
+        material_config_fingerprint="test",
+        entry_order=["https://paulgraham.com/other.html"],
+        entries={
+            "https://paulgraham.com/other.html": CatalogEntry(
+                stable_id="https://paulgraham.com/other.html",
+                url="https://paulgraham.com/other.html",
+                title="Other",
+                position=0,
+                first_seen_at=t0,
+                last_seen_at=t0,
+                observed_updated_at=t0,
+            )
+        },
+    )
+    save_catalog(repo_root / "catalog.json", catalog)
+    result = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
+    )
+    assert result.exit_code == 2
 
 
 def test_update_from_source_file(repo_root: Path, sample_html_path: Path) -> None:
@@ -342,7 +376,15 @@ def _write_one_essay(repo_root: Path) -> None:
         ],
     )
     rss, atom, jf = render_snapshot_feeds(snapshot)
-    write_feeds(repo_root, rss=rss, atom=atom, json_feed=jf)
+    write_feeds(
+        repo_root,
+        rss=rss,
+        atom=atom,
+        json_feed=jf,
+        simple_rss=rss,
+        simple_atom=atom,
+        simple_json_feed=jf,
+    )
 
 
 def test_check_ok(repo_root: Path) -> None:
@@ -365,7 +407,7 @@ def test_check_fails_wrong_content_text(repo_root: Path) -> None:
         app,
         ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 2
 
 
 def test_env_enrich_false_without_flag(
@@ -540,6 +582,218 @@ def test_cli_quiet_and_verbose_prefer_quiet(
     assert configure.call_args.kwargs["verbose"] is False
 
 
+def test_env_force_true_without_flag(
+    repo_root: Path,
+    sample_html_path: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PG_ESSAY_FEEDS_FORCE=true without --force still bypasses refresh no-op."""
+    monkeypatch.setenv("PG_ESSAY_FEEDS_FORCE", "true")
+    result_path = tmp_path / "force-result.txt"
+    args = [
+        "update",
+        "--repo-root",
+        str(repo_root),
+        "--quiet",
+        "--no-enrich",
+        "--source-file",
+        str(sample_html_path),
+        "--result-file",
+        str(result_path),
+    ]
+    assert runner.invoke(app, args).exit_code == 0
+    second = runner.invoke(app, args)
+    assert second.exit_code == 0, second.output
+    assert result_path.read_text(encoding="utf-8").endswith("action=updated\n")
+
+
+def test_no_force_clears_env_force(
+    repo_root: Path,
+    sample_html_path: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--no-force clears PG_ESSAY_FEEDS_FORCE=true so refresh no-op can skip."""
+    monkeypatch.setenv("PG_ESSAY_FEEDS_FORCE", "true")
+    result_path = tmp_path / "no-force-result.txt"
+    base = [
+        "update",
+        "--repo-root",
+        str(repo_root),
+        "--quiet",
+        "--no-enrich",
+        "--source-file",
+        str(sample_html_path),
+        "--result-file",
+        str(result_path),
+    ]
+    assert runner.invoke(app, base).exit_code == 0
+    second = runner.invoke(app, [*base, "--no-force"])
+    assert second.exit_code == 0, second.output
+    assert result_path.read_text(encoding="utf-8").endswith("action=unchanged\n")
+
+
+def test_env_validate_links_false_skips_probes(
+    repo_root: Path,
+    sample_html_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PG_ESSAY_FEEDS_VALIDATE_LINKS=false without CLI flag skips probes."""
+    monkeypatch.setenv("PG_ESSAY_FEEDS_VALIDATE_LINKS", "false")
+    validate = MagicMock()
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.validate_essays_live", validate)
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--source-file",
+            str(sample_html_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    validate.assert_not_called()
+
+
+def test_cli_validate_links_overrides_env_false(
+    repo_root: Path,
+    sample_html_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--validate-links forces probes on even when env disables them."""
+    monkeypatch.setenv("PG_ESSAY_FEEDS_VALIDATE_LINKS", "false")
+    validate = MagicMock(return_value=None)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.validate_essays_live", validate)
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--validate-links",
+            "--source-file",
+            str(sample_html_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    validate.assert_called_once()
+
+
+def test_env_verbose_not_clobbered_by_cli_default(
+    repo_root: Path,
+    sample_html_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Env verbose survives when -v is not on the command line (default False)."""
+    monkeypatch.setenv("PG_ESSAY_FEEDS_VERBOSE", "true")
+    configure = MagicMock()
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.configure_logging", configure)
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--no-enrich",
+            "--source-file",
+            str(sample_html_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    configure.assert_called_once()
+    assert configure.call_args.kwargs["verbose"] is True
+    assert configure.call_args.kwargs["quiet"] is False
+
+
+def test_check_env_quiet_without_flag(repo_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """PG_ESSAY_FEEDS_QUIET=true without -q → quiet success empty output."""
+    monkeypatch.setenv("PG_ESSAY_FEEDS_QUIET", "true")
+    _write_one_essay(repo_root)
+    result = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1"],
+    )
+    assert result.exit_code == 0
+    assert result.stdout == ""
+
+
+def test_cli_no_enrich_overrides_env_true(
+    repo_root: Path,
+    sample_html_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--no-enrich keeps enrichment off even when env enables it."""
+    monkeypatch.setenv("PG_ESSAY_FEEDS_ENRICH", "true")
+    enrich = MagicMock(side_effect=lambda essays, **_: essays)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.enrich_essays", enrich)
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--source-file",
+            str(sample_html_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    enrich.assert_not_called()
+
+
+def test_env_timeout_survives_without_flag(
+    repo_root: Path,
+    sample_html_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PG_ESSAY_FEEDS_TIMEOUT survives when --timeout is omitted."""
+    monkeypatch.setenv("PG_ESSAY_FEEDS_TIMEOUT", "12.5")
+    captured: dict[str, Any] = {}
+
+    def fake_pipeline(settings: Any, **kwargs: Any) -> Any:
+        captured["timeout"] = settings.timeout
+        from paul_graham_essay_feeds.pipeline import run_catalog_pipeline as real
+
+        return real(settings, **kwargs)
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.run_catalog_pipeline", fake_pipeline)
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--source-file",
+            str(sample_html_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert captured["timeout"] == 12.5
+
+
+def test_env_min_items_survives_on_check(
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PG_ESSAY_FEEDS_MIN_ITEMS survives when --min-items is omitted on check."""
+    monkeypatch.setenv("PG_ESSAY_FEEDS_MIN_ITEMS", "5")
+    _write_one_essay(repo_root)
+    result = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--quiet"],
+    )
+    assert result.exit_code == 2
+
+
 def test_discovery_passes_source_url_as_base_url(
     repo_root: Path,
     sample_html_path: Path,
@@ -571,7 +825,7 @@ def test_discovery_passes_source_url_as_base_url(
     assert captured["base_url"]
 
 
-def test_update_oserror_exits_1(
+def test_update_oserror_exits_4(
     repo_root: Path,
     sample_html_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -592,10 +846,10 @@ def test_update_oserror_exits_1(
             str(sample_html_path),
         ],
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 4
 
 
-def test_check_oserror_exits_1(
+def test_check_oserror_exits_4(
     repo_root: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -609,4 +863,4 @@ def test_check_oserror_exits_1(
         app,
         ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 4

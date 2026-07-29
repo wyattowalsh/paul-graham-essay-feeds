@@ -36,7 +36,6 @@ from paul_graham_essay_feeds.models import (
     FeedEntrySnapshot,
     FeedError,
     FeedSnapshot,
-    Lifecycle,
     ResourceState,
 )
 
@@ -63,16 +62,14 @@ def test_catalog_rejects_extra_fields() -> None:
         )
 
 
-def test_catalog_entry_lifecycle_and_utc() -> None:
+def test_catalog_entry_utc() -> None:
     entry = CatalogEntry(
         stable_id="https://paulgraham.com/a.html",
         url="https://paulgraham.com/a.html",
         title="A",
         position=0,
-        lifecycle=Lifecycle.ACTIVE,
         first_seen_at=datetime(2024, 1, 1, tzinfo=UTC),
     )
-    assert entry.lifecycle is Lifecycle.ACTIVE
     assert entry.first_seen_at is not None
     assert entry.first_seen_at.tzinfo is not None
 
@@ -84,7 +81,6 @@ def test_naive_datetime_rejected_on_entry() -> None:
             url="https://paulgraham.com/a.html",
             title="A",
             position=0,
-            lifecycle=Lifecycle.ACTIVE,
             first_seen_at=datetime(2024, 1, 1),
         )
 
@@ -160,7 +156,6 @@ def test_save_load_roundtrip(tmp_path: Path) -> None:
         url="https://paulgraham.com/a.html",
         title="A",
         position=0,
-        lifecycle=Lifecycle.ACTIVE,
     )
     original = Catalog(
         schema_version=1,
@@ -262,6 +257,27 @@ def test_migrate_rejects_extra_fields() -> None:
         )
 
 
+def test_migrate_strips_legacy_lifecycle_keys() -> None:
+    cat = migrate_catalog(
+        {
+            "schema_version": 1,
+            "material_config_fingerprint": "fp",
+            "entry_order": ["https://paulgraham.com/a.html"],
+            "entries": {
+                "https://paulgraham.com/a.html": {
+                    "stable_id": "https://paulgraham.com/a.html",
+                    "url": "https://paulgraham.com/a.html",
+                    "title": "A",
+                    "position": 0,
+                    "lifecycle": "active",
+                }
+            },
+        }
+    )
+    assert "lifecycle" not in cat.entries["https://paulgraham.com/a.html"].model_dump()
+    assert cat.entry_order == ["https://paulgraham.com/a.html"]
+
+
 @pytest.mark.skipif(os.name == "nt", reason="POSIX mode bits only")
 def test_save_file_mode_0644(tmp_path: Path) -> None:
     path = default_catalog_path(tmp_path)
@@ -353,7 +369,6 @@ def test_bootstrap_from_synthetic_feed_json(tmp_path: Path) -> None:
     assert set(catalog.entries) == set(catalog.entry_order)
 
     first = catalog.entries["https://paulgraham.com/a.html"]
-    assert first.lifecycle is Lifecycle.ACTIVE
     assert first.position == 0
     assert first.title == "Essay A"
     assert first.url == "https://paulgraham.com/a.html"
@@ -367,7 +382,6 @@ def test_bootstrap_from_synthetic_feed_json(tmp_path: Path) -> None:
 
     second = catalog.entries["https://paulgraham.com/b.html"]
     assert second.position == 1
-    assert second.lifecycle is Lifecycle.ACTIVE
     assert second.summary == "Short summary for essay B content."
     assert second.prior_good_summary == second.summary
 
@@ -481,7 +495,6 @@ def _entry(
     item: DiscoveryItem,
     *,
     position: int,
-    lifecycle: Lifecycle = Lifecycle.ACTIVE,
     first_seen_at: datetime = T0,
     last_seen_at: datetime = T0,
     observed_updated_at: datetime = T0,
@@ -498,7 +511,6 @@ def _entry(
         url=item.url,
         title=item.title,
         position=position,
-        lifecycle=lifecycle,
         first_seen_at=first_seen_at,
         last_seen_at=last_seen_at,
         observed_updated_at=observed_updated_at,
@@ -528,12 +540,10 @@ def test_bootstrap_from_empty_prior() -> None:
     assert changes.updated == []
     assert changes.unchanged == []
     assert changes.removed == []
-    assert changes.tombstone_candidates == []
 
     for idx, sid in enumerate(catalog.entry_order):
         entry = catalog.entries[sid]
         assert entry.position == idx
-        assert entry.lifecycle is Lifecycle.ACTIVE
         assert entry.first_seen_at == T1
         assert entry.last_seen_at == T1
         assert entry.observed_updated_at == T1
@@ -542,7 +552,7 @@ def test_bootstrap_from_empty_prior() -> None:
 def test_unchanged_existing_updates_last_seen_only() -> None:
     a = _item(slug="a", position=1)
     prior = Catalog(
-        schema_version=2,
+        schema_version=1,
         material_config_fingerprint="cfg-abc",
         versions={"generator": "1.0"},
         entry_order=[a.stable_id],
@@ -560,7 +570,7 @@ def test_unchanged_existing_updates_last_seen_only() -> None:
             )
         },
         last_generation_id="gen-1",
-        migration_history=[{"from": 1, "to": 2}],
+        migration_history=[{"from": 1, "to": 1}],
     )
 
     catalog, changes = reconcile_discovery(prior, [a], now=T1)
@@ -580,11 +590,11 @@ def test_unchanged_existing_updates_last_seen_only() -> None:
     assert entry.published_at == T0
     assert entry.page.etag == '"e1"'
     assert entry.page.raw_sha256 == "a" * 64
-    assert catalog.schema_version == 2
+    assert catalog.schema_version == 1
     assert catalog.material_config_fingerprint == "cfg-abc"
     assert catalog.versions == {"generator": "1.0"}
     assert catalog.last_generation_id == "gen-1"
-    assert catalog.migration_history == [{"from": 1, "to": 2}]
+    assert catalog.migration_history == [{"from": 1, "to": 1}]
 
 
 def test_material_title_url_position_changes_mark_updated() -> None:
@@ -639,11 +649,10 @@ def test_new_id_is_added() -> None:
     assert changes.updated == [a.stable_id]
     assert changes.unchanged == []
     assert catalog.entries[c.stable_id].first_seen_at == T1
-    assert catalog.entries[c.stable_id].lifecycle is Lifecycle.ACTIVE
     assert catalog.entry_order == [c.stable_id, a.stable_id]
 
 
-def test_missing_active_becomes_tombstone_candidate_not_deleted() -> None:
+def test_missing_index_essay_hard_deleted() -> None:
     a = _item(slug="a", position=1)
     b = _item(slug="b", position=2)
     prior = Catalog(
@@ -658,67 +667,72 @@ def test_missing_active_becomes_tombstone_candidate_not_deleted() -> None:
 
     catalog, changes = reconcile_discovery(prior, [a], now=T1)
 
-    assert changes.tombstone_candidates == [b.stable_id]
-    assert changes.removed == []
-    assert b.stable_id in catalog.entries
-    missing = catalog.entries[b.stable_id]
-    assert missing.lifecycle is Lifecycle.MISSING_CANDIDATE
-    assert missing.summary == "keep me"
-    assert missing.last_seen_at == T0
+    assert changes.removed == [b.stable_id]
+    assert b.stable_id not in catalog.entries
     assert catalog.entry_order == [a.stable_id]
     assert a.stable_id in catalog.entries
-    assert catalog.entries[a.stable_id].lifecycle is Lifecycle.ACTIVE
 
 
-def test_already_missing_or_tombstoned_preserved_without_relisting() -> None:
+def test_orphan_prior_entry_not_in_order_is_dropped() -> None:
     a = _item(slug="a", position=1)
     gone = _item(slug="gone", position=2)
-    dead = _item(slug="dead", position=3)
     prior = Catalog(
         schema_version=1,
         material_config_fingerprint="default",
         entry_order=[a.stable_id],
         entries={
             a.stable_id: _entry(a, position=0),
-            gone.stable_id: _entry(gone, position=1, lifecycle=Lifecycle.MISSING_CANDIDATE),
-            dead.stable_id: _entry(dead, position=2, lifecycle=Lifecycle.TOMBSTONED),
+            gone.stable_id: _entry(gone, position=1),
         },
     )
 
     catalog, changes = reconcile_discovery(prior, [a], now=T1)
 
-    assert changes.tombstone_candidates == []
-    assert catalog.entries[gone.stable_id].lifecycle is Lifecycle.MISSING_CANDIDATE
-    assert catalog.entries[dead.stable_id].lifecycle is Lifecycle.TOMBSTONED
-    assert gone.stable_id not in catalog.entry_order
-    assert dead.stable_id not in catalog.entry_order
+    assert gone.stable_id not in changes.removed
+    assert gone.stable_id not in catalog.entries
+    assert catalog.entry_order == [a.stable_id]
 
 
-def test_missing_candidate_reactivated_when_rediscovered() -> None:
+def test_enrichment_reused_when_still_on_index() -> None:
     a = _item(slug="a", position=1)
     prior = Catalog(
         schema_version=1,
         material_config_fingerprint="default",
-        entry_order=[],
-        entries={
-            a.stable_id: _entry(
-                a,
-                position=0,
-                lifecycle=Lifecycle.MISSING_CANDIDATE,
-                summary="old summary",
-            )
-        },
+        entry_order=[a.stable_id],
+        entries={a.stable_id: _entry(a, position=0, summary="old summary")},
     )
 
     catalog, changes = reconcile_discovery(prior, [a], now=T1)
     entry = catalog.entries[a.stable_id]
 
-    assert entry.lifecycle is Lifecycle.ACTIVE
     assert entry.last_seen_at == T1
     assert entry.summary == "old summary"
     assert changes.unchanged == [a.stable_id]
-    assert changes.added == []
     assert catalog.entry_order == [a.stable_id]
+
+
+def test_rediscovery_after_hard_delete_is_added() -> None:
+    """Essay removed from the catalog, then rediscovered → classified as added."""
+    a = _item(slug="a", position=1)
+    b = _item(slug="b", position=2)
+    prior = Catalog(
+        schema_version=1,
+        material_config_fingerprint="default",
+        entry_order=[a.stable_id, b.stable_id],
+        entries={
+            a.stable_id: _entry(a, position=0),
+            b.stable_id: _entry(b, position=1, summary="old"),
+        },
+    )
+    after_delete, deleted = reconcile_discovery(prior, [a], now=T1)
+    assert b.stable_id in deleted.removed
+    assert b.stable_id not in after_delete.entries
+
+    catalog, changes = reconcile_discovery(after_delete, [a, b], now=T2)
+    assert changes.added == [b.stable_id]
+    assert changes.removed == []
+    assert catalog.entries[b.stable_id].first_seen_at == T2
+    assert catalog.entries[b.stable_id].summary is None
 
 
 def test_reconcile_naive_now_rejected() -> None:
@@ -763,7 +777,6 @@ def _refresh_entry(
         url=stable_id,
         title=title or stable_id.rsplit("/", 1)[-1],
         position=position,
-        lifecycle=Lifecycle.ACTIVE,
         summary=summary,
         page=ResourceState(last_checked_at=last_checked_at),
     )
@@ -1066,21 +1079,20 @@ def test_plan_refresh_naive_now_rejected() -> None:
 
 
 def test_skips_entry_order_ids_missing_from_map() -> None:
+    """Catalog model forbids entry_order ids absent from entries."""
     fresh = NOW - timedelta(days=1)
     entry = _refresh_entry("https://paulgraham.com/a.html", last_checked_at=fresh)
-    catalog = Catalog(
-        schema_version=1,
-        material_config_fingerprint="test",
-        index=ResourceState(last_checked_at=fresh),
-        entry_order=[
-            "https://paulgraham.com/missing.html",
-            "https://paulgraham.com/a.html",
-        ],
-        entries={entry.stable_id: entry},
-    )
-
-    plan = plan_refresh(catalog, now=NOW, stale_after_days=STALE_AFTER)
-    assert [d.stable_id for d in plan.decisions] == ["https://paulgraham.com/a.html"]
+    with pytest.raises(ValidationError, match="entry_order"):
+        Catalog(
+            schema_version=1,
+            material_config_fingerprint="test",
+            index=ResourceState(last_checked_at=fresh),
+            entry_order=[
+                "https://paulgraham.com/missing.html",
+                "https://paulgraham.com/a.html",
+            ],
+            entries={entry.stable_id: entry},
+        )
 
 
 def test_force_overrides_other_reasons() -> None:

@@ -18,7 +18,6 @@ from paul_graham_essay_feeds.models import (
     FeedEntrySnapshot,
     FeedError,
     FeedSnapshot,
-    Lifecycle,
 )
 from paul_graham_essay_feeds.pipeline import _publish_catalog_and_feeds
 
@@ -63,7 +62,6 @@ def _catalog(count: int = 3) -> Catalog:
             url=f"https://paulgraham.com/e{i}.html",
             title=f"Title {i}",
             position=i,
-            lifecycle=Lifecycle.ACTIVE,
             first_seen_at=T0,
             last_seen_at=T0,
             observed_updated_at=T0,
@@ -93,6 +91,9 @@ def test_publish_writes_catalog_and_feeds_after_verify(tmp_path: Path) -> None:
         rss=rss,
         atom=atom,
         json_feed=jf,
+        simple_rss=rss,
+        simple_atom=atom,
+        simple_json_feed=jf,
         min_items=3,
         reporter=NULL_REPORTER,
     )
@@ -101,6 +102,9 @@ def test_publish_writes_catalog_and_feeds_after_verify(tmp_path: Path) -> None:
     assert (tmp_path / "feeds" / "rss.xml").is_file()
     assert (tmp_path / "feeds" / "atom.xml").is_file()
     assert (tmp_path / "feeds" / "feed.json").is_file()
+    assert (tmp_path / "feeds" / "rss.simple.xml").is_file()
+    assert (tmp_path / "feeds" / "atom.simple.xml").is_file()
+    assert (tmp_path / "feeds" / "feed.simple.json").is_file()
     assert not (tmp_path / "state" / "current.json").exists()
     assert not (tmp_path / "state" / "generations").exists()
     loaded = load_catalog(default_catalog_path(tmp_path))
@@ -118,6 +122,9 @@ def test_publish_does_not_write_on_verify_failure(tmp_path: Path) -> None:
             rss=rss,
             atom=atom,
             json_feed=bad_json,
+            simple_rss=rss,
+            simple_atom=atom,
+            simple_json_feed=bad_json,
             min_items=3,
             reporter=NULL_REPORTER,
         )
@@ -134,6 +141,9 @@ def test_publish_respects_feed_file_mode(tmp_path: Path) -> None:
         rss=rss,
         atom=atom,
         json_feed=jf,
+        simple_rss=rss,
+        simple_atom=atom,
+        simple_json_feed=jf,
         file_mode=0o600,
     )
     mode = stat.S_IMODE((tmp_path / "feeds" / "rss.xml").stat().st_mode)

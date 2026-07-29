@@ -65,7 +65,14 @@ def test_catalog_publish_root_catalog_and_feeds(tmp_path: Path) -> None:
     assert result.action == "updated"
     catalog = json.loads(default_catalog_path(tmp_path).read_text(encoding="utf-8"))
     assert len(catalog["entry_order"]) >= MIN_ITEMS
-    for name in ("rss.xml", "atom.xml", "feed.json"):
+    for name in (
+        "rss.xml",
+        "atom.xml",
+        "feed.json",
+        "rss.simple.xml",
+        "atom.simple.xml",
+        "feed.simple.json",
+    ):
         assert (tmp_path / "feeds" / name).is_file()
     assert not (tmp_path / "state" / "current.json").exists()
     assert not (tmp_path / "state" / "generations").exists()
@@ -83,6 +90,9 @@ def test_catalog_second_pass_unchanged_no_mtime_churn(tmp_path: Path) -> None:
         tmp_path / "feeds" / "rss.xml",
         tmp_path / "feeds" / "atom.xml",
         tmp_path / "feeds" / "feed.json",
+        tmp_path / "feeds" / "rss.simple.xml",
+        tmp_path / "feeds" / "atom.simple.xml",
+        tmp_path / "feeds" / "feed.simple.json",
     ]
     snapshots = {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in tracked}
 

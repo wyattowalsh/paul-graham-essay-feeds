@@ -30,8 +30,8 @@ from paul_graham_essay_feeds.catalog import (
 from paul_graham_essay_feeds.discover import discover_essays
 from paul_graham_essay_feeds.enrich import PageEnrichEvidence, enrich_essays, validate_essays_live
 from paul_graham_essay_feeds.feeds import (
+    all_feed_paths,
     catalog_to_feed_snapshot,
-    feed_paths,
     feeds_exist,
     render_snapshot_feeds,
     write_feeds,
@@ -44,7 +44,6 @@ from paul_graham_essay_feeds.models import (
     CatalogEntry,
     Essay,
     FeedError,
-    Lifecycle,
     ProgressReporter,
     ResourceState,
     content_sha256,
@@ -217,24 +216,6 @@ def _apply_enrichment(
     return catalog.model_copy(update={"entries": next_entries})
 
 
-def _with_index_state(catalog: Catalog, *, index_hash: str, now: datetime) -> Catalog:
-    return catalog.model_copy(
-        update={
-            "index": ResourceState(
-                raw_sha256=index_hash,
-                decoded_sha256=index_hash,
-                last_checked_at=now,
-                status_code=200,
-            ),
-            "versions": {
-                **dict(catalog.versions),
-                "generator": GENERATOR,
-                "package": __version__,
-            },
-        }
-    )
-
-
 def material_catalog_digest(catalog: Catalog) -> str:
     """Hash material catalog fields only (exclude volatile observation clocks)."""
     material_entries: dict[str, dict[str, object]] = {}
@@ -244,7 +225,6 @@ def material_catalog_digest(catalog: Catalog) -> str:
             "url": entry.url,
             "title": entry.title,
             "position": entry.position,
-            "lifecycle": entry.lifecycle.value,
             "observed_updated_at": (
                 entry.observed_updated_at.isoformat()
                 if entry.observed_updated_at is not None
@@ -279,7 +259,7 @@ def _should_skip_publish(
 ) -> bool:
     """Skip rewrite when reconcile is inert and no page work is due (F-001).
 
-    Missing root ``catalog.json`` or ``feeds/`` always publishes once.
+    Missing root ``catalog.json`` or any of the six ``feeds/`` files always publishes.
     """
     if force:
         return False
@@ -287,7 +267,7 @@ def _should_skip_publish(
         return False
     if not default_catalog_path(root).is_file():
         return False
-    if changeset.added or changeset.updated or changeset.tombstone_candidates:
+    if changeset.added or changeset.updated or changeset.removed:
         return False
     return not any(d.fetch_page for d in plan.decisions)
 
@@ -306,8 +286,11 @@ def _material_unchanged_vs_disk(
     rss: bytes,
     atom: bytes,
     json_feed: bytes,
+    simple_rss: bytes,
+    simple_atom: bytes,
+    simple_json_feed: bytes,
 ) -> bool:
-    """True when post-enrich material matches on-disk catalog + feeds."""
+    """True when post-enrich material matches on-disk catalog + all six feeds."""
     if not feeds_exist(root):
         return False
     existing = load_catalog(default_catalog_path(root))
@@ -315,11 +298,14 @@ def _material_unchanged_vs_disk(
         return False
     if material_catalog_digest(existing) != material_catalog_digest(catalog):
         return False
-    paths = feed_paths(root)
+    paths = all_feed_paths(root)
     return (
         _feed_bytes_match(paths["rss"], rss)
         and _feed_bytes_match(paths["atom"], atom)
         and _feed_bytes_match(paths["json"], json_feed)
+        and _feed_bytes_match(paths["rss_simple"], simple_rss)
+        and _feed_bytes_match(paths["atom_simple"], simple_atom)
+        and _feed_bytes_match(paths["json_simple"], simple_json_feed)
     )
 
 
@@ -330,36 +316,56 @@ def _publish_catalog_and_feeds(
     rss: bytes,
     atom: bytes,
     json_feed: bytes,
+    simple_rss: bytes,
+    simple_atom: bytes,
+    simple_json_feed: bytes,
     min_items: int,
     reporter: ProgressReporter,
 ) -> Catalog:
-    """Verify in memory, then atomically write root catalog.json + feeds/*."""
+    """Verify in memory, write six ``feeds/`` files first, then durable ``catalog.json``.
+
+    Feeds-then-catalog admits a short tear window (AD-005): projections land
+    before the catalog stamp. Failure before any replace leaves priors intact.
+    """
     assert_verified(
         rss=rss,
         atom=atom,
         json_feed=json_feed,
         min_items=min_items,
     )
+    assert_verified(
+        rss=simple_rss,
+        atom=simple_atom,
+        json_feed=simple_json_feed,
+        min_items=min_items,
+    )
     catalog_path = default_catalog_path(root)
-    save_catalog(catalog_path, catalog)
     write_feeds(
         root,
         rss=rss,
         atom=atom,
         json_feed=json_feed,
+        simple_rss=simple_rss,
+        simple_atom=simple_atom,
+        simple_json_feed=simple_json_feed,
         reporter=reporter,
     )
-    logger.info("Published catalog + feeds → {} + {}", catalog_path, root / "feeds")
+    save_catalog(catalog_path, catalog)
+    logger.info(
+        "Published feeds + catalog → {} + {}",
+        root / "feeds",
+        catalog_path,
+    )
     return catalog
 
 
 def _essays_from_catalog(catalog: Catalog) -> list[Essay]:
-    """Rebuild Essay list from active catalog entries (304 plan-only path)."""
+    """Rebuild Essay list from catalog ``entry_order`` (304 plan-only path)."""
     essays: list[Essay] = []
     position = 1
     for stable_id in catalog.entry_order:
         entry = catalog.entries.get(stable_id)
-        if entry is None or entry.lifecycle is Lifecycle.TOMBSTONED:
+        if entry is None:
             continue
         essays.append(
             Essay(
@@ -441,7 +447,8 @@ def run_catalog_pipeline(
             now=observed,
             material_config_fingerprint=fingerprint,
         )
-        if prior.material_config_fingerprint in {"bootstrap", "default"}:
+        fingerprint_changed = prior.material_config_fingerprint != fingerprint
+        if fingerprint_changed:
             prior = prior.model_copy(update={"material_config_fingerprint": fingerprint})
         save_catalog(default_catalog_path(root), prior)
         logger.info(
@@ -450,8 +457,9 @@ def run_catalog_pipeline(
         )
     else:
         prior = _load_or_bootstrap_catalog(root, now=observed, fingerprint=fingerprint)
-        # Align fingerprint when bootstrapping empty fingerprint catalogs.
-        if prior.material_config_fingerprint in {"bootstrap", "default"}:
+        # Live fingerprint must win before skip/digest decisions (RV-S-011).
+        fingerprint_changed = prior.material_config_fingerprint != fingerprint
+        if fingerprint_changed:
             prior = prior.model_copy(update={"material_config_fingerprint": fingerprint})
 
     index_not_modified = False
@@ -519,7 +527,9 @@ def run_catalog_pipeline(
         now=observed,
     )
 
-    if _should_skip_publish(root=root, force=settings.force, changeset=changeset, plan=plan):
+    if not fingerprint_changed and _should_skip_publish(
+        root=root, force=settings.force, changeset=changeset, plan=plan
+    ):
         # Pre-enrich UNCHANGED: zero tracked writes (no save_catalog / enrich / publish).
         # Page-due plans never reach here (F-001); identity+planner decide skip.
         # http-cache sidecar may update above; tracked paths stay untouched.
@@ -542,20 +552,18 @@ def run_catalog_pipeline(
     # URLs we will GET for enrich this run — a successful enrich implies reachability,
     # so live HEAD probes skip those ids (probe the rest first, then enrich).
     enrich_ids = due_ids if settings.enrich else set()
+    probe_essays = [e for e in essays if e.stable_id not in enrich_ids] if enrich_ids else essays
+    all_due_use_enrich_get = bool(enrich_ids) and not probe_essays
 
     if settings.validate_links:
-        probe_essays = (
-            [e for e in essays if e.stable_id not in enrich_ids] if enrich_ids else essays
-        )
         if enrich_ids and probe_essays:
             logger.info(
-                "Live-probing {}/{} essays not selected for enrich this run…",
+                "Live-checking {} URLs not enriched this run…",
                 len(probe_essays),
-                len(essays),
             )
-        elif enrich_ids and not probe_essays:
+        elif all_due_use_enrich_get:
             logger.info(
-                "Skipping dedicated link probes (all {} essays due for enrich GET)",
+                "Checking and enriching {} essay pages (one GET each)…",
                 len(essays),
             )
         validate_essays_live(
@@ -569,11 +577,12 @@ def run_catalog_pipeline(
 
     if settings.enrich and due_ids:
         due_essays = _essays_for_ids(essays, due_ids)
-        logger.info(
-            "Enriching {}/{} essays selected by refresh plan…",
-            len(due_essays),
-            len(essays),
-        )
+        if not (settings.validate_links and all_due_use_enrich_get):
+            logger.info(
+                "Enriching {}/{} essays selected by refresh plan…",
+                len(due_essays),
+                len(essays),
+            )
         page_validators = {
             sid: (
                 catalog.entries[sid].page.etag,
@@ -629,8 +638,18 @@ def run_catalog_pipeline(
         public_base_url=settings.public_base_url,
         index_hash=index_hash,
         index_fingerprint=index_fingerprint,
+        summary_mode="enriched",
     )
     rss, atom, json_feed = render_snapshot_feeds(snapshot)
+    simple_snapshot = catalog_to_feed_snapshot(
+        catalog,
+        generator=GENERATOR,
+        public_base_url=settings.public_base_url,
+        index_hash=index_hash,
+        index_fingerprint=index_fingerprint,
+        summary_mode="title_only",
+    )
+    simple_rss, simple_atom, simple_json_feed = render_snapshot_feeds(simple_snapshot)
 
     # Verify in memory before any durable publish decision.
     assert_verified(
@@ -639,19 +658,30 @@ def run_catalog_pipeline(
         json_feed=json_feed,
         min_items=settings.min_items,
     )
+    assert_verified(
+        rss=simple_rss,
+        atom=simple_atom,
+        json_feed=simple_json_feed,
+        min_items=settings.min_items,
+    )
 
-    # Post-enrich UNCHANGED: material digest + feed bytes match disk → skip.
+    # Post-enrich material-noop: feed bytes match disk, but page clocks may have
+    # advanced in memory — persist catalog only so freshness gates work next run.
     if not settings.force and _material_unchanged_vs_disk(
         root,
         catalog=catalog,
         rss=rss,
         atom=atom,
         json_feed=json_feed,
+        simple_rss=simple_rss,
+        simple_atom=simple_atom,
+        simple_json_feed=simple_json_feed,
     ):
         logger.info(
-            "Post-enrich material unchanged (hash {}); skipping publish",
+            "Post-enrich material unchanged (hash {}); saving catalog clocks only",
             index_hash[:12],
         )
+        save_catalog(default_catalog_path(root), catalog)
         return PipelineResult(
             catalog=catalog,
             changeset=changeset,
@@ -668,6 +698,9 @@ def run_catalog_pipeline(
         rss=rss,
         atom=atom,
         json_feed=json_feed,
+        simple_rss=simple_rss,
+        simple_atom=simple_atom,
+        simple_json_feed=simple_json_feed,
         min_items=settings.min_items,
         reporter=progress,
     )

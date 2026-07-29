@@ -16,6 +16,7 @@ from paul_graham_essay_feeds.models import (
     ATOM_NS,
     FEED_SUMMARY_CHARS,
     FeedError,
+    VerificationError,
 )
 
 # Public violation codes (stable for tests and callers).
@@ -71,8 +72,12 @@ class _ItemView:
     content_text: str | None = None
 
 
-def _feed_paths(root: Path) -> dict[str, Path]:
-    feeds_dir = root / "feeds"
+def _feed_paths(
+    root: Path,
+    *,
+    relative_dir: str = "feeds",
+) -> dict[str, Path]:
+    feeds_dir = root / relative_dir
     return {
         "rss": feeds_dir / "rss.xml",
         "atom": feeds_dir / "atom.xml",
@@ -421,14 +426,20 @@ def verify_feed_bytes(
     return VerificationReport(ok=len(violations) == 0, violations=violations)
 
 
-def verify_feed_dir(root: Path, *, min_items: int) -> VerificationReport:
-    """Read ``root/feeds/{rss.xml,atom.xml,feed.json}`` and deep-verify."""
-    paths = _feed_paths(root)
+def verify_feed_dir(
+    root: Path,
+    *,
+    min_items: int,
+    relative_dir: str = "feeds",
+) -> VerificationReport:
+    """Read ``root / relative_dir / {rss.xml,atom.xml,feed.json}`` and deep-verify."""
+    paths = _feed_paths(root, relative_dir=relative_dir)
     violations: list[VerificationViolation] = []
     blobs: dict[str, bytes] = {}
+    rel_prefix = relative_dir.strip("/")
 
     for key, path in paths.items():
-        rel = f"feeds/{_FEED_NAMES[key]}"
+        rel = f"{rel_prefix}/{_FEED_NAMES[key]}"
         if not path.is_file():
             violations.append(
                 VerificationViolation(
@@ -467,7 +478,7 @@ def verify_feed_dir(root: Path, *, min_items: int) -> VerificationReport:
 
 
 def raise_on_failure(report: VerificationReport) -> None:
-    """Raise :class:`FeedError` when ``report`` is not ok.
+    """Raise :class:`VerificationError` when ``report`` is not ok.
 
     Message includes the first few violations for diagnostics.
     """
@@ -477,7 +488,7 @@ def raise_on_failure(report: VerificationReport) -> None:
     parts = [f"{v.code}: {v.message}" for v in preview]
     extra = len(report.violations) - len(preview)
     suffix = f" (+{extra} more)" if extra > 0 else ""
-    raise FeedError(
+    raise VerificationError(
         f"Feed verification failed ({len(report.violations)}): " + "; ".join(parts) + suffix
     )
 

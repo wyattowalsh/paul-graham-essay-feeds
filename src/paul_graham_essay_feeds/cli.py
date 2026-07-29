@@ -15,18 +15,65 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from paul_graham_essay_feeds.catalog import default_catalog_path, load_catalog
-from paul_graham_essay_feeds.feeds import verify_feed_artifacts
+from paul_graham_essay_feeds.feeds import (
+    ENRICHED_FEED_NAMES,
+    SIMPLE_FEED_NAMES,
+    verify_feed_artifacts,
+)
 from paul_graham_essay_feeds.models import (
+    Catalog,
+    ConfigurationError,
     ExitCode,
     FeedError,
     OutputPolicy,
     ProgressReporter,
+    VerificationError,
+    exit_code_for_exception,
     format_validation_error,
 )
 from paul_graham_essay_feeds.pipeline import run_catalog_pipeline
 from paul_graham_essay_feeds.settings import Settings
 
 console = Console(stderr=True)
+
+
+def _catalog_order_ids(catalog: Catalog) -> list[str]:
+    """Ordered stable ids from ``entry_order`` (must exist in ``entries``)."""
+    ids: list[str] = []
+    for stable_id in catalog.entry_order:
+        if stable_id not in catalog.entries:
+            raise VerificationError(f"Catalog entry_order references missing entry: {stable_id!r}")
+        ids.append(stable_id)
+    return ids
+
+
+def _feed_json_ids(feed_path: Path) -> list[str]:
+    try:
+        payload = json.loads(feed_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise VerificationError(f"Unable to read feed ids from {feed_path}: {exc}") from exc
+    items = payload.get("items")
+    if not isinstance(items, list):
+        raise VerificationError(f"feed.json items must be a list: {feed_path}")
+    feed_ids: list[str] = []
+    for item in items:
+        if not isinstance(item, dict) or "id" not in item:
+            raise VerificationError(f"feed item missing id: {feed_path}")
+        feed_ids.append(str(item["id"]))
+    return feed_ids
+
+
+def _assert_catalog_feed_id_parity(catalog: Catalog, root: Path) -> None:
+    """Fail check when catalog order disagrees with enriched or simple JSON feeds."""
+    catalog_ids = _catalog_order_ids(catalog)
+    for name in (ENRICHED_FEED_NAMES["json"], SIMPLE_FEED_NAMES["json"]):
+        feed_path = root / "feeds" / name
+        feed_ids = _feed_json_ids(feed_path)
+        if catalog_ids != feed_ids:
+            raise VerificationError(
+                "Catalog entry_order ids do not match ordered ids in "
+                f"{name} (catalog={len(catalog_ids)}, feed={len(feed_ids)})"
+            )
 
 
 def _emit_update_action(action: str, *, result_file: Path | None) -> None:
@@ -68,6 +115,11 @@ def _is_cmdline(ctx: typer.Context, name: str) -> bool:
     """True when ``name`` was set on the command line (not default/env)."""
     source = ctx.get_parameter_source(name)
     return source is not None and source.name == "COMMANDLINE"
+
+
+def _cmdline_or_none[T](ctx: typer.Context, name: str, value: T) -> T | None:
+    """Return ``value`` when set on the command line; otherwise ``None`` (keep Settings)."""
+    return value if _is_cmdline(ctx, name) else None
 
 
 def _settings(
@@ -189,11 +241,11 @@ def update_cmd(
     settings = _settings(
         repo_root=repo_root,
         min_items=min_items,
-        quiet=quiet if _is_cmdline(ctx, "quiet") else None,
-        verbose=verbose if _is_cmdline(ctx, "verbose") else None,
+        quiet=_cmdline_or_none(ctx, "quiet", quiet),
+        verbose=_cmdline_or_none(ctx, "verbose", verbose),
         timeout=timeout,
         retries=retries,
-        validate_links=(validate_links if _is_cmdline(ctx, "validate_links") else None),
+        validate_links=validate_links,
         enrich=enrich,
         force=force,
         public_base_url=public_base_url,
@@ -226,10 +278,10 @@ def update_cmd(
             )
     except FeedError as exc:
         logger.error("{}", exc)
-        raise typer.Exit(code=1) from exc
+        raise typer.Exit(code=exit_code_for_exception(exc)) from exc
     except OSError as exc:
         logger.error("{}", exc)
-        raise typer.Exit(code=1) from exc
+        raise typer.Exit(code=exit_code_for_exception(exc)) from exc
 
 
 @app.command("check")
@@ -239,39 +291,43 @@ def check_cmd(
         Path | None,
         typer.Option("--repo-root", help="Root containing feeds/ (+ optional catalog.json)"),
     ] = None,
-    min_items: Annotated[int | None, typer.Option("--min-items")] = None,
-    quiet: Annotated[bool, typer.Option("--quiet", "-q")] = False,
-    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+    min_items: Annotated[
+        int | None,
+        typer.Option("--min-items", help="Safety floor for essay count"),
+    ] = None,
+    quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Errors only")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Debug logs")] = False,
 ) -> None:
     """Deep-verify ``feeds/``; validate root ``catalog.json`` when present."""
     settings = _settings(
         repo_root=repo_root,
         min_items=min_items,
-        quiet=quiet if _is_cmdline(ctx, "quiet") else None,
-        verbose=verbose if _is_cmdline(ctx, "verbose") else None,
+        quiet=_cmdline_or_none(ctx, "quiet", quiet),
+        verbose=_cmdline_or_none(ctx, "verbose", verbose),
     )
     configure_logging(verbose=settings.verbose, quiet=settings.quiet)
     try:
         root = settings.repo_root
         feeds = root / "feeds"
         if not feeds.is_dir():
-            raise FeedError(f"Missing feeds directory: {feeds}")
+            raise ConfigurationError(f"Missing feeds directory: {feeds}")
         verify_feed_artifacts(root, min_items=settings.min_items)
         catalog_path = default_catalog_path(root)
         if catalog_path.is_file():
             catalog = load_catalog(catalog_path)
             if catalog is None:
-                raise FeedError(f"Unable to load catalog: {catalog_path}")
+                raise ConfigurationError(f"Unable to load catalog: {catalog_path}")
+            _assert_catalog_feed_id_parity(catalog, root)
         if not settings.quiet:
             payload = json.loads((feeds / "feed.json").read_text(encoding="utf-8"))
             count = len(payload["items"])
             console.print(f"[green]VALID[/green] {count} items in [bold]{feeds}[/bold]")
     except FeedError as exc:
         logger.error("{}", exc)
-        raise typer.Exit(code=1) from exc
+        raise typer.Exit(code=exit_code_for_exception(exc)) from exc
     except OSError as exc:
         logger.error("{}", exc)
-        raise typer.Exit(code=1) from exc
+        raise typer.Exit(code=exit_code_for_exception(exc)) from exc
 
 
 def main() -> None:

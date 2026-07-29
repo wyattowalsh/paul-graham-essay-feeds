@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 
 from paul_graham_essay_feeds.feeds import (
     catalog_to_feed_snapshot,
@@ -30,7 +31,6 @@ from paul_graham_essay_feeds.models import (
     FeedEntrySnapshot,
     FeedError,
     FeedSnapshot,
-    Lifecycle,
     ResourceState,
     blurb,
     rfc3339,
@@ -95,7 +95,6 @@ def _catalog_entry(
     sid: str,
     title: str,
     position: int,
-    lifecycle: Lifecycle = Lifecycle.ACTIVE,
     observed_updated_at: datetime | None = T1,
     first_seen_at: datetime | None = T0,
     summary: str | None = None,
@@ -107,7 +106,6 @@ def _catalog_entry(
         url=url or sid,
         title=title,
         position=position,
-        lifecycle=lifecycle,
         first_seen_at=first_seen_at,
         last_seen_at=first_seen_at,
         observed_updated_at=observed_updated_at,
@@ -215,7 +213,8 @@ def test_json_feed_shape_short_content_text() -> None:
     assert "content_text" in item0
     assert item0["summary"] == snap.items[0].summary
     assert item0["content_text"] == item0["summary"]
-    assert "authors" in item0
+    assert "authors" in data
+    assert "authors" not in item0
 
 
 def test_cross_format_id_parity() -> None:
@@ -264,16 +263,26 @@ def _write_sample(repo_root: Path, snap: FeedSnapshot | None = None) -> FeedSnap
         rss=render_rss(snap),
         atom=render_atom(snap),
         json_feed=render_json(snap),
+        simple_rss=render_rss(snap),
+        simple_atom=render_atom(snap),
+        simple_json_feed=render_json(snap),
     )
     return snap
 
 
 def _assert_no_staging_temps(feeds_dir: Path) -> None:
+    names = (
+        "rss.xml",
+        "atom.xml",
+        "feed.json",
+        "rss.simple.xml",
+        "atom.simple.xml",
+        "feed.simple.json",
+    )
     leftovers = [
         p
         for p in feeds_dir.iterdir()
-        if p.is_file()
-        and any(p.name.startswith(f".{name}.") for name in ("rss.xml", "atom.xml", "feed.json"))
+        if p.is_file() and any(p.name.startswith(f".{name}.") for name in names)
     ]
     assert leftovers == [], f"leftover staging temps: {[p.name for p in leftovers]}"
 
@@ -312,12 +321,18 @@ def test_write_feeds_overwrites(repo_root: Path) -> None:
         rss=render_rss(full),
         atom=b"<feed/>",
         json_feed=b"{}",
+        simple_rss=render_rss(full),
+        simple_atom=b"<feed/>",
+        simple_json_feed=b"{}",
     )
     write_feeds(
         repo_root,
         rss=render_rss(one),
         atom=b"<feed/>",
         json_feed=b"{}",
+        simple_rss=render_rss(one),
+        simple_atom=b"<feed/>",
+        simple_json_feed=b"{}",
     )
     rss = (repo_root / "feeds" / "rss.xml").read_bytes()
     assert rss.count(b"<item>") == 1
@@ -337,13 +352,28 @@ def test_write_feeds_replace_failure_leaves_safe_state(
     """If os.replace fails mid-publish, temps are cleaned and finals stay whole files."""
     _write_sample(repo_root)
     feeds_dir = repo_root / "feeds"
-    prior = {name: (feeds_dir / name).read_bytes() for name in ("rss.xml", "atom.xml", "feed.json")}
+    feed_names = (
+        "rss.xml",
+        "atom.xml",
+        "feed.json",
+        "rss.simple.xml",
+        "atom.simple.xml",
+        "feed.simple.json",
+    )
+    prior = {name: (feeds_dir / name).read_bytes() for name in feed_names}
 
     one = _snapshot([_entry_snap()])
     new_rss = render_rss(one)
     new_atom = render_atom(one)
     new_json = render_json(one)
-    new_blobs = {"rss.xml": new_rss, "atom.xml": new_atom, "feed.json": new_json}
+    new_blobs = {
+        "rss.xml": new_rss,
+        "atom.xml": new_atom,
+        "feed.json": new_json,
+        "rss.simple.xml": new_rss,
+        "atom.simple.xml": new_atom,
+        "feed.simple.json": new_json,
+    }
 
     real_replace = os.replace
     calls = {"n": 0}
@@ -363,12 +393,14 @@ def test_write_feeds_replace_failure_leaves_safe_state(
             rss=new_rss,
             atom=new_atom,
             json_feed=new_json,
+            simple_rss=new_rss,
+            simple_atom=new_atom,
+            simple_json_feed=new_json,
         )
 
     _assert_no_staging_temps(feeds_dir)
 
-    order = ("rss.xml", "atom.xml", "feed.json")
-    for i, name in enumerate(order):
+    for i, name in enumerate(feed_names):
         data = (feeds_dir / name).read_bytes()
         if i < fail_after:
             assert data == new_blobs[name]
@@ -411,27 +443,16 @@ def test_render_json_includes_snapshot_meta() -> None:
 # --- catalog → FeedSnapshot projection (folded from test_snapshot) ---
 
 
-def test_active_only_and_entry_order() -> None:
-    active_a = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
-    missing = _catalog_entry(
-        sid="https://paulgraham.com/m.html",
-        title="M",
-        position=1,
-        lifecycle=Lifecycle.MISSING_CANDIDATE,
-    )
-    active_b = _catalog_entry(
+def test_entry_order_projection() -> None:
+    """Catalog entry_order is projected in full (index-mirror membership)."""
+    a = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    b = _catalog_entry(
         sid="https://paulgraham.com/b.html",
         title="B",
-        position=2,
+        position=1,
         observed_updated_at=T2,
     )
-    tomb = _catalog_entry(
-        sid="https://paulgraham.com/t.html",
-        title="T",
-        position=3,
-        lifecycle=Lifecycle.TOMBSTONED,
-    )
-    cat = _catalog([active_a, missing, active_b, tomb])
+    cat = _catalog([a, b])
     snap = catalog_to_feed_snapshot(cat, generator=GENERATOR)
 
     assert [i.id for i in snap.items] == [
@@ -460,6 +481,56 @@ def test_summary_from_catalog_and_blurb_fallback() -> None:
     )
     assert snap.items[0].summary == "Source-derived short summary for Alpha."
     assert snap.items[1].summary == blurb("Beta")
+
+
+def test_summary_mode_title_only_ignores_catalog_summary() -> None:
+    with_summary = _catalog_entry(
+        sid="https://paulgraham.com/a.html",
+        title="Alpha",
+        position=0,
+        summary="Source-derived short summary for Alpha.",
+    )
+    snap = catalog_to_feed_snapshot(
+        _catalog([with_summary]),
+        generator=GENERATOR,
+        summary_mode="title_only",
+    )
+    assert snap.items[0].summary == blurb("Alpha")
+    assert "Source-derived" not in snap.items[0].summary
+
+
+def test_write_feeds_relative_dir_custom(repo_root: Path) -> None:
+    snap = _snapshot()
+    write_feeds(
+        repo_root,
+        rss=render_rss(snap),
+        atom=render_atom(snap),
+        json_feed=render_json(snap),
+        simple_rss=render_rss(snap),
+        simple_atom=render_atom(snap),
+        simple_json_feed=render_json(snap),
+        relative_dir="feeds/custom",
+    )
+    paths = feed_paths(repo_root, relative_dir="feeds/custom")
+    assert paths["rss"].is_file()
+    assert paths["atom"].is_file()
+    assert paths["json"].is_file()
+    assert paths["rss"] == repo_root / "feeds" / "custom" / "rss.xml"
+
+
+def test_verify_feed_artifacts_checks_enriched_only(repo_root: Path) -> None:
+    _write_sample(repo_root)
+    verify_feed_artifacts(repo_root, min_items=2)
+
+    # Corrupt enriched tree → verify_feed_artifacts must fail.
+    bad = json.loads((repo_root / "feeds" / "feed.json").read_text())
+    bad["items"] = []
+    (repo_root / "feeds" / "feed.json").write_text(
+        json.dumps(bad) + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(FeedError):
+        verify_feed_artifacts(repo_root, min_items=2)
 
 
 def test_observed_falls_back_to_first_seen() -> None:
@@ -494,18 +565,12 @@ def test_skips_entries_missing_both_timestamps() -> None:
     assert [i.id for i in snap.items] == ["https://paulgraham.com/a.html"]
 
 
-def test_empty_active_set_raises() -> None:
-    only_missing = _catalog_entry(
-        sid="https://paulgraham.com/m.html",
-        title="M",
-        position=0,
-        lifecycle=Lifecycle.MISSING_CANDIDATE,
-    )
-    with pytest.raises(FeedError, match="no ACTIVE"):
-        catalog_to_feed_snapshot(_catalog([only_missing]), generator=GENERATOR)
+def test_empty_catalog_raises() -> None:
+    with pytest.raises(FeedError, match="no entries with observation"):
+        catalog_to_feed_snapshot(_catalog([]), generator=GENERATOR)
 
 
-def test_all_undated_active_raises() -> None:
+def test_all_undated_entries_raise() -> None:
     undated = _catalog_entry(
         sid="https://paulgraham.com/u.html",
         title="U",
@@ -513,7 +578,7 @@ def test_all_undated_active_raises() -> None:
         observed_updated_at=None,
         first_seen_at=None,
     )
-    with pytest.raises(FeedError, match="no ACTIVE"):
+    with pytest.raises(FeedError, match="no entries with observation"):
         catalog_to_feed_snapshot(_catalog([undated]), generator=GENERATOR)
 
 
@@ -549,16 +614,53 @@ def test_feed_url_from_public_base() -> None:
     assert snap_none.public_base_url is None
 
 
+def test_rss_atom_link_self_from_public_base() -> None:
+    entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    snap = catalog_to_feed_snapshot(
+        _catalog([entry]),
+        generator=GENERATOR,
+        public_base_url="https://example.com/pg-feeds/",
+    )
+    rss = render_rss(snap)
+    root = ET.fromstring(rss)
+    self_links = [el for el in root.iter(f"{{{ATOM_NS}}}link") if el.get("rel") == "self"]
+    assert len(self_links) == 1
+    assert self_links[0].get("type") == "application/rss+xml"
+    assert self_links[0].get("href") == "https://example.com/pg-feeds/rss.xml"
+    assert b"xmlns:atom=" in rss
+
+
+def test_rss_no_atom_link_when_feed_url_none() -> None:
+    entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    snap = catalog_to_feed_snapshot(_catalog([entry]), generator=GENERATOR)
+    assert snap.feed_url is None
+    root = ET.fromstring(render_rss(snap))
+    assert list(root.iter(f"{{{ATOM_NS}}}link")) == []
+
+
+def test_rss_atom_link_self_simple_feed_url() -> None:
+    snap = FeedSnapshot(
+        logical_updated_at=_LOGICAL,
+        generator=GENERATOR,
+        feed_url="https://example.com/pg-feeds/feed.simple.json",
+        items=[_entry_snap()],
+    )
+    root = ET.fromstring(render_rss(snap))
+    self_links = [el for el in root.iter(f"{{{ATOM_NS}}}link") if el.get("rel") == "self"]
+    assert len(self_links) == 1
+    assert self_links[0].get("href") == "https://example.com/pg-feeds/rss.simple.xml"
+    assert self_links[0].get("type") == "application/rss+xml"
+
+
 def test_missing_entry_in_order_raises() -> None:
     entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
-    cat = Catalog(
-        schema_version=1,
-        material_config_fingerprint="test",
-        entry_order=["https://paulgraham.com/a.html", "https://paulgraham.com/ghost.html"],
-        entries={entry.stable_id: entry},
-    )
-    with pytest.raises(FeedError, match="missing entry"):
-        catalog_to_feed_snapshot(cat, generator=GENERATOR)
+    with pytest.raises(ValidationError, match="entry_order"):
+        Catalog(
+            schema_version=1,
+            material_config_fingerprint="test",
+            entry_order=["https://paulgraham.com/a.html", "https://paulgraham.com/ghost.html"],
+            entries={entry.stable_id: entry},
+        )
 
 
 def test_never_uses_1970_sentinel_in_projection() -> None:
@@ -714,3 +816,42 @@ def test_golden_fixtures_parity() -> None:
     assert render_rss(snap) == (fixtures / "golden.rss.xml").read_bytes()
     assert render_atom(snap) == (fixtures / "golden.atom.xml").read_bytes()
     assert render_json(snap) == (fixtures / "golden.feed.json").read_bytes()
+
+
+def test_simple_golden_fixtures_parity() -> None:
+    """title_only renders match committed simple goldens under tests/fixtures/feeds/."""
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures" / "feeds"
+    snap = FeedSnapshot(
+        logical_updated_at=datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC),
+        generator="pg-essay-feeds/0.1.0",
+        index_hash="abc123",
+        index_fingerprint=(
+            "1\thttps://paulgraham.com/a.html\thttps://paulgraham.com/a.html\tAlpha"
+        ),
+        items=[
+            FeedEntrySnapshot(
+                id="https://paulgraham.com/a.html",
+                url="https://paulgraham.com/a.html",
+                title="Alpha",
+                summary=blurb("Alpha"),
+                observed_updated_at=datetime(2025, 3, 1, 0, 0, 0, tzinfo=UTC),
+            ),
+            FeedEntrySnapshot(
+                id="https://paulgraham.com/b.html",
+                url="https://paulgraham.com/b.html",
+                title="Beta",
+                summary=blurb("Beta"),
+                observed_updated_at=datetime(2024, 6, 15, 9, 30, 0, tzinfo=UTC),
+            ),
+            FeedEntrySnapshot(
+                id="urn:uuid:11111111-1111-5111-8111-111111111111",
+                url="https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt",
+                title="Chapter 1",
+                summary=blurb("Chapter 1"),
+                observed_updated_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
+            ),
+        ],
+    )
+    assert render_rss(snap) == (fixtures / "golden.rss.simple.xml").read_bytes()
+    assert render_atom(snap) == (fixtures / "golden.atom.simple.xml").read_bytes()
+    assert render_json(snap) == (fixtures / "golden.feed.simple.json").read_bytes()
