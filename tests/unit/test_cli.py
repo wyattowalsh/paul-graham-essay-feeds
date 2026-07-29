@@ -9,6 +9,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from typer.core import TyperGroup
 from typer.main import get_command
 from typer.testing import CliRunner
 
@@ -33,7 +34,9 @@ def test_help() -> None:
 
 def test_update_exposes_from_feeds_option() -> None:
     """`--from-feeds` is a real update flag (param + help; ANSI-safe)."""
-    update = get_command(app).commands["update"]
+    click_app = get_command(app)
+    assert isinstance(click_app, TyperGroup)
+    update = click_app.commands["update"]
     from_feeds = next(p for p in update.params if p.name == "from_feeds")
     assert "--from-feeds" in from_feeds.opts
 
