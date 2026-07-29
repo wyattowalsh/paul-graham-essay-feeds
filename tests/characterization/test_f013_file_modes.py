@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from paul_graham_essay_feeds.feeds import render_atom, render_json, render_rss, write_feeds
-from paul_graham_essay_feeds.model import Essay
+from paul_graham_essay_feeds.models import Essay, FeedEntrySnapshot, FeedSnapshot
 
 
 def _essay() -> Essay:
@@ -29,13 +29,26 @@ def _essay() -> Essay:
 @pytest.mark.characterization
 @pytest.mark.skipif(os.name == "nt", reason="POSIX mode bits only")
 def test_written_feeds_are_group_and_other_readable(tmp_path: Path) -> None:
-    essays = [_essay()]
+    essay = _essay()
     now = datetime(2024, 1, 1, tzinfo=UTC)
+    snap = FeedSnapshot(
+        logical_updated_at=now,
+        generator="pg-essay-feeds/test",
+        items=[
+            FeedEntrySnapshot(
+                id=essay.stable_id,
+                url=essay.url,
+                title=essay.title,
+                summary=essay.summary or essay.title,
+                observed_updated_at=now,
+            )
+        ],
+    )
     write_feeds(
         tmp_path,
-        rss=render_rss(essays, built_at=now),
-        atom=render_atom(essays, built_at=now),
-        json_feed=render_json(essays, built_at=now),
+        rss=render_rss(snap),
+        atom=render_atom(snap),
+        json_feed=render_json(snap),
     )
     for name in ("rss.xml", "atom.xml", "feed.json"):
         mode = (tmp_path / "feeds" / name).stat().st_mode

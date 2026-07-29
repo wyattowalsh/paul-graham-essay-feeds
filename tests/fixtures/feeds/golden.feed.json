@@ -1,0 +1,76 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "Paul Graham: Essays",
+  "home_page_url": "https://paulgraham.com/articles.html",
+  "description": "Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.",
+  "language": "en",
+  "authors": [
+    {
+      "name": "Paul Graham",
+      "url": "https://paulgraham.com/"
+    }
+  ],
+  "items": [
+    {
+      "id": "https://paulgraham.com/a.html",
+      "url": "https://paulgraham.com/a.html",
+      "title": "Alpha",
+      "summary": "Alpha summary text for feeds.",
+      "content_text": "Alpha summary text for feeds.",
+      "authors": [
+        {
+          "name": "Paul Graham",
+          "url": "https://paulgraham.com/"
+        }
+      ],
+      "tags": [
+        "Essays"
+      ],
+      "language": "en",
+      "date_modified": "2025-03-01T00:00:00Z"
+    },
+    {
+      "id": "https://paulgraham.com/b.html",
+      "url": "https://paulgraham.com/b.html",
+      "title": "Beta",
+      "summary": "Beta summary text for feeds.",
+      "content_text": "Beta summary text for feeds.",
+      "authors": [
+        {
+          "name": "Paul Graham",
+          "url": "https://paulgraham.com/"
+        }
+      ],
+      "tags": [
+        "Essays"
+      ],
+      "language": "en",
+      "date_modified": "2024-06-15T09:30:00Z"
+    },
+    {
+      "id": "urn:uuid:11111111-1111-5111-8111-111111111111",
+      "url": "https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt",
+      "title": "Chapter 1",
+      "summary": "Protected chapter summary.",
+      "content_text": "Protected chapter summary.",
+      "authors": [
+        {
+          "name": "Paul Graham",
+          "url": "https://paulgraham.com/"
+        }
+      ],
+      "tags": [
+        "Essays"
+      ],
+      "language": "en",
+      "date_modified": "2024-01-01T12:00:00Z"
+    }
+  ],
+  "_pg_essay_feeds": {
+    "generator": "pg-essay-feeds/0.1.0",
+    "item_count": 3,
+    "logical_updated_at": "2024-06-01T12:00:00Z",
+    "index_hash": "abc123",
+    "index_fingerprint": "1\thttps://paulgraham.com/a.html\thttps://paulgraham.com/a.html\tAlpha"
+  }
+}

@@ -1,4 +1,4 @@
-"""Unit tests for prevalidated publication."""
+"""Unit tests for verify-then-write catalog + feeds publish (pipeline)."""
 
 from __future__ import annotations
 
@@ -8,10 +8,21 @@ from pathlib import Path
 
 import pytest
 
+from paul_graham_essay_feeds.catalog import default_catalog_path, load_catalog
 from paul_graham_essay_feeds.feeds import render_atom, render_json, render_rss
-from paul_graham_essay_feeds.model import Essay, FeedError
-from paul_graham_essay_feeds.presentation import NULL_REPORTER
-from paul_graham_essay_feeds.publication import publish_feed_bundle, publish_or_raise
+from paul_graham_essay_feeds.models import (
+    NULL_REPORTER,
+    Catalog,
+    CatalogEntry,
+    Essay,
+    FeedEntrySnapshot,
+    FeedError,
+    FeedSnapshot,
+    Lifecycle,
+)
+from paul_graham_essay_feeds.pipeline import _publish_catalog_and_feeds
+
+T0 = datetime(2024, 1, 1, tzinfo=UTC)
 
 
 def _essay(n: int = 1) -> Essay:
@@ -27,88 +38,103 @@ def _essay(n: int = 1) -> Essay:
     )
 
 
-def _bytes(count: int = 3) -> tuple[bytes, bytes, bytes]:
-    essays = [_essay(i) for i in range(1, count + 1)]
-    now = datetime(2024, 1, 1, tzinfo=UTC)
-    return (
-        render_rss(essays, built_at=now),
-        render_atom(essays, built_at=now),
-        render_json(essays, built_at=now),
+def _snapshot(essays: list[Essay]) -> FeedSnapshot:
+    return FeedSnapshot(
+        logical_updated_at=T0,
+        generator="pg-essay-feeds/test",
+        items=[
+            FeedEntrySnapshot(
+                id=e.stable_id,
+                url=e.url,
+                title=e.title,
+                summary=e.summary or e.title,
+                observed_updated_at=T0,
+                published_at=e.published_at,
+            )
+            for e in essays
+        ],
     )
 
 
-def test_publish_writes_after_verify(tmp_path: Path) -> None:
-    rss, atom, jf = _bytes(3)
-    result = publish_feed_bundle(
-        tmp_path,
-        rss=rss,
-        atom=atom,
-        json_feed=jf,
-        min_items=3,
-    )
-    assert result.report.ok
-    assert result.rss_path.is_file()
-    assert result.atom_path.is_file()
-    assert result.json_path.is_file()
-
-
-def test_publish_does_not_write_on_verify_failure(tmp_path: Path) -> None:
-    rss, atom, _jf = _bytes(3)
-    # Corrupt JSON to fail deep verify.
-    bad_json = b'{"version":"https://jsonfeed.org/version/1.1","items":[]}'
-    with pytest.raises(FeedError):
-        publish_feed_bundle(
-            tmp_path,
-            rss=rss,
-            atom=atom,
-            json_feed=bad_json,
-            min_items=3,
+def _catalog(count: int = 3) -> Catalog:
+    entries = [
+        CatalogEntry(
+            stable_id=f"https://paulgraham.com/e{i}.html",
+            url=f"https://paulgraham.com/e{i}.html",
+            title=f"Title {i}",
+            position=i,
+            lifecycle=Lifecycle.ACTIVE,
+            first_seen_at=T0,
+            last_seen_at=T0,
+            observed_updated_at=T0,
+            summary=f"A short summary for essay number {i} content.",
         )
-    assert not (tmp_path / "feeds" / "rss.xml").exists()
+        for i in range(1, count + 1)
+    ]
+    return Catalog(
+        schema_version=1,
+        material_config_fingerprint="test",
+        entry_order=[e.stable_id for e in entries],
+        entries={e.stable_id: e for e in entries},
+    )
 
 
-def test_publish_or_raise_success(tmp_path: Path) -> None:
+def _bytes(count: int = 3) -> tuple[bytes, bytes, bytes]:
+    snap = _snapshot([_essay(i) for i in range(1, count + 1)])
+    return render_rss(snap), render_atom(snap), render_json(snap)
+
+
+def test_publish_writes_catalog_and_feeds_after_verify(tmp_path: Path) -> None:
     rss, atom, jf = _bytes(3)
-    result = publish_or_raise(
+    catalog = _catalog(3)
+    published = _publish_catalog_and_feeds(
         tmp_path,
+        catalog=catalog,
         rss=rss,
         atom=atom,
         json_feed=jf,
         min_items=3,
         reporter=NULL_REPORTER,
-        file_mode=0o644,
     )
-    assert result.report.ok
-    assert result.root == tmp_path
-    assert result.rss_path.read_bytes() == rss
-    assert result.atom_path.read_bytes() == atom
-    assert result.json_path.read_bytes() == jf
+    assert published.entry_order == catalog.entry_order
+    assert default_catalog_path(tmp_path).is_file()
+    assert (tmp_path / "feeds" / "rss.xml").is_file()
+    assert (tmp_path / "feeds" / "atom.xml").is_file()
+    assert (tmp_path / "feeds" / "feed.json").is_file()
+    assert not (tmp_path / "state" / "current.json").exists()
+    assert not (tmp_path / "state" / "generations").exists()
+    loaded = load_catalog(default_catalog_path(tmp_path))
+    assert loaded is not None
+    assert loaded.entry_order == catalog.entry_order
 
 
-def test_publish_or_raise_reraises_feed_error(tmp_path: Path) -> None:
+def test_publish_does_not_write_on_verify_failure(tmp_path: Path) -> None:
     rss, atom, _jf = _bytes(3)
     bad_json = b'{"version":"https://jsonfeed.org/version/1.1","items":[]}'
-    with pytest.raises(FeedError, match="verification failed"):
-        publish_or_raise(
+    with pytest.raises(FeedError):
+        _publish_catalog_and_feeds(
             tmp_path,
+            catalog=_catalog(3),
             rss=rss,
             atom=atom,
             json_feed=bad_json,
             min_items=3,
+            reporter=NULL_REPORTER,
         )
-    feeds_dir = tmp_path / "feeds"
-    assert not feeds_dir.exists() or not any(feeds_dir.iterdir())
+    assert not default_catalog_path(tmp_path).exists()
+    assert not (tmp_path / "feeds" / "rss.xml").exists()
 
 
-def test_publish_respects_file_mode(tmp_path: Path) -> None:
+def test_publish_respects_feed_file_mode(tmp_path: Path) -> None:
+    from paul_graham_essay_feeds.feeds import write_feeds
+
     rss, atom, jf = _bytes(3)
-    result = publish_feed_bundle(
+    write_feeds(
         tmp_path,
         rss=rss,
         atom=atom,
         json_feed=jf,
-        min_items=3,
         file_mode=0o600,
     )
-    mode = stat.S_IMODE(result.rss_path.stat().st_mode)
+    mode = stat.S_IMODE((tmp_path / "feeds" / "rss.xml").stat().st_mode)
     assert mode == 0o600

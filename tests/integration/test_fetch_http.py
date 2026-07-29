@@ -7,8 +7,8 @@ from threading import Thread
 
 import pytest
 
-from paul_graham_essay_feeds.fetch import fetch_html
-from paul_graham_essay_feeds.model import FeedError
+from paul_graham_essay_feeds.http import fetch_html
+from paul_graham_essay_feeds.models import FeedError
 from tests.html_samples import synthetic_index_html
 
 pytestmark = pytest.mark.integration

@@ -12,12 +12,14 @@ from paul_graham_essay_feeds.settings import Settings
 
 def test_defaults(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("PG_ESSAY_FEEDS_VALIDATE_LINKS", raising=False)
     s = Settings()
     assert s.min_items >= 1
     assert s.timeout > 0
-    assert s.validate_links is False
+    assert s.validate_links is True
     assert s.enrich is True
     assert s.force is False
+    assert "use_catalog_pipeline" not in Settings.model_fields
 
 
 def test_settings_fields_have_descriptions() -> None:
@@ -38,8 +40,13 @@ def test_enrich_env_false(monkeypatch: pytest.MonkeyPatch) -> None:
     assert Settings().enrich is False
 
 
-def test_validate_links_env_true(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("PG_ESSAY_FEEDS_VALIDATE_LINKS", "true")
+def test_validate_links_env_false_opts_out(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PG_ESSAY_FEEDS_VALIDATE_LINKS", "false")
+    assert Settings().validate_links is False
+
+
+def test_validate_links_default_true(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("PG_ESSAY_FEEDS_VALIDATE_LINKS", raising=False)
     assert Settings().validate_links is True
 
 

@@ -5,8 +5,8 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from paul_graham_essay_feeds.fetch import is_retryable_exception, run_with_retry
-from paul_graham_essay_feeds.model import FeedError
+from paul_graham_essay_feeds.http import is_retryable_exception, run_with_retry
+from paul_graham_essay_feeds.models import FeedError
 
 
 @pytest.fixture(autouse=True)
@@ -19,9 +19,9 @@ def _no_tenacity_sleep(monkeypatch: pytest.MonkeyPatch):
     """
     from tenacity import wait_none
 
-    from paul_graham_essay_feeds import fetch as fetch_mod
+    from paul_graham_essay_feeds import http as http_mod
 
-    original = fetch_mod.retrying
+    original = http_mod.retrying
     sleep_calls: list[float] = []
 
     def _fast_retrying(*, attempts: int, reraise: bool = True):
@@ -34,7 +34,7 @@ def _no_tenacity_sleep(monkeypatch: pytest.MonkeyPatch):
         controller.sleep = _sleep
         return controller
 
-    monkeypatch.setattr(fetch_mod, "retrying", _fast_retrying)
+    monkeypatch.setattr(http_mod, "retrying", _fast_retrying)
     yield sleep_calls
 
 

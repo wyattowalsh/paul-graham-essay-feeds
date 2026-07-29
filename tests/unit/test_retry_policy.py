@@ -11,7 +11,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from paul_graham_essay_feeds.retry_policy import (
+from paul_graham_essay_feeds.http import (
     DEFAULT_MAX_RETRY_AFTER,
     RETRYABLE_HTTP_STATUS,
     TimeoutConfig,

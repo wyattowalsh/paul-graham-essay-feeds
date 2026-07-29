@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from paul_graham_essay_feeds.metadata import (
+from paul_graham_essay_feeds.enrich import (
     PageMetadata,
     extract_page_metadata,
     score_summary_quality,
 )
-from paul_graham_essay_feeds.model import FEED_SUMMARY_CHARS
+from paul_graham_essay_feeds.models import FEED_SUMMARY_CHARS
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "upstream"
 PAGE_URL = "https://paulgraham.com/earn.html"

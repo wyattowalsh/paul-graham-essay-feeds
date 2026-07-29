@@ -1,4 +1,4 @@
-"""Unit tests for fetch.py (httpx + respx + Tenacity)."""
+"""Unit tests for http.py (httpx + respx + Tenacity)."""
 
 from __future__ import annotations
 
@@ -6,14 +6,14 @@ import httpx
 import pytest
 import respx
 
-from paul_graham_essay_feeds.fetch import (
+from paul_graham_essay_feeds.http import (
     _assert_url,
     decode_html,
     fetch_html,
     hop_safe_get,
     hop_safe_request,
 )
-from paul_graham_essay_feeds.model import ALLOWED_HOSTS, FeedError
+from paul_graham_essay_feeds.models import ALLOWED_HOSTS, FeedError
 
 
 @pytest.fixture(autouse=True)
@@ -26,9 +26,9 @@ def _no_tenacity_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     from tenacity import wait_none
 
-    from paul_graham_essay_feeds import fetch as fetch_mod
+    from paul_graham_essay_feeds import http as http_mod
 
-    original = fetch_mod.retrying
+    original = http_mod.retrying
 
     def _fast_retrying(*, attempts: int, reraise: bool = True):
         controller = original(attempts=attempts, reraise=reraise)
@@ -36,7 +36,7 @@ def _no_tenacity_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
         controller.sleep = lambda _seconds: None
         return controller
 
-    monkeypatch.setattr(fetch_mod, "retrying", _fast_retrying)
+    monkeypatch.setattr(http_mod, "retrying", _fast_retrying)
 
 
 def test_decode_html_utf8() -> None:

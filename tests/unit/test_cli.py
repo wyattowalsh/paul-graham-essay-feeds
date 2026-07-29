@@ -11,8 +11,8 @@ import pytest
 from typer.testing import CliRunner
 
 from paul_graham_essay_feeds.cli import _settings, app
-from paul_graham_essay_feeds.feeds import render_atom, render_json, render_rss, write_feeds
-from paul_graham_essay_feeds.model import Essay, utc_now
+from paul_graham_essay_feeds.feeds import render_snapshot_feeds, write_feeds
+from paul_graham_essay_feeds.models import FeedEntrySnapshot, FeedSnapshot, utc_now
 
 runner = CliRunner()
 
@@ -22,11 +22,19 @@ def test_help() -> None:
     assert result.exit_code == 0
     assert "update" in result.output
     assert "check" in result.output
+    assert "bootstrap" not in result.output
+    assert "site" not in result.output
+    assert "legacy-pipeline" not in result.output
+    assert "catalog-pipeline" not in result.output
+
+
+def test_update_help_exposes_from_feeds() -> None:
+    result = runner.invoke(app, ["update", "--help"])
+    assert result.exit_code == 0
+    assert "--from-feeds" in result.output
 
 
 def test_check_missing_feeds(repo_root: Path) -> None:
-    result = runner.invoke(app, ["--repo-root", str(repo_root), "--quiet", "check"])
-    # Typer puts options after command often; try command-first style
     result = runner.invoke(app, ["check", "--repo-root", str(repo_root), "--quiet"])
     assert result.exit_code == 1
 
@@ -46,9 +54,15 @@ def test_update_missing_source(repo_root: Path) -> None:
     assert result.exit_code == 1
 
 
-def test_check_bad_rss(repo_root: Path) -> None:
+def _seed_bad_feeds(repo_root: Path) -> Path:
+    """Write intentionally invalid feed bodies under ``feeds/`` (no generations)."""
     feeds = repo_root / "feeds"
-    feeds.mkdir()
+    feeds.mkdir(parents=True, exist_ok=True)
+    return feeds
+
+
+def test_check_bad_rss(repo_root: Path) -> None:
+    feeds = _seed_bad_feeds(repo_root)
     (feeds / "rss.xml").write_text("not rss", encoding="utf-8")
     (feeds / "atom.xml").write_text("<feed><entry/></feed>", encoding="utf-8")
     (feeds / "feed.json").write_text('{"version":"x","items":[]}', encoding="utf-8")
@@ -57,8 +71,7 @@ def test_check_bad_rss(repo_root: Path) -> None:
 
 
 def test_check_bad_atom(repo_root: Path) -> None:
-    feeds = repo_root / "feeds"
-    feeds.mkdir()
+    feeds = _seed_bad_feeds(repo_root)
     (feeds / "rss.xml").write_text("<rss><item/></rss>", encoding="utf-8")
     (feeds / "atom.xml").write_text("<notfeed/>", encoding="utf-8")
     (feeds / "feed.json").write_text('{"version":"x","items":[]}', encoding="utf-8")
@@ -67,8 +80,7 @@ def test_check_bad_atom(repo_root: Path) -> None:
 
 
 def test_check_bad_json(repo_root: Path) -> None:
-    feeds = repo_root / "feeds"
-    feeds.mkdir()
+    feeds = _seed_bad_feeds(repo_root)
     (feeds / "rss.xml").write_text("<rss><item/></rss>", encoding="utf-8")
     (feeds / "atom.xml").write_text("<feed><entry/></feed>", encoding="utf-8")
     (feeds / "feed.json").write_text("{}", encoding="utf-8")
@@ -77,8 +89,7 @@ def test_check_bad_json(repo_root: Path) -> None:
 
 
 def test_check_below_min_items(repo_root: Path) -> None:
-    feeds = repo_root / "feeds"
-    feeds.mkdir()
+    feeds = _seed_bad_feeds(repo_root)
     (feeds / "rss.xml").write_text("<rss><item></item></rss>", encoding="utf-8")
     (feeds / "atom.xml").write_text("<feed><entry></entry></feed>", encoding="utf-8")
     (feeds / "feed.json").write_text(
@@ -94,8 +105,7 @@ def test_check_below_min_items(repo_root: Path) -> None:
 
 def test_check_count_parity_mismatch(repo_root: Path) -> None:
     """RSS/Atom/JSON item counts must agree."""
-    feeds = repo_root / "feeds"
-    feeds.mkdir()
+    feeds = _seed_bad_feeds(repo_root)
     (feeds / "rss.xml").write_text(
         "<rss><item></item><item></item></rss>",
         encoding="utf-8",
@@ -113,14 +123,26 @@ def test_check_count_parity_mismatch(repo_root: Path) -> None:
 
 
 def test_check_invalid_json_items(repo_root: Path) -> None:
-    feeds = repo_root / "feeds"
-    feeds.mkdir()
+    feeds = _seed_bad_feeds(repo_root)
     (feeds / "rss.xml").write_text("<rss><item></item></rss>", encoding="utf-8")
     (feeds / "atom.xml").write_text("<feed><entry></entry></feed>", encoding="utf-8")
     (feeds / "feed.json").write_text(
         '{"version":"x","items":"not-a-list"}',
         encoding="utf-8",
     )
+    result = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
+    )
+    assert result.exit_code == 1
+
+
+def test_check_corrupt_catalog(repo_root: Path) -> None:
+    """When catalog.json exists, check fail-closes on corrupt catalog."""
+    _write_one_essay(repo_root)
+    catalog = repo_root / "catalog.json"
+    catalog.parent.mkdir(parents=True, exist_ok=True)
+    catalog.write_text("{not-json", encoding="utf-8")
     result = runner.invoke(
         app,
         ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
@@ -143,12 +165,14 @@ def test_update_from_source_file(repo_root: Path, sample_html_path: Path) -> Non
     )
     assert result.exit_code == 0, result.output
     assert (repo_root / "feeds" / "rss.xml").is_file()
+    assert (repo_root / "catalog.json").is_file()
+    assert not (repo_root / "state" / "current.json").exists()
 
 
 def test_update_source_file_oversize(tmp_path: Path) -> None:
     """RV-S-002: local source file over max_bytes fails."""
-    from paul_graham_essay_feeds.cli import _read_source_file
-    from paul_graham_essay_feeds.model import FeedError
+    from paul_graham_essay_feeds.models import FeedError
+    from paul_graham_essay_feeds.pipeline import _read_source_file
 
     huge = tmp_path / "big.html"
     huge.write_bytes(b"x" * 2000)
@@ -156,8 +180,86 @@ def test_update_source_file_oversize(tmp_path: Path) -> None:
         _read_source_file(huge, max_bytes=512)
 
 
-def test_update_skips_when_index_hash_unchanged(repo_root: Path, sample_html_path: Path) -> None:
-    """Second update with same source skips rewrite when feeds exist with matching hash."""
+def test_update_from_feeds_bootstraps_catalog(
+    repo_root: Path,
+    sample_html_path: Path,
+) -> None:
+    """--from-feeds materializes catalog from feeds/ then runs the pipeline."""
+    # First publish so feeds/ exist.
+    first = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--source-file",
+            str(sample_html_path),
+        ],
+    )
+    assert first.exit_code == 0, first.output
+    catalog = repo_root / "catalog.json"
+    catalog.unlink()
+    assert not catalog.is_file()
+
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--from-feeds",
+            "--source-file",
+            str(sample_html_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert catalog.is_file()
+
+
+def test_update_result_file_and_github_output(
+    repo_root: Path,
+    sample_html_path: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result_path = tmp_path / "out" / "result.txt"
+    github_path = tmp_path / "gha" / "output.txt"
+    github_path.parent.mkdir(parents=True)
+    github_path.write_text("", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_OUTPUT", str(github_path))
+
+    args = [
+        "update",
+        "--repo-root",
+        str(repo_root),
+        "--quiet",
+        "--no-enrich",
+        "--source-file",
+        str(sample_html_path),
+        "--result-file",
+        str(result_path),
+    ]
+    first = runner.invoke(app, args)
+    assert first.exit_code == 0, first.output
+    assert first.stdout == ""
+    assert not (first.stderr or "").strip()
+    assert "action=updated\n" in result_path.read_text(encoding="utf-8")
+    assert "action=updated\n" in github_path.read_text(encoding="utf-8")
+
+    second = runner.invoke(app, args)
+    assert second.exit_code == 0, second.output
+    assert second.stdout == ""
+    assert not (second.stderr or "").strip()
+    assert result_path.read_text(encoding="utf-8").endswith("action=unchanged\n")
+    assert github_path.read_text(encoding="utf-8").endswith("action=unchanged\n")
+
+
+def test_update_skips_when_refresh_not_due(repo_root: Path, sample_html_path: Path) -> None:
+    """Second update with same source skips rewrite when refresh planner says not due."""
     args = [
         "update",
         "--repo-root",
@@ -191,6 +293,9 @@ def test_update_force_rewrites(repo_root: Path, sample_html_path: Path) -> None:
     assert runner.invoke(app, args).exit_code == 0
     forced = runner.invoke(app, [*args, "--force"])
     assert forced.exit_code == 0, forced.output
+    # Second --force must remain idempotent (same gen id; no immutable mismatch).
+    forced_again = runner.invoke(app, [*args, "--force"])
+    assert forced_again.exit_code == 0, forced_again.output
 
 
 def test_update_verbose(repo_root: Path, sample_html_path: Path) -> None:
@@ -209,25 +314,23 @@ def test_update_verbose(repo_root: Path, sample_html_path: Path) -> None:
     assert result.exit_code == 0, result.output
 
 
-def _write_one_essay(repo_root: Path) -> list[Essay]:
-    essays = [
-        Essay(
-            position=1,
-            title="A",
-            url="https://paulgraham.com/a.html",
-            stable_id="https://paulgraham.com/a.html",
-            is_permalink=True,
-            summary="Short summary for check tests.",
-        ),
-    ]
+def _write_one_essay(repo_root: Path) -> None:
     now = utc_now()
-    write_feeds(
-        repo_root,
-        rss=render_rss(essays, built_at=now),
-        atom=render_atom(essays, built_at=now),
-        json_feed=render_json(essays, built_at=now),
+    snapshot = FeedSnapshot(
+        logical_updated_at=now,
+        generator="pg-essay-feeds/test",
+        items=[
+            FeedEntrySnapshot(
+                id="https://paulgraham.com/a.html",
+                url="https://paulgraham.com/a.html",
+                title="A",
+                summary="Short summary for check tests.",
+                observed_updated_at=now,
+            ),
+        ],
     )
-    return essays
+    rss, atom, jf = render_snapshot_feeds(snapshot)
+    write_feeds(repo_root, rss=rss, atom=atom, json_feed=jf)
 
 
 def test_check_ok(repo_root: Path) -> None:
@@ -237,6 +340,7 @@ def test_check_ok(repo_root: Path) -> None:
         ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
     )
     assert result.exit_code == 0
+    assert result.stdout == ""
 
 
 def test_check_fails_wrong_content_text(repo_root: Path) -> None:
@@ -260,7 +364,7 @@ def test_env_enrich_false_without_flag(
     """PG_ESSAY_FEEDS_ENRICH=false without CLI flags keeps enrich off."""
     monkeypatch.setenv("PG_ESSAY_FEEDS_ENRICH", "false")
     enrich = MagicMock(side_effect=lambda essays, **_: essays)
-    monkeypatch.setattr("paul_graham_essay_feeds.cli.enrich_essays", enrich)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.enrich_essays", enrich)
     result = runner.invoke(
         app,
         [
@@ -284,7 +388,7 @@ def test_cli_enrich_overrides_env_false(
     """--enrich forces enrichment on even when env disables it."""
     monkeypatch.setenv("PG_ESSAY_FEEDS_ENRICH", "false")
     enrich = MagicMock(side_effect=lambda essays, **_: essays)
-    monkeypatch.setattr("paul_graham_essay_feeds.cli.enrich_essays", enrich)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.enrich_essays", enrich)
     result = runner.invoke(
         app,
         [
@@ -309,10 +413,10 @@ def test_env_validate_links_true_without_flag(
     sample_html_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """PG_ESSAY_FEEDS_VALIDATE_LINKS=true without flag still probes."""
+    """PG_ESSAY_FEEDS_VALIDATE_LINKS=true without CLI flag still probes."""
     monkeypatch.setenv("PG_ESSAY_FEEDS_VALIDATE_LINKS", "true")
-    validate = MagicMock()
-    monkeypatch.setattr("paul_graham_essay_feeds.cli.validate_essays_live", validate)
+    validate = MagicMock(return_value=None)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.validate_essays_live", validate)
     result = runner.invoke(
         app,
         [
@@ -333,6 +437,32 @@ def test_env_validate_links_true_without_flag(
     assert "workers" in kwargs
     assert "max_bytes" in kwargs
     assert kwargs["workers"] == 4
+
+
+def test_no_validate_links_flag_skips_probes(
+    repo_root: Path,
+    sample_html_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--no-validate-links skips probes even when env default would probe."""
+    monkeypatch.setenv("PG_ESSAY_FEEDS_VALIDATE_LINKS", "true")
+    validate = MagicMock()
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.validate_essays_live", validate)
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--no-validate-links",
+            "--source-file",
+            str(sample_html_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    validate.assert_not_called()
 
 
 def test_quiet_preferred_when_both_set() -> None:
@@ -398,20 +528,20 @@ def test_cli_quiet_and_verbose_prefer_quiet(
     assert configure.call_args.kwargs["verbose"] is False
 
 
-def test_extract_passes_source_url_as_base_url(
+def test_discovery_passes_source_url_as_base_url(
     repo_root: Path,
     sample_html_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured: dict[str, Any] = {}
 
-    def fake_extract(html: str, **kwargs: Any) -> list[Essay]:
+    def fake_discover(html: str, **kwargs: Any) -> Any:
         captured.update(kwargs)
-        from paul_graham_essay_feeds.extract import extract_essays as real
+        from paul_graham_essay_feeds.discovery import discover_essays as real
 
         return real(html, **kwargs)
 
-    monkeypatch.setattr("paul_graham_essay_feeds.cli.extract_essays", fake_extract)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.discover_essays", fake_discover)
     result = runner.invoke(
         app,
         [
@@ -435,7 +565,7 @@ def test_update_oserror_exits_1(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "paul_graham_essay_feeds.cli.publish_feed_bundle",
+        "paul_graham_essay_feeds.pipeline._publish_catalog_and_feeds",
         MagicMock(side_effect=OSError("disk full")),
     )
     result = runner.invoke(
@@ -457,25 +587,12 @@ def test_check_oserror_exits_1(
     repo_root: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    feeds = repo_root / "feeds"
-    feeds.mkdir()
-    (feeds / "rss.xml").write_text("<rss><item/></rss>", encoding="utf-8")
-    (feeds / "atom.xml").write_text("<feed><entry/></feed>", encoding="utf-8")
-    (feeds / "feed.json").write_text('{"version":"x","items":[]}', encoding="utf-8")
+    _write_one_essay(repo_root)
 
-    real_read_text = Path.read_text
-
-    def flaky_read(
-        self: Path,
-        encoding: str | None = None,
-        errors: str | None = None,
-        newline: str | None = None,
-    ) -> str:
-        if self.name == "rss.xml":
-            raise OSError("permission denied")
-        return real_read_text(self, encoding=encoding, errors=errors, newline=newline)
-
-    monkeypatch.setattr(Path, "read_text", flaky_read)
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.cli.verify_feed_artifacts",
+        MagicMock(side_effect=OSError("permission denied")),
+    )
     result = runner.invoke(
         app,
         ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],

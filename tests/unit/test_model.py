@@ -1,4 +1,4 @@
-"""Unit tests for model.py."""
+"""Unit tests for models.py (Essay, constants, helpers)."""
 
 from __future__ import annotations
 
@@ -6,10 +6,9 @@ import pytest
 from pydantic import ValidationError
 
 from paul_graham_essay_feeds import __version__
-from paul_graham_essay_feeds.model import (
+from paul_graham_essay_feeds.models import (
     FEED_SUMMARY_CHARS,
     GENERATOR,
-    STABLE_UNPUBLISHED_UPDATED,
     Essay,
     FeedError,
     blurb,
@@ -20,7 +19,6 @@ from paul_graham_essay_feeds.model import (
     normalize_text,
     rfc822,
     rfc3339,
-    stable_updated,
     truncate_text,
     user_agent,
     utc_now,
@@ -163,12 +161,6 @@ def test_essay_fields_have_descriptions() -> None:
         assert field.description, f"Essay.{name} missing description"
 
 
-def test_stable_unpublished_updated_sentinel() -> None:
-    assert STABLE_UNPUBLISHED_UPDATED.year == 1970
-    assert stable_updated("https://paulgraham.com/a.html") is STABLE_UNPUBLISHED_UPDATED
-    assert stable_updated("urn:uuid:abc") == STABLE_UNPUBLISHED_UPDATED
-
-
 def test_generator_and_user_agent_from_version() -> None:
     assert __version__ in GENERATOR
     assert f"pg-essay-feeds/{__version__}" == GENERATOR
@@ -189,16 +181,6 @@ def test_validate_essay_link_ok() -> None:
 
 
 def test_validate_essay_link_rejects_fragment() -> None:
-    e = Essay(
-        position=1,
-        title="T",
-        url="https://paulgraham.com/t.html",
-        stable_id="https://paulgraham.com/t.html",
-        is_permalink=True,
-    )
-    # bypass model validator by constructing then mutate via model_copy
-    bad = e.model_copy(update={"url": "https://paulgraham.com/t.html#frag"})
-    # model_copy still validates url field... so build with model_construct
     bad = Essay.model_construct(
         position=1,
         title="T",

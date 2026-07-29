@@ -10,10 +10,11 @@ import respx
 from paul_graham_essay_feeds.enrich import (
     _MAX_CONTENT_CHARS,
     _SUMMARY_CHARS,
+    PageEnrichEvidence,
     enrich_essays,
     parse_page_metadata,
 )
-from paul_graham_essay_feeds.model import Essay, content_sha256
+from paul_graham_essay_feeds.models import Essay, content_sha256
 
 SAMPLE_HTML = """
 <html><head>
@@ -134,7 +135,8 @@ def test_parse_page_metadata_body_summary_truncates() -> None:
     assert meta["content_text"] is None
 
 
-def test_parse_page_metadata_prefers_og_description() -> None:
+def test_parse_page_metadata_prefers_meta_description() -> None:
+    """metadata API preference: meta description → og → twitter → body."""
     html = """
     <html><head>
     <title>T</title>
@@ -144,7 +146,7 @@ def test_parse_page_metadata_prefers_og_description() -> None:
     </head><body>body</body></html>
     """
     meta = parse_page_metadata(html, page_url="https://paulgraham.com/t.html")
-    assert meta["summary"] == "og wins here"
+    assert meta["summary"] == "generic description"
 
 
 def test_parse_page_metadata_twitter_description_fallback() -> None:
@@ -289,6 +291,182 @@ def test_enrich_off_host_redirect_soft_fails() -> None:
     assert out[0].summary is None
 
 
+@respx.mock
+def test_enrich_304_retains_prior_summary() -> None:
+    """Page 304 keeps prior-good summary; never invents empty body (L408/L409)."""
+    route = respx.get("https://paulgraham.com/earn.html").mock(
+        return_value=httpx.Response(304, headers={"ETag": '"page-v1"'})
+    )
+    prior_summary = "A talk about how people become billionaires."
+    base = _essay().model_copy(
+        update={
+            "summary": prior_summary,
+            "content_hash": "a" * 64,
+            "content_text": None,
+        }
+    )
+    evidence: dict[str, PageEnrichEvidence] = {}
+    out = enrich_essays(
+        [base],
+        workers=1,
+        retries=0,
+        quiet=True,
+        page_validators={base.stable_id: ('"page-v1"', "Tue, 01 Jul 2024 00:00:00 GMT")},
+        page_evidence_out=evidence,
+    )
+    assert len(out) == 1
+    assert out[0].summary == prior_summary
+    assert out[0].content_text is None
+    assert out[0].content_hash == "a" * 64
+    assert route.called
+    req_headers = route.calls[0].request.headers
+    assert req_headers["If-None-Match"] == '"page-v1"'
+    assert req_headers["If-Modified-Since"] == "Tue, 01 Jul 2024 00:00:00 GMT"
+    ev = evidence[base.stable_id]
+    assert ev.not_modified is True
+    assert ev.status_code == 304
+    assert ev.etag == '"page-v1"'
+
+
+@respx.mock
+def test_enrich_200_captures_page_validators() -> None:
+    """200 response surfaces ETag / Last-Modified for catalog ResourceState."""
+    lm = "Wed, 02 Jul 2024 12:00:00 GMT"
+    respx.get("https://paulgraham.com/earn.html").mock(
+        return_value=httpx.Response(
+            200,
+            text=SAMPLE_HTML,
+            headers={"ETag": '"page-v2"', "Last-Modified": lm},
+        )
+    )
+    base = _essay()
+    evidence: dict[str, PageEnrichEvidence] = {}
+    out = enrich_essays(
+        [base],
+        workers=1,
+        retries=0,
+        quiet=True,
+        page_validators={base.stable_id: ('"page-v1"', None)},
+        page_evidence_out=evidence,
+    )
+    assert out[0].summary and "billionaires" in out[0].summary
+    assert out[0].content_text is None
+    ev = evidence[base.stable_id]
+    assert ev.not_modified is False
+    assert ev.status_code == 200
+    assert ev.etag == '"page-v2"'
+    assert ev.last_modified == lm
+
+
+def test_apply_enrichment_304_retains_prior_good() -> None:
+    """_apply_enrichment 304 path keeps summary + hashes; stamps status 304."""
+    from datetime import UTC, datetime
+
+    from paul_graham_essay_feeds.models import (
+        Catalog,
+        CatalogEntry,
+        Lifecycle,
+        ResourceState,
+    )
+    from paul_graham_essay_feeds.pipeline import _apply_enrichment
+
+    now = datetime(2026, 7, 28, 12, 0, tzinfo=UTC)
+    sid = "https://paulgraham.com/earn.html"
+    entry = CatalogEntry(
+        stable_id=sid,
+        url=sid,
+        title="How to Earn a Billion Dollars",
+        position=0,
+        lifecycle=Lifecycle.ACTIVE,
+        summary="prior good summary",
+        prior_good_summary="prior good summary",
+        page=ResourceState(
+            etag='"page-v1"',
+            last_modified="Tue, 01 Jul 2024 00:00:00 GMT",
+            raw_sha256="a" * 64,
+            decoded_sha256="a" * 64,
+            status_code=200,
+        ),
+    )
+    catalog = Catalog(
+        schema_version=1,
+        material_config_fingerprint="test",
+        entry_order=[sid],
+        entries={sid: entry},
+    )
+    # 304 enrich returns the prior essay unchanged (no invented empty summary).
+    essay = _essay().model_copy(update={"summary": "prior good summary", "content_hash": "a" * 64})
+    evidence = {
+        sid: PageEnrichEvidence(
+            not_modified=True,
+            etag='"page-v1"',
+            last_modified="Tue, 01 Jul 2024 00:00:00 GMT",
+            status_code=304,
+        )
+    }
+    next_catalog = _apply_enrichment(catalog, [essay], now=now, page_evidence=evidence)
+    updated = next_catalog.entries[sid]
+    assert updated.summary == "prior good summary"
+    assert updated.prior_good_summary == "prior good summary"
+    assert updated.page.status_code == 304
+    assert updated.page.etag == '"page-v1"'
+    assert updated.page.raw_sha256 == "a" * 64
+    assert updated.page.last_checked_at == now
+
+
+def test_apply_enrichment_200_persists_validators() -> None:
+    """200 evidence writes etag/last_modified into page ResourceState."""
+    from datetime import UTC, datetime
+
+    from paul_graham_essay_feeds.models import (
+        Catalog,
+        CatalogEntry,
+        Lifecycle,
+        ResourceState,
+    )
+    from paul_graham_essay_feeds.pipeline import _apply_enrichment
+
+    now = datetime(2026, 7, 28, 12, 0, tzinfo=UTC)
+    sid = "https://paulgraham.com/earn.html"
+    entry = CatalogEntry(
+        stable_id=sid,
+        url=sid,
+        title="How to Earn a Billion Dollars",
+        position=0,
+        lifecycle=Lifecycle.ACTIVE,
+        page=ResourceState(etag='"old"', status_code=200),
+    )
+    catalog = Catalog(
+        schema_version=1,
+        material_config_fingerprint="test",
+        entry_order=[sid],
+        entries={sid: entry},
+    )
+    essay = _essay().model_copy(
+        update={
+            "summary": "fresh summary from page",
+            "content_hash": "b" * 64,
+            "published_hint": "June 2026",
+        }
+    )
+    lm = "Wed, 02 Jul 2024 12:00:00 GMT"
+    evidence = {
+        sid: PageEnrichEvidence(
+            not_modified=False,
+            etag='"page-v2"',
+            last_modified=lm,
+            status_code=200,
+        )
+    }
+    next_catalog = _apply_enrichment(catalog, [essay], now=now, page_evidence=evidence)
+    updated = next_catalog.entries[sid]
+    assert updated.summary == "fresh summary from page"
+    assert updated.page.etag == '"page-v2"'
+    assert updated.page.last_modified == lm
+    assert updated.page.status_code == 200
+    assert updated.page.raw_sha256 == "b" * 64
+
+
 def test_enrich_worker_exception_keeps_essay() -> None:
     """fut.result raising a non-FeedError soft-fails and keeps the original essay."""
     base = _essay()
@@ -303,7 +481,10 @@ def test_enrich_worker_exception_keeps_essay() -> None:
     pool.submit.return_value = boom_fut
 
     with (
-        patch("paul_graham_essay_feeds.enrich.httpx.Client", return_value=client),
+        patch(
+            "paul_graham_essay_feeds.enrich.create_http_client",
+            return_value=client,
+        ),
         patch("paul_graham_essay_feeds.enrich.ThreadPoolExecutor") as pool_cls,
         patch(
             "paul_graham_essay_feeds.enrich.as_completed",

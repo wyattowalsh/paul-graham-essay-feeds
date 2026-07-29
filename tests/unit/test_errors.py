@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, ValidationError
 
-from paul_graham_essay_feeds.errors import (
+from paul_graham_essay_feeds.models import (
     ExitCode,
+    FeedError,
     UserFacingError,
     exit_code_for_exception,
     format_validation_error,
 )
-from paul_graham_essay_feeds.model import FeedError
 
 
 class _Mini(BaseModel):
@@ -33,7 +33,7 @@ def test_exit_code_mapping() -> None:
 
 
 def test_typed_user_errors() -> None:
-    from paul_graham_essay_feeds.errors import (
+    from paul_graham_essay_feeds.models import (
         ConfigurationError,
         NetworkSourceError,
         VerificationError,

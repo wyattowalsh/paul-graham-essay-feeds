@@ -6,8 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from paul_graham_essay_feeds.model import FeedError
-from paul_graham_essay_feeds.types import normalize_essay_url, require_aware_utc
+from paul_graham_essay_feeds.models import FeedError, normalize_essay_url, require_aware_utc
 
 
 def test_require_aware_utc_rejects_naive() -> None:

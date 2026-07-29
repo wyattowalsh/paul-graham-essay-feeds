@@ -11,7 +11,7 @@ import respx
 from typer.testing import CliRunner
 
 from paul_graham_essay_feeds.cli import app
-from paul_graham_essay_feeds.model import SOURCE_URL
+from paul_graham_essay_feeds.models import SOURCE_URL
 from tests.html_samples import synthetic_index_html
 
 pytestmark = pytest.mark.e2e
@@ -74,10 +74,46 @@ def test_cli_update_then_check(repo_root: Path, sample_html_path: Path) -> None:
     assert (feeds / "rss.xml").is_file()
     assert (feeds / "atom.xml").is_file()
     assert (feeds / "feed.json").is_file()
+    assert (repo_root / "catalog.json").is_file()
+    assert not (repo_root / "state" / "current.json").exists()
     assert not (repo_root / "data" / "essays.json").exists()
     assert not (feeds / ".manifest.json").exists()
     check = runner.invoke(app, ["check", "--repo-root", str(repo_root), "--quiet"])
     assert check.exit_code == 0, check.output
+
+
+def test_cli_second_update_unchanged_exit_zero(
+    repo_root: Path, sample_html_path: Path, tmp_path: Path
+) -> None:
+    """Re-run update → action=unchanged, exit 0, no tracked churn (L215)."""
+    args = [
+        "update",
+        "--repo-root",
+        str(repo_root),
+        "--quiet",
+        "--no-enrich",
+        "--source-file",
+        str(sample_html_path),
+    ]
+    first = runner.invoke(app, args)
+    assert first.exit_code == 0, first.output
+
+    catalog = repo_root / "catalog.json"
+    rss = repo_root / "feeds" / "rss.xml"
+    catalog_bytes = catalog.read_bytes()
+    rss_bytes = rss.read_bytes()
+    catalog_mtime = catalog.stat().st_mtime_ns
+    rss_mtime = rss.stat().st_mtime_ns
+
+    result_file = tmp_path / "result.txt"
+    second = runner.invoke(app, [*args, "--result-file", str(result_file)])
+    assert second.exit_code == 0, second.output
+    assert second.output == ""
+    assert "action=unchanged" in result_file.read_text(encoding="utf-8")
+    assert catalog.read_bytes() == catalog_bytes
+    assert rss.read_bytes() == rss_bytes
+    assert catalog.stat().st_mtime_ns == catalog_mtime
+    assert rss.stat().st_mtime_ns == rss_mtime
 
 
 def test_cli_check_fails_before_update(repo_root: Path) -> None:
@@ -155,7 +191,7 @@ def test_cli_update_enrich_with_mocked_pages(repo_root: Path) -> None:
 
 @respx.mock
 def test_cli_update_validate_links(repo_root: Path) -> None:
-    """--validate-links probes each essay URL via HEAD."""
+    """Default-on / explicit --validate-links probes each essay URL via HEAD."""
     _mock_index()
     _mock_link_probes(status=200)
     result = runner.invoke(
@@ -179,13 +215,39 @@ def test_cli_update_validate_links(repo_root: Path) -> None:
     assert len(head_calls) == 3
 
 
+@respx.mock
+def test_cli_update_probe_failure_still_publishes(repo_root: Path) -> None:
+    """Failed live probes warn but still publish all essays (exit 0)."""
+    _mock_index()
+    _mock_link_probes(status=404)
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--validate-links",
+            "--min-items",
+            "3",
+            "--retries",
+            "0",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert (repo_root / "feeds" / "rss.xml").is_file()
+    feed_json = (repo_root / "feeds" / "feed.json").read_text(encoding="utf-8")
+    assert "essay-0.html" in feed_json
+
+
 def test_cli_update_oserror_exits_1(
     repo_root: Path,
     sample_html_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "paul_graham_essay_feeds.cli.publish_feed_bundle",
+        "paul_graham_essay_feeds.pipeline._publish_catalog_and_feeds",
         MagicMock(side_effect=OSError("disk full")),
     )
     result = runner.invoke(
@@ -205,29 +267,34 @@ def test_cli_update_oserror_exits_1(
 
 def test_cli_check_oserror_exits_1(
     repo_root: Path,
+    sample_html_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    feeds = repo_root / "feeds"
-    feeds.mkdir()
-    (feeds / "rss.xml").write_text("<rss><item/></rss>", encoding="utf-8")
-    (feeds / "atom.xml").write_text("<feed><entry/></feed>", encoding="utf-8")
-    (feeds / "feed.json").write_text('{"version":"x","items":[]}', encoding="utf-8")
+    # Seed feeds/ so check reaches feed I/O (not missing-feeds).
+    seeded = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--source-file",
+            str(sample_html_path),
+        ],
+    )
+    assert seeded.exit_code == 0, seeded.output
 
-    real_read_text = Path.read_text
+    real_read_bytes = Path.read_bytes
 
-    def flaky_read(
-        self: Path,
-        encoding: str | None = None,
-        errors: str | None = None,
-        newline: str | None = None,
-    ) -> str:
+    def flaky_read_bytes(self: Path) -> bytes:
         if self.name == "rss.xml":
             raise OSError("permission denied")
-        return real_read_text(self, encoding=encoding, errors=errors, newline=newline)
+        return real_read_bytes(self)
 
-    monkeypatch.setattr(Path, "read_text", flaky_read)
+    monkeypatch.setattr(Path, "read_bytes", flaky_read_bytes)
     result = runner.invoke(
         app,
-        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
+        ["check", "--repo-root", str(repo_root), "--quiet"],
     )
     assert result.exit_code == 1

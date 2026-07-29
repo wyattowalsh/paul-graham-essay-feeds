@@ -1,8 +1,12 @@
-"""Unit tests for decoding.decode_html_document."""
+"""Unit tests for http decoding (decode_html_document)."""
 
 from __future__ import annotations
 
-from paul_graham_essay_feeds.decoding import EncodingSource, decode_html, decode_html_document
+from pathlib import Path
+
+from paul_graham_essay_feeds.http import EncodingSource, decode_html, decode_html_document
+
+UPSTREAM = Path(__file__).resolve().parents[1] / "fixtures" / "upstream"
 
 
 def test_utf8_strict() -> None:
@@ -17,6 +21,23 @@ def test_bom_utf8() -> None:
     assert doc.text == "hello"
     assert doc.source is EncodingSource.BOM
     assert doc.had_bom is True
+
+
+def test_fixture_encoding_utf8_bom() -> None:
+    raw = (UPSTREAM / "encoding-utf8-bom.html").read_bytes()
+    assert raw.startswith(b"\xef\xbb\xbf")
+    doc = decode_html_document(raw)
+    assert doc.had_bom is True
+    assert doc.source is EncodingSource.BOM
+    assert "\ufeff" not in doc.text
+
+
+def test_fixture_encoding_windows_1252() -> None:
+    raw = (UPSTREAM / "encoding-windows-1252.bin").read_bytes()
+    doc = decode_html_document(raw)
+    assert doc.encoding == "windows-1252"
+    assert doc.source is EncodingSource.META
+    assert "\u201c" in doc.text
 
 
 def test_transport_charset_windows_1252() -> None:
