@@ -36,8 +36,10 @@ def _settings(tmp_path: Path, **kwargs: object) -> Settings:
     return Settings.model_validate(data)
 
 
-def _stable_enrich(essays: list[Essay], **_: object) -> list[Essay]:
-    return [
+def _stable_enrich(essays: list[Essay], **kwargs: object) -> list[Essay]:
+    from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
+    out = [
         essay.model_copy(
             update={
                 "summary": f"Summary for {essay.title}",
@@ -46,6 +48,13 @@ def _stable_enrich(essays: list[Essay], **_: object) -> list[Essay]:
         )
         for essay in essays
     ]
+    page_evidence_out = kwargs.get("page_evidence_out")
+    if page_evidence_out is not None:
+        for essay in out:
+            page_evidence_out[essay.stable_id] = PageEnrichEvidence(  # type: ignore[index]
+                ok=True, status_code=200
+            )
+    return out
 
 
 def test_c01_catalog_only_refresh_reports_state_changed(

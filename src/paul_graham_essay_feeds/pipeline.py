@@ -23,6 +23,7 @@ from paul_graham_essay_feeds.catalog import (
     RefreshPlan,
     bootstrap_catalog_from_feeds,
     default_catalog_path,
+    failure_backoff_delta,
     load_catalog,
     plan_refresh,
     reconcile_discovery,
@@ -153,9 +154,9 @@ def _apply_enrichment(
 ) -> Catalog:
     """Merge enrichment fields into catalog entries (preserve prior-good).
 
-    HTTP 304 retains prior summaries (no empty-body replace). ETag /
-    Last-Modified land on ``page`` ResourceState from 200 evidence; they only
-    hit durable catalog storage when material publish saves the catalog.
+    Successful validation (HTTP 304 or accepted 200) advances success clocks.
+    Soft-fail / transport / parse failures advance attempt clocks and backoff
+    only — they never mint a success TTL.
     """
     by_id = {e.stable_id: e for e in enriched}
     evidence_by_id = page_evidence or {}
@@ -165,14 +166,41 @@ def _apply_enrichment(
         if entry is None:
             continue
         ev = evidence_by_id.get(stable_id)
-        if ev is not None and ev.not_modified:
-            # 304: retain prior-good / summary; update check clock only.
+
+        # Failure path: no evidence, or explicit ok=False.
+        if ev is None or not ev.ok:
+            fail_count = int(entry.page.failure_count) + 1
+            page = entry.page.model_copy(
+                update={
+                    "last_attempted_at": now,
+                    "last_response_at": now,
+                    "failure_count": fail_count,
+                    "last_error_kind": (ev.error_kind if ev is not None else "missing_evidence"),
+                    "last_error_message": (
+                        ev.error_message if ev is not None else "no enrich evidence"
+                    ),
+                    "next_retry_at": now + failure_backoff_delta(failure_count=fail_count),
+                    "status_code": ev.status_code if ev is not None else entry.page.status_code,
+                }
+            )
+            next_entries[stable_id] = entry.model_copy(update={"page": page})
+            continue
+
+        if ev.not_modified:
+            # 304: retain prior-good / summary; successful validation clocks only.
             page = ResourceState(
                 etag=ev.etag or entry.page.etag,
                 last_modified=ev.last_modified or entry.page.last_modified,
                 raw_sha256=entry.page.raw_sha256,
                 decoded_sha256=entry.page.decoded_sha256,
                 last_checked_at=now,
+                last_attempted_at=now,
+                last_response_at=now,
+                last_success_at=now,
+                failure_count=0,
+                last_error_kind=None,
+                last_error_message=None,
+                next_retry_at=None,
                 status_code=304,
                 selected_encoding=entry.page.selected_encoding,
             )
@@ -201,21 +229,23 @@ def _apply_enrichment(
             or (essay.published_hint or None) != (entry.published_hint or None)
             or essay.published_at != entry.published_at
         )
-        # Persist validators on 200 evidence; otherwise keep prior page validators.
-        if ev is not None and ev.status_code == 200:
-            page_etag = ev.etag
-            page_last_modified = ev.last_modified
-            page_status = 200
-        else:
-            page_etag = entry.page.etag
-            page_last_modified = entry.page.last_modified
-            page_status = 200 if essay.content_hash else entry.page.status_code
+        # Successful 200 body path.
+        page_etag = ev.etag if ev.status_code == 200 else entry.page.etag
+        page_last_modified = ev.last_modified if ev.status_code == 200 else entry.page.last_modified
+        page_status = ev.status_code if ev.status_code is not None else 200
         page = ResourceState(
             etag=page_etag,
             last_modified=page_last_modified,
             raw_sha256=essay.content_hash or entry.page.raw_sha256,
             decoded_sha256=essay.content_hash or entry.page.decoded_sha256,
             last_checked_at=now,
+            last_attempted_at=now,
+            last_response_at=now,
+            last_success_at=now,
+            failure_count=0,
+            last_error_kind=None,
+            last_error_message=None,
+            next_retry_at=None,
             status_code=page_status,
         )
         next_entries[stable_id] = entry.model_copy(

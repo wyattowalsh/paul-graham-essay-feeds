@@ -245,7 +245,11 @@ class _StrictModel(BaseModel):
 
 
 class ResourceState(_StrictModel):
-    """HTTP resource cache evidence for index or essay pages."""
+    """HTTP resource cache evidence for index or essay pages.
+
+    Schema v2 separates attempt/response clocks from successful validation so
+    failed refreshes never mint a success TTL.
+    """
 
     etag: str | None = Field(default=None, description="Last observed ETag validator.")
     last_modified: str | None = Field(
@@ -256,14 +260,48 @@ class ResourceState(_StrictModel):
         default=None, description="SHA-256 of decoded text when HTML was decoded."
     )
     last_checked_at: datetime | None = Field(
-        default=None, description="UTC time of the last request/check attempt."
+        default=None,
+        description=(
+            "Legacy alias for last successful validation (UTC). "
+            "Prefer last_success_at; kept for schema-v1 compatibility."
+        ),
+    )
+    last_attempted_at: datetime | None = Field(
+        default=None, description="UTC time of the last request attempt (success or failure)."
+    )
+    last_response_at: datetime | None = Field(
+        default=None, description="UTC time of the last HTTP response or transport outcome."
+    )
+    last_success_at: datetime | None = Field(
+        default=None,
+        description="UTC time of the last successful validation (304 or accepted 200).",
+    )
+    failure_count: int = Field(
+        default=0,
+        ge=0,
+        description="Consecutive failure count since last successful validation.",
+    )
+    last_error_kind: str | None = Field(
+        default=None, description="Typed last error kind (timeout, http_5xx, parse, …)."
+    )
+    last_error_message: str | None = Field(
+        default=None, description="Short last error message for diagnostics."
+    )
+    next_retry_at: datetime | None = Field(
+        default=None, description="UTC earliest time the resource is due after failure backoff."
     )
     status_code: int | None = Field(default=None, description="Last HTTP status when known.")
     selected_encoding: str | None = Field(
         default=None, description="Encoding chosen by the HTML decoder when applicable."
     )
 
-    @field_validator("last_checked_at")
+    @field_validator(
+        "last_checked_at",
+        "last_attempted_at",
+        "last_response_at",
+        "last_success_at",
+        "next_retry_at",
+    )
     @classmethod
     def _utc(cls, value: datetime | None) -> datetime | None:
         return None if value is None else require_aware_utc(value)
@@ -319,7 +357,9 @@ class CatalogEntry(_StrictModel):
 class Catalog(_StrictModel):
     """Schema-versioned durable catalog (SSOT for generation inputs)."""
 
-    schema_version: Literal[1] = Field(description="Catalog schema version (currently 1).")
+    schema_version: Literal[1, 2] = Field(
+        description="Catalog schema version (2 = resource lifecycle clocks)."
+    )
     material_config_fingerprint: str = Field(
         min_length=1, description="Fingerprint of material generator settings."
     )

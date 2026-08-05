@@ -31,12 +31,13 @@ from paul_graham_essay_feeds.models import (
 DEFAULT_CATALOG_REL: Path = Path("catalog.json")
 """Default catalog path relative to a repository root (repo-root SSOT)."""
 
-CATALOG_SCHEMA_VERSION: Final[Literal[1]] = 1
+CATALOG_SCHEMA_VERSION: Final[Literal[2]] = 2
 """Current durable catalog schema version written by this module."""
 
 _FILE_MODE: int = 0o644
-_DEFAULT_SCHEMA_VERSION: Final[Literal[1]] = 1
+_DEFAULT_SCHEMA_VERSION: Final[Literal[2]] = 2
 _DEFAULT_FINGERPRINT = "default"
+_MAX_FAILURE_BACKOFF_DAYS: Final[int] = 7
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +94,7 @@ def empty_catalog(
     material_config_fingerprint: str,
     versions: dict[str, str] | None = None,
 ) -> Catalog:
-    """Return a new empty schema-v1 catalog with the given fingerprint."""
+    """Return a new empty schema-v2 catalog with the given fingerprint."""
     return Catalog(
         schema_version=CATALOG_SCHEMA_VERSION,
         material_config_fingerprint=material_config_fingerprint,
@@ -181,29 +182,80 @@ def catalog_to_json(catalog: Catalog) -> str:
     return json.dumps(payload, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
 
 
+def _migrate_resource_state_v1_to_v2(raw: dict[str, Any]) -> dict[str, Any]:
+    """Map schema-v1 ResourceState clocks onto v2 lifecycle fields."""
+    page = dict(raw)
+    last_checked = page.get("last_checked_at")
+    status = page.get("status_code")
+    # Treat prior last_checked_at as success only when status looks successful
+    # (200/304) or status is unknown (legacy rows often omitted status).
+    success_like = status in (None, 200, 304)
+    if last_checked is not None and success_like:
+        page.setdefault("last_success_at", last_checked)
+        page.setdefault("last_attempted_at", last_checked)
+        page.setdefault("last_response_at", last_checked)
+    elif last_checked is not None:
+        page.setdefault("last_attempted_at", last_checked)
+        page.setdefault("last_response_at", last_checked)
+    page.setdefault("failure_count", 0)
+    return page
+
+
 def migrate_catalog(data: dict[str, Any]) -> Catalog:
     """Validate and migrate raw catalog data to the current schema.
 
-    Currently only schema version 1 is accepted. Missing ``schema_version`` is
-    treated as invalid (no silent upgrade of unknown layouts). Unknown future
-    versions fail closed. Legacy per-entry ``lifecycle`` keys are stripped.
+    Accepts schema version 1 (upgrades to 2) and version 2. Missing
+    ``schema_version`` is invalid. Unknown future versions fail closed.
+    Legacy per-entry ``lifecycle`` keys are stripped.
     """
     if not isinstance(data, dict):
         raise ConfigurationError("Catalog root must be an object")
     if "schema_version" not in data:
         raise ConfigurationError("Catalog missing schema_version")
     version = data.get("schema_version")
-    if version != CATALOG_SCHEMA_VERSION:
-        raise ConfigurationError(
-            f"Unsupported catalog schema_version={version!r}; expected {CATALOG_SCHEMA_VERSION}"
-        )
-    entries = data.get("entries")
+    if version not in (1, 2):
+        raise ConfigurationError(f"Unsupported catalog schema_version={version!r}; expected 1 or 2")
+
+    payload = dict(data)
+    history = list(payload.get("migration_history") or [])
+    if not isinstance(history, list):
+        history = []
+
+    entries = payload.get("entries")
     if isinstance(entries, dict):
         for raw_entry in entries.values():
             if isinstance(raw_entry, dict):
                 raw_entry.pop("lifecycle", None)
+
+    if version == 1:
+        # Upgrade resource clocks: index + each entry.page
+        index = payload.get("index")
+        if isinstance(index, dict):
+            payload["index"] = _migrate_resource_state_v1_to_v2(index)
+        if isinstance(entries, dict):
+            migrated_entries: dict[str, Any] = {}
+            for sid, raw_entry in entries.items():
+                if not isinstance(raw_entry, dict):
+                    migrated_entries[sid] = raw_entry
+                    continue
+                entry = dict(raw_entry)
+                page = entry.get("page")
+                if isinstance(page, dict):
+                    entry["page"] = _migrate_resource_state_v1_to_v2(page)
+                migrated_entries[sid] = entry
+            payload["entries"] = migrated_entries
+        payload["schema_version"] = CATALOG_SCHEMA_VERSION
+        history.append(
+            {
+                "from": 1,
+                "to": 2,
+                "name": "resource_lifecycle_clocks",
+            }
+        )
+        payload["migration_history"] = history
+
     try:
-        return Catalog.model_validate(data)
+        return Catalog.model_validate(payload)
     except ValidationError as exc:
         raise ConfigurationError(f"Invalid catalog: {exc}") from exc
 
@@ -426,7 +478,7 @@ def plan_refresh(
     canaries = canary_ids if canary_ids is not None else frozenset()
 
     fetch_index = force or _is_stale(
-        catalog.index.last_checked_at,
+        _success_clock(catalog.index),
         now=current,
         stale_after_days=stale_after_days,
     )
@@ -474,12 +526,12 @@ def _entry_reasons(
     # unchecked — that reintroduced full rewrites every pass (F-001 adjacent).
     reasons: list[RefreshReason] = []
     if enrich and _is_stale(
-        entry.page.last_checked_at,
+        _success_clock(entry.page),
         now=now,
         stale_after_days=stale_after_days,
     ):
         reasons.append(RefreshReason.STALE)
-    if enrich and _missing_summary(entry.summary):
+    if enrich and _missing_summary(entry.summary) and _missing_summary_due(entry.page, now=now):
         reasons.append(RefreshReason.MISSING_METADATA)
     if entry.stable_id in canaries:
         reasons.append(RefreshReason.CANARY)
@@ -492,15 +544,43 @@ def _missing_summary(summary: str | None) -> bool:
     return summary is None or not summary.strip()
 
 
+def _success_clock(page: object) -> datetime | None:
+    """Prefer last_success_at; fall back to legacy last_checked_at."""
+    last_success = getattr(page, "last_success_at", None)
+    if last_success is not None:
+        return last_success  # type: ignore[no-any-return]
+    return getattr(page, "last_checked_at", None)  # type: ignore[no-any-return]
+
+
+def _missing_summary_due(page: object, *, now: datetime) -> bool:
+    """Whether a missing summary should re-queue (respect failure backoff)."""
+    next_retry = getattr(page, "next_retry_at", None)
+    if next_retry is not None:
+        return now >= next_retry  # type: ignore[no-any-return]
+    return True
+
+
 def _is_stale(
-    last_checked_at: datetime | None,
+    last_success_at: datetime | None,
     *,
     now: datetime,
     stale_after_days: int,
 ) -> bool:
-    if last_checked_at is None:
+    """True when never successfully validated, future-dated, or past TTL."""
+    if last_success_at is None:
         return True
-    return (now - last_checked_at) >= timedelta(days=stale_after_days)
+    # Future clocks are treated as stale (fail closed) so wall-clock catch-up
+    # cannot hide resources from refresh forever.
+    if last_success_at > now:
+        return True
+    return (now - last_success_at) >= timedelta(days=stale_after_days)
+
+
+def failure_backoff_delta(*, failure_count: int) -> timedelta:
+    """Bounded exponential backoff after consecutive failures (hours → days)."""
+    # 1h, 2h, 4h, … capped at _MAX_FAILURE_BACKOFF_DAYS.
+    hours = min(24 * _MAX_FAILURE_BACKOFF_DAYS, 2 ** max(0, failure_count - 1))
+    return timedelta(hours=hours)
 
 
 def _apply_page_fetch_budget(

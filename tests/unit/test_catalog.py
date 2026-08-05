@@ -127,9 +127,9 @@ def test_default_catalog_path() -> None:
     assert Path("catalog.json") == DEFAULT_CATALOG_REL
 
 
-def test_empty_catalog_schema_v1() -> None:
+def test_empty_catalog_schema_current() -> None:
     cat = empty_catalog(material_config_fingerprint="abc")
-    assert cat.schema_version == CATALOG_SCHEMA_VERSION == 1
+    assert cat.schema_version == CATALOG_SCHEMA_VERSION == 2
     assert cat.material_config_fingerprint == "abc"
     assert cat.versions == {}
     assert cat.entries == {}
@@ -167,8 +167,12 @@ def test_save_load_roundtrip(tmp_path: Path) -> None:
     save_catalog(path, original)
     loaded = load_catalog(path)
     assert loaded is not None
-    assert loaded == original
+    # Load migrates schema v1 → v2 (resource lifecycle clocks).
+    assert loaded.schema_version == 2
     assert loaded.entries[entry.stable_id].title == "A"
+    assert loaded.material_config_fingerprint == "fp-round"
+    assert loaded.migration_history
+    assert loaded.migration_history[-1]["to"] == 2
 
 
 def test_deterministic_json_sorted_keys_and_newline(tmp_path: Path) -> None:
@@ -232,7 +236,10 @@ def test_migrate_valid_current_schema() -> None:
             "material_config_fingerprint": "fp",
         }
     )
-    assert cat.schema_version == 1
+    assert cat.schema_version == 2
+    assert cat.migration_history
+    assert cat.migration_history[-1]["from"] == 1
+    assert cat.migration_history[-1]["to"] == 2
     assert cat.material_config_fingerprint == "fp"
 
 
@@ -360,7 +367,7 @@ def test_bootstrap_from_synthetic_feed_json(tmp_path: Path) -> None:
 
     catalog = bootstrap_catalog_from_feeds(tmp_path, now=now)
 
-    assert catalog.schema_version == 1
+    assert catalog.schema_version == 2
     assert catalog.material_config_fingerprint == "bootstrap"
     assert catalog.entry_order == [
         "https://paulgraham.com/a.html",
@@ -390,7 +397,7 @@ def test_missing_feeds_returns_empty_catalog(tmp_path: Path) -> None:
     now = datetime(2026, 7, 25, 12, 0, 0, tzinfo=UTC)
     catalog = bootstrap_catalog_from_feeds(tmp_path, now=now)
 
-    assert catalog.schema_version == 1
+    assert catalog.schema_version == 2
     assert catalog.material_config_fingerprint == "bootstrap"
     assert catalog.entry_order == []
     assert catalog.entries == {}
@@ -528,7 +535,7 @@ def test_bootstrap_from_empty_prior() -> None:
     essays = [_item(slug="a", position=1), _item(slug="b", position=2)]
     catalog, changes = reconcile_discovery(None, essays, now=T1)
 
-    assert catalog.schema_version == 1
+    assert catalog.schema_version == 2
     assert catalog.material_config_fingerprint == "default"
     assert catalog.versions == {}
     assert catalog.entry_order == [
@@ -590,6 +597,7 @@ def test_unchanged_existing_updates_last_seen_only() -> None:
     assert entry.published_at == T0
     assert entry.page.etag == '"e1"'
     assert entry.page.raw_sha256 == "a" * 64
+    # Reconcile preserves prior schema_version until load/migrate.
     assert catalog.schema_version == 1
     assert catalog.material_config_fingerprint == "cfg-abc"
     assert catalog.versions == {"generator": "1.0"}

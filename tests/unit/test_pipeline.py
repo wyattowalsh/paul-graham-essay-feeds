@@ -43,9 +43,11 @@ def _settings(tmp_path: Path, **kwargs: object) -> Settings:
     return Settings.model_validate(data)
 
 
-def _stable_enrich(essays: list[Essay], **_: object) -> list[Essay]:
+def _stable_enrich(essays: list[Essay], **kwargs: object) -> list[Essay]:
     """Deterministic enrich: identical material across calls for the same essays."""
-    return [
+    from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
+    out = [
         essay.model_copy(
             update={
                 "summary": f"Stable summary for {essay.title}",
@@ -55,6 +57,13 @@ def _stable_enrich(essays: list[Essay], **_: object) -> list[Essay]:
         )
         for essay in essays
     ]
+    page_evidence_out = kwargs.get("page_evidence_out")
+    if page_evidence_out is not None:
+        for essay in out:
+            page_evidence_out[essay.stable_id] = PageEnrichEvidence(  # type: ignore[index]
+                ok=True, status_code=200
+            )
+    return out
 
 
 def test_pipeline_publish_creates_catalog_and_feeds(tmp_path: Path) -> None:
@@ -360,10 +369,12 @@ def test_post_enrich_material_change_still_publishes(
     html = synthetic_index_html()
     call_n = {"n": 0}
 
-    def evolving_enrich(essays: list[Essay], **_: object) -> list[Essay]:
+    def evolving_enrich(essays: list[Essay], **kwargs: object) -> list[Essay]:
+        from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
         call_n["n"] += 1
         suffix = "v1" if call_n["n"] == 1 else "v2"
-        return [
+        out = [
             essay.model_copy(
                 update={
                     "summary": f"Summary {suffix} for {essay.title}",
@@ -373,6 +384,13 @@ def test_post_enrich_material_change_still_publishes(
             )
             for essay in essays
         ]
+        page_evidence_out = kwargs.get("page_evidence_out")
+        if page_evidence_out is not None:
+            for essay in out:
+                page_evidence_out[essay.stable_id] = PageEnrichEvidence(  # type: ignore[index]
+                    ok=True, status_code=200
+                )
+        return out
 
     monkeypatch.setattr(
         "paul_graham_essay_feeds.pipeline.enrich_essays",
@@ -591,11 +609,13 @@ def test_prior_good_retained_when_enrich_returns_fffd(
     html = synthetic_index_html()
     call_n = {"n": 0}
 
-    def enrich_then_corrupt(essays: list[Essay], **_: object) -> list[Essay]:
+    def enrich_then_corrupt(essays: list[Essay], **kwargs: object) -> list[Essay]:
+        from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
         call_n["n"] += 1
         if call_n["n"] == 1:
-            return _stable_enrich(essays)
-        return [
+            return _stable_enrich(essays, **kwargs)
+        out = [
             essay.model_copy(
                 update={
                     "summary": "Broken \ufffd summary that must not replace prior-good.",
@@ -605,6 +625,13 @@ def test_prior_good_retained_when_enrich_returns_fffd(
             )
             for essay in essays
         ]
+        page_evidence_out = kwargs.get("page_evidence_out")
+        if page_evidence_out is not None:
+            for essay in out:
+                page_evidence_out[essay.stable_id] = PageEnrichEvidence(  # type: ignore[index]
+                    ok=True, status_code=200
+                )
+        return out
 
     monkeypatch.setattr(
         "paul_graham_essay_feeds.pipeline.enrich_essays",

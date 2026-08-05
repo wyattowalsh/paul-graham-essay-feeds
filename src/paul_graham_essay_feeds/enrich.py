@@ -492,12 +492,15 @@ def extract_page_metadata(html: str | bytes, *, page_url: str) -> PageMetadata:
 
 @dataclass(frozen=True, slots=True)
 class PageEnrichEvidence:
-    """Per-page enrich transport evidence (validators + 304 flag)."""
+    """Per-page enrich transport evidence (validators + outcome)."""
 
     not_modified: bool = False
     etag: str | None = None
     last_modified: str | None = None
     status_code: int | None = None
+    ok: bool = True
+    error_kind: str | None = None
+    error_message: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -577,8 +580,12 @@ def _enrich_one(
     attempts: int,
     etag: str | None = None,
     last_modified: str | None = None,
-) -> tuple[Essay, PageEnrichEvidence | None]:
-    """Scrape one page; soft-fail to the original essay on network/parse errors."""
+) -> tuple[Essay, PageEnrichEvidence]:
+    """Scrape one page; soft-fail to the original essay on network/parse errors.
+
+    Always returns evidence so callers can distinguish success from failure
+    without advancing a success TTL on soft-fail.
+    """
 
     def _load() -> _PageGet:
         return _fetch_page(
@@ -593,20 +600,36 @@ def _enrich_one(
         fetched = run_with_retry(_load, attempts=attempts, what=f"enrich {essay.url}")
     except FeedError as exc:
         logger.warning("Enrichment failed for {}: {}", essay.url, exc)
-        return essay, None
+        kind = type(exc).__name__
+        return essay, PageEnrichEvidence(
+            ok=False,
+            error_kind=kind,
+            error_message=str(exc)[:500],
+        )
 
-    evidence = PageEnrichEvidence(
-        not_modified=fetched.not_modified,
-        etag=fetched.etag,
-        last_modified=fetched.last_modified,
-        status_code=fetched.status_code,
-    )
     if fetched.not_modified:
-        return essay, evidence
+        return essay, PageEnrichEvidence(
+            not_modified=True,
+            etag=fetched.etag,
+            last_modified=fetched.last_modified,
+            status_code=304,
+            ok=True,
+        )
 
     assert fetched.html is not None
-    page_hash = content_sha256(fetched.html)
-    meta = parse_page_metadata(fetched.html, page_url=essay.url)
+    try:
+        page_hash = content_sha256(fetched.html)
+        meta = parse_page_metadata(fetched.html, page_url=essay.url)
+    except Exception as exc:
+        logger.warning("Enrichment parse failed for {}: {}", essay.url, exc)
+        return essay, PageEnrichEvidence(
+            etag=fetched.etag,
+            last_modified=fetched.last_modified,
+            status_code=fetched.status_code,
+            ok=False,
+            error_kind="parse",
+            error_message=str(exc)[:500],
+        )
 
     updated = essay.model_copy(
         update={
@@ -621,7 +644,13 @@ def _enrich_one(
             "content_hash": page_hash,
         }
     )
-    return updated, evidence
+    return updated, PageEnrichEvidence(
+        not_modified=False,
+        etag=fetched.etag,
+        last_modified=fetched.last_modified,
+        status_code=fetched.status_code,
+        ok=True,
+    )
 
 
 def enrich_essays(
@@ -674,9 +703,15 @@ def enrich_essays(
             except Exception as exc:
                 logger.warning("Enrich worker failed for position {}: {}", pos, exc)
                 out[pos] = prior
+                if page_evidence_out is not None:
+                    page_evidence_out[prior.stable_id] = PageEnrichEvidence(
+                        ok=False,
+                        error_kind=type(exc).__name__,
+                        error_message=str(exc)[:500],
+                    )
                 continue
             out[pos] = essay
-            if page_evidence_out is not None and evidence is not None:
+            if page_evidence_out is not None:
                 page_evidence_out[essay.stable_id] = evidence
 
     enriched = [out[e.position] for e in essays]
