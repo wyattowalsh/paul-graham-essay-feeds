@@ -43,8 +43,12 @@ jobs:
           PG_ESSAY_FEEDS_PUBLIC_BASE_URL: "https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds"
         run: uv run pg-essay-feeds update --quiet
 
-      - name: Upload workspace when updated
-        if: steps.update.outputs.action == 'updated'
+      - name: Upload workspace when catalog or feeds changed
+        # state_changed: catalog clocks/state only; updated: material feed rewrite.
+        # Both must be published so freshness advances survive the schedule.
+        if: >-
+          steps.update.outputs.action == 'updated' ||
+          steps.update.outputs.action == 'state_changed'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: feed-update-workspace
@@ -55,7 +59,9 @@ jobs:
 
   publish:
     needs: update
-    if: needs.update.outputs.action == 'updated'
+    if: >-
+      needs.update.outputs.action == 'updated' ||
+      needs.update.outputs.action == 'state_changed'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

@@ -12,6 +12,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 
 from loguru import logger
@@ -57,6 +58,21 @@ from paul_graham_essay_feeds.verify import assert_verified
 _HTTP_CACHE_REL: Path = Path(".cache") / "http-cache.json"
 
 
+class PipelineAction(StrEnum):
+    """Durable outcome of one pipeline pass (machine side-channel values).
+
+    Wire strings for ``--result-file`` / ``$GITHUB_OUTPUT``:
+
+    * ``unchanged`` — no tracked durable writes (catalog/feeds untouched)
+    * ``state_changed`` — catalog state written; all six feed bytes identical
+    * ``updated`` — material feed projections (and catalog) written
+    """
+
+    NO_CHANGE = "unchanged"
+    STATE_CHANGED = "state_changed"
+    MATERIAL_CHANGED = "updated"
+
+
 @dataclass(frozen=True, slots=True)
 class PipelineResult:
     """Outcome of one catalog-pipeline update pass."""
@@ -67,7 +83,8 @@ class PipelineResult:
     index_hash: str
     essay_count: int
     skipped: bool
-    action: str  # "updated" | "unchanged"
+    action: str  # PipelineAction value: unchanged | state_changed | updated
+    changed_paths: tuple[str, ...] = ()
 
 
 def _read_source_file(path: Path, *, max_bytes: int) -> str:
@@ -545,7 +562,8 @@ def run_catalog_pipeline(
             index_hash=index_hash,
             essay_count=len(essays),
             skipped=True,
-            action="unchanged",
+            action=PipelineAction.NO_CHANGE.value,
+            changed_paths=(),
         )
 
     due_ids = {d.stable_id for d in plan.decisions if d.fetch_page}
@@ -689,7 +707,8 @@ def run_catalog_pipeline(
             index_hash=index_hash,
             essay_count=len(essays),
             skipped=True,
-            action="unchanged",
+            action=PipelineAction.STATE_CHANGED.value,
+            changed_paths=("catalog.json",),
         )
 
     published = _publish_catalog_and_feeds(
@@ -712,5 +731,14 @@ def run_catalog_pipeline(
         index_hash=index_hash,
         essay_count=len(essays),
         skipped=False,
-        action="updated",
+        action=PipelineAction.MATERIAL_CHANGED.value,
+        changed_paths=(
+            "catalog.json",
+            "feeds/rss.xml",
+            "feeds/atom.xml",
+            "feeds/feed.json",
+            "feeds/rss.simple.xml",
+            "feeds/atom.simple.xml",
+            "feeds/feed.simple.json",
+        ),
     )

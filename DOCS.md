@@ -209,7 +209,7 @@ the same way as dual bools. If both quiet and verbose end up true, quiet wins.
 | `--validate-links` / `--no-validate-links` | on (env) | Live HEAD/GET; report-only; never drop essays |
 | `--public-base-url URL` | env / unset | Public base for self links |
 | `--from-feeds` | off | Bootstrap durable catalog from existing `feeds/` before update |
-| `--result-file PATH` | — | Append `action=unchanged\|updated`; also writes `$GITHUB_OUTPUT` when set (quiet success side-channel) |
+| `--result-file PATH` | — | Append `action=unchanged\|state_changed\|updated`; also writes `$GITHUB_OUTPUT` when set (quiet success side-channel) |
 | `-q` / `--quiet` | off (env) | Quiet success → zero stdout **and** stderr; errors only; result-file / `$GITHUB_OUTPUT` still write |
 | `-v` / `--verbose` | off (env) | Debug logs |
 
@@ -421,9 +421,21 @@ suite entrypoints (CI / `just test` / `just ci-local`), not on partial path sele
 
 > [!NOTE]
 > GitHub Actions auto-sets `$GITHUB_OUTPUT` for step outputs. `update --quiet` still
-> appends `action=unchanged|updated` there (and to `--result-file` when passed).
+> appends `action=unchanged|state_changed|updated` there (and to `--result-file`
+> when passed). The scheduled workflow publishes when `action` is `updated`
+> **or** `state_changed` so catalog-only clock advances are not dropped.
 > Settings default `STALE_AFTER_DAYS=30`; `update-feeds.yml` overrides to `90` so
 > daily runs do not mass re-enrich on day 31 when the index is unchanged.
+
+### Pipeline action contract
+
+| `action` value | Meaning | Tracked durable writes | Workflow publish? |
+| :--- | :--- | :--- | :--- |
+| `unchanged` | No material or catalog state write | none | no |
+| `state_changed` | Catalog state/clocks written; all six feed bytes identical | `catalog.json` | **yes** |
+| `updated` | Material feed projections rewritten (and catalog) | `catalog.json` + `feeds/*` | **yes** |
+
+`PipelineResult.changed_paths` lists relative paths written for machine consumers.
 
 ### just recipes
 
@@ -541,7 +553,8 @@ requires `content_text` without matching regenerated artifacts in the same chang
 | Env enrich/validate ignored | flag always passed historically | Pass flags only when overriding; check `PG_ESSAY_FEEDS_*` |
 | Turbify-looking double URL | relative join bug | Should be impossible post-canonicalize; open an issue with HTML snippet |
 | Missing / empty durable catalog | bootstrap needed from existing feeds | `update --from-feeds` once, then normal `update` |
-| Empty action / `UNCHANGED` | refresh planner not due (no material work) | Expected; use `--force` / `FORCE=true` to bypass planner no-op |
+| Empty action / `UNCHANGED` | refresh planner not due (no durable write) | Expected; use `--force` / `FORCE=true` to bypass planner no-op |
+| `STATE` / `state_changed` | catalog clocks/state written; feeds byte-identical | Expected after enrich 304/material-noop; workflow still publishes catalog |
 | Want mass re-enrich | planner skipped pages (not stale) | `update --force` (bypasses planner no-op; not an index-hash myth) |
 | Quiet run but saw output | logging/side-channel, not console success | Errors still print; `--result-file` / `$GITHUB_OUTPUT` write under `-q` |
 | `check` missing files | never ran `update` in that root | `update --repo-root …` first |
@@ -626,7 +639,8 @@ leaves prior catalog + feeds intact. No second feed tree, no generation tree,
 no `current.json`, no `site/`, no `feeds/validated/`.
 
 Material-noop after enrich may still `save_catalog` so page clocks advance even
-when feed bytes are unchanged.
+when feed bytes are unchanged. That path returns `action=state_changed` (not
+`unchanged`) so scheduled automation commits the catalog.
 
 ### AD-006 — CLI and Python
 

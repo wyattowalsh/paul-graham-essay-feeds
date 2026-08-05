@@ -265,7 +265,9 @@ def test_post_enrich_material_noop_persists_clocks_feeds_unchanged(
     rss_mtime = rss_path.stat().st_mtime_ns
 
     second = run_catalog_pipeline(settings, html=html, now=T_LATER)
-    assert second.action == "unchanged"
+    # Catalog clocks written; feed bytes identical → state_changed (not unchanged).
+    assert second.action == "state_changed"
+    assert second.changed_paths == ("catalog.json",)
     assert second.skipped is True
     assert enrich.call_count > first_calls
     second_calls = enrich.call_count
@@ -284,6 +286,7 @@ def test_post_enrich_material_noop_persists_clocks_feeds_unchanged(
     # Fresh clocks → multi-pass must not re-enrich.
     third = run_catalog_pipeline(settings, html=html, now=T_LATER)
     assert third.action == "unchanged"
+    assert third.changed_paths == ()
     assert third.skipped is True
     assert enrich.call_count == second_calls
 

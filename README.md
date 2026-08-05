@@ -129,7 +129,7 @@ pg-essay-feeds update --force
 
 # quiet success → zero bytes on stdout/stderr; machine sinks still get action=
 pg-essay-feeds update -q --result-file /tmp/pg-action.txt
-# ($GITHUB_OUTPUT also receives action=unchanged|updated when set)
+# ($GITHUB_OUTPUT also receives action=unchanged|state_changed|updated when set)
 
 # verify feeds (parity + content_text)
 pg-essay-feeds check

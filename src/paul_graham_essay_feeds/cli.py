@@ -77,7 +77,10 @@ def _assert_catalog_feed_id_parity(catalog: Catalog, root: Path) -> None:
 
 
 def _emit_update_action(action: str, *, result_file: Path | None) -> None:
-    """Append ``action=unchanged|updated`` to ``--result-file`` and/or ``$GITHUB_OUTPUT``."""
+    """Append ``action=unchanged|state_changed|updated`` for machine consumers.
+
+    Writes to ``--result-file`` and/or ``$GITHUB_OUTPUT`` when set.
+    """
     line = f"action={action}\n"
     if result_file is not None:
         result_file.parent.mkdir(parents=True, exist_ok=True)
@@ -231,7 +234,7 @@ def update_cmd(
         Path | None,
         typer.Option(
             "--result-file",
-            help="Append action=unchanged|updated for machine consumers",
+            help="Append action=unchanged|state_changed|updated for machine consumers",
         ),
     ] = None,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Errors only")] = False,
@@ -269,7 +272,11 @@ def update_cmd(
             return
         if action == "unchanged":
             console.print(
-                f"[yellow]UNCHANGED[/yellow] — skipped write ({count} essays; refresh not due)"
+                f"[yellow]UNCHANGED[/yellow] — no durable write ({count} essays; refresh not due)"
+            )
+        elif action == "state_changed":
+            console.print(
+                f"[cyan]STATE[/cyan] — catalog state written, feeds unchanged ({count} essays)"
             )
         else:
             console.print(
