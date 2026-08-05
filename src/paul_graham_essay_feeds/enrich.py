@@ -560,7 +560,9 @@ def _fetch_page(
             status_code=304,
         )
     if result.response is None:
-        raise FeedError(ev.error_message or f"Fetch failed for {url}")
+        # Transport failure must remain retryable (httpx.TransportError), not a
+        # permanent FeedError, until Tenacity exhausts the attempt budget.
+        raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
     result.response.raise_for_status()
     html = decode_html(result.body, transport_charset=ev.charset)
     return _PageGet(

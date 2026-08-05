@@ -26,6 +26,7 @@ UNPARSEABLE_JSON: Final = "UNPARSEABLE_JSON"
 COUNT_MISMATCH: Final = "COUNT_MISMATCH"
 BELOW_MIN_ITEMS: Final = "BELOW_MIN_ITEMS"
 DUPLICATE_ID: Final = "DUPLICATE_ID"
+EMPTY_ID: Final = "EMPTY_ID"
 EMPTY_TITLE: Final = "EMPTY_TITLE"
 EMPTY_URL: Final = "EMPTY_URL"
 EMPTY_SUMMARY: Final = "EMPTY_SUMMARY"
@@ -33,6 +34,8 @@ CONTENT_TEXT_MISMATCH: Final = "CONTENT_TEXT_MISMATCH"
 SUMMARY_LENGTH: Final = "SUMMARY_LENGTH"
 UNICODE_REPLACEMENT: Final = "UNICODE_REPLACEMENT"
 ID_ORDER_MISMATCH: Final = "ID_ORDER_MISMATCH"
+ARTIFACT_TOO_LARGE: Final = "ARTIFACT_TOO_LARGE"
+_MAX_ARTIFACT_BYTES: Final = 20 * 1024 * 1024
 
 _REPLACEMENT = "\ufffd"
 
@@ -235,6 +238,15 @@ def _check_item_fields(
 ) -> list[VerificationViolation]:
     out: list[VerificationViolation] = []
     for i, item in enumerate(items):
+        if not item.item_id.strip():
+            out.append(
+                VerificationViolation(
+                    code=EMPTY_ID,
+                    message=f"{format_label} items[{i}] has empty id",
+                    path=path,
+                    index=i,
+                )
+            )
         if not item.title.strip():
             out.append(
                 VerificationViolation(
@@ -344,11 +356,24 @@ def verify_feed_bytes(
 ) -> VerificationReport:
     """Deep-verify an in-memory RSS/Atom/JSON feed triple.
 
-    Checks parseability, count parity, min-items floor, duplicate ids, empty
-    title/url/summary, JSON ``content_text == summary``, summary length bounds,
-    U+FFFD integrity, and ordered id parity across formats.
+    Checks parseability, size caps, count parity, min-items floor, duplicate
+    ids, empty id/title/url/summary, JSON ``content_text == summary``, summary
+    length bounds, U+FFFD integrity, and ordered id parity across formats.
     """
     violations: list[VerificationViolation] = []
+    for label, blob, path in (
+        ("rss", rss, "feeds/rss.xml"),
+        ("atom", atom, "feeds/atom.xml"),
+        ("json", json_feed, "feeds/feed.json"),
+    ):
+        if len(blob) > _MAX_ARTIFACT_BYTES:
+            violations.append(
+                VerificationViolation(
+                    code=ARTIFACT_TOO_LARGE,
+                    message=(f"{label} artifact is {len(blob)} bytes (max {_MAX_ARTIFACT_BYTES})"),
+                    path=path,
+                )
+            )
 
     rss_result = _parse_rss_items(rss)
     atom_result = _parse_atom_items(atom)

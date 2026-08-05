@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from paul_graham_essay_feeds.models import MAX_BYTES, MIN_ITEMS, SOURCE_URL
@@ -107,8 +107,64 @@ class Settings(BaseSettings):
         default=True,
         description="Allow discovery fallback extraction when markers are sparse.",
     )
+    max_page_fetches: int | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Cap page enrich fetches per run (None = all due). Fair cursor persists "
+            "across runs via catalog.versions page_fetch_cursor."
+        ),
+    )
+    max_link_validations: int | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Cap dedicated live link probes per run (None = all non-enrich probes). "
+            "Independent of max_page_fetches."
+        ),
+    )
+    host_cooldown_seconds: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Minimum seconds between requests to the same host (0 = off).",
+    )
 
     @field_validator("repo_root", mode="before")
     @classmethod
     def _resolve_root(cls, value: Path | str) -> Path:
         return Path(value).expanduser().resolve()
+
+    @model_validator(mode="after")
+    def _validate_public_urls(self) -> Settings:
+        """Reject unsafe/malformed public_base_url and source_url at construct."""
+        from urllib.parse import urlsplit
+
+        from paul_graham_essay_feeds.models import ConfigurationError
+
+        for field_name, raw in (
+            ("source_url", self.source_url),
+            ("public_base_url", self.public_base_url),
+        ):
+            if raw is None:
+                continue
+            text = raw.strip()
+            if not text:
+                if field_name == "public_base_url":
+                    object.__setattr__(self, "public_base_url", None)
+                    continue
+                raise ConfigurationError(f"{field_name} must not be blank")
+            parts = urlsplit(text)
+            if parts.scheme not in {"https", "http"}:
+                raise ConfigurationError(
+                    f"{field_name} must use https (or http for tests): {raw!r}"
+                )
+            if parts.username or parts.password:
+                raise ConfigurationError(f"{field_name} must not include userinfo: {raw!r}")
+            if not parts.netloc or not parts.hostname:
+                raise ConfigurationError(f"{field_name} must be absolute: {raw!r}")
+            if field_name == "public_base_url" and parts.scheme != "https":
+                # Allow http only for localhost/loopback test harnesses.
+                host = (parts.hostname or "").lower()
+                if host not in {"localhost", "127.0.0.1", "::1"}:
+                    raise ConfigurationError(f"public_base_url must be https (got {raw!r})")
+        return self

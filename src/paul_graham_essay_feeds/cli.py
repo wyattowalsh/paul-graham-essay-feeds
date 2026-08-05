@@ -320,11 +320,15 @@ def check_cmd(
             raise ConfigurationError(f"Missing feeds directory: {feeds}")
         verify_feed_artifacts(root, min_items=settings.min_items)
         catalog_path = default_catalog_path(root)
-        if catalog_path.is_file():
-            catalog = load_catalog(catalog_path)
-            if catalog is None:
-                raise ConfigurationError(f"Unable to load catalog: {catalog_path}")
-            _assert_catalog_feed_id_parity(catalog, root)
+        # Normal repository bundles require catalog.json (M-25).
+        if not catalog_path.is_file():
+            raise ConfigurationError(
+                f"Missing required catalog.json for repository check: {catalog_path}"
+            )
+        catalog = load_catalog(catalog_path)
+        if catalog is None:
+            raise ConfigurationError(f"Unable to load catalog: {catalog_path}")
+        _assert_catalog_feed_id_parity(catalog, root)
         if not settings.quiet:
             payload = json.loads((feeds / "feed.json").read_text(encoding="utf-8"))
             count = len(payload["items"])

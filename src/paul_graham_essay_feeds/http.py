@@ -332,6 +332,38 @@ class wait_full_jitter:
         )
 
 
+class wait_retry_after_or_jitter:
+    """Wait the greater of full-jitter backoff and a bounded ``Retry-After``.
+
+    Honors both delta-seconds and HTTP-date ``Retry-After`` values (via
+    :func:`parse_retry_after`), capped at ``max_retry_after`` (default 120s).
+    """
+
+    def __init__(
+        self,
+        *,
+        initial: float = DEFAULT_JITTER_INITIAL,
+        max: float = DEFAULT_JITTER_MAX,
+        exp_base: float = DEFAULT_JITTER_EXP_BASE,
+        max_retry_after: float = DEFAULT_MAX_RETRY_AFTER,
+        rng: random.Random | None = None,
+    ) -> None:
+        self._jitter = wait_full_jitter(initial=initial, max=max, exp_base=exp_base, rng=rng)
+        self.max_retry_after = max_retry_after
+
+    def __call__(self, retry_state: RetryCallState) -> float:
+        jitter = float(self._jitter(retry_state))
+        retry_after = 0.0
+        if retry_state.outcome is not None and retry_state.outcome.failed:
+            exc = retry_state.outcome.exception()
+            if isinstance(exc, httpx.HTTPStatusError):
+                header = exc.response.headers.get("Retry-After")
+                parsed = parse_retry_after(header, max_wait=self.max_retry_after)
+                if parsed is not None:
+                    retry_after = float(parsed)
+        return max(jitter, retry_after)
+
+
 class TimeoutConfig(BaseModel):
     """Granular HTTP timeouts for httpx (connect / read / write / pool)."""
 
@@ -1031,7 +1063,9 @@ def _get_once(
             headers=headers,
         )
         if result.response is None:
-            raise FeedError(result.evidence.error_message or f"Fetch failed for {url}")
+            # Transport failure: raise retryable httpx error (not FeedError) so
+            # Tenacity can classify retries before terminal conversion.
+            raise httpx.TransportError(result.evidence.error_message or f"Fetch failed for {url}")
         result.response.raise_for_status()
         logger.info("Fetched {} ({} bytes)", result.evidence.final_url, len(result.body))
         charset = result.evidence.charset
@@ -1116,7 +1150,8 @@ def fetch_index(
                     raw_sha256=None,
                 )
             if result.response is None:
-                raise NetworkSourceError(ev.error_message or f"Fetch failed for {url}")
+                # Keep transport failures retryable until run_with_retry exhausts.
+                raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
             result.response.raise_for_status()
             html = decode_html(result.body, transport_charset=ev.charset)
             return IndexFetchResult(
@@ -1156,11 +1191,11 @@ def _before_sleep(retry_state: RetryCallState) -> None:
 
 
 def retrying(*, attempts: int, reraise: bool = True) -> Retrying:
-    """Build a Retrying controller: exponential backoff + **true** full jitter."""
+    """Build a Retrying controller: full jitter, honoring bounded Retry-After."""
     n = max(1, attempts)
     return Retrying(
         stop=stop_after_attempt(n),
-        wait=wait_full_jitter(initial=0.4, max=8.0, exp_base=2),
+        wait=wait_retry_after_or_jitter(initial=0.4, max=8.0, exp_base=2),
         retry=retry_if_exception(is_retryable_exception),
         before_sleep=_before_sleep,
         reraise=reraise,

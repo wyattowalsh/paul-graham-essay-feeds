@@ -361,6 +361,9 @@ def test_update_verbose(repo_root: Path, sample_html_path: Path) -> None:
 
 
 def _write_one_essay(repo_root: Path) -> None:
+    from paul_graham_essay_feeds.catalog import save_catalog
+    from paul_graham_essay_feeds.models import Catalog, CatalogEntry
+
     now = utc_now()
     snapshot = FeedSnapshot(
         logical_updated_at=now,
@@ -384,6 +387,27 @@ def _write_one_essay(repo_root: Path) -> None:
         simple_rss=rss,
         simple_atom=atom,
         simple_json_feed=jf,
+    )
+    # Repository check requires catalog.json parity with feed ids (M-25).
+    save_catalog(
+        repo_root / "catalog.json",
+        Catalog(
+            schema_version=2,
+            material_config_fingerprint="test",
+            entry_order=["https://paulgraham.com/a.html"],
+            entries={
+                "https://paulgraham.com/a.html": CatalogEntry(
+                    stable_id="https://paulgraham.com/a.html",
+                    url="https://paulgraham.com/a.html",
+                    title="A",
+                    position=0,
+                    first_seen_at=now,
+                    last_seen_at=now,
+                    observed_updated_at=now,
+                    summary="Short summary for check tests.",
+                )
+            },
+        ),
     )
 
 

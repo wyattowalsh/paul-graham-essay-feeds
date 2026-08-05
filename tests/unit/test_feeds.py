@@ -561,8 +561,9 @@ def test_skips_entries_missing_both_timestamps() -> None:
         observed_updated_at=None,
         first_seen_at=None,
     )
-    snap = catalog_to_feed_snapshot(_catalog([good, undated]), generator=GENERATOR)
-    assert [i.id for i in snap.items] == ["https://paulgraham.com/a.html"]
+    # H-17: undated entries fail closed (no silent omit).
+    with pytest.raises(FeedError, match="lacks observed_updated_at"):
+        catalog_to_feed_snapshot(_catalog([good, undated]), generator=GENERATOR)
 
 
 def test_empty_catalog_raises() -> None:
@@ -578,7 +579,7 @@ def test_all_undated_entries_raise() -> None:
         observed_updated_at=None,
         first_seen_at=None,
     )
-    with pytest.raises(FeedError, match="no entries with observation"):
+    with pytest.raises(FeedError, match=r"lacks observed_updated_at|no entries with observation"):
         catalog_to_feed_snapshot(_catalog([undated]), generator=GENERATOR)
 
 

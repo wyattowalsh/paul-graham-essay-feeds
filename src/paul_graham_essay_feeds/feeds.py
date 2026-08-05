@@ -26,6 +26,7 @@ from paul_graham_essay_feeds.models import (
     DC_NS,
     FEED_DESCRIPTION,
     FEED_ID,
+    FEED_ID_SIMPLE,
     FEED_SUMMARY_CHARS,
     FEED_TITLE,
     JSON_FEED_VERSION,
@@ -55,6 +56,28 @@ SIMPLE_FEED_NAMES: Final[dict[str, str]] = {
     "atom": "atom.simple.xml",
     "json": "feed.simple.json",
 }
+
+
+def feed_self_url(json_feed_url: str, *, kind: Literal["rss", "atom", "json"]) -> str:
+    """Derive a self-link URL from the JSON Feed public URL without brittle replaces.
+
+    Accepts either enriched (``…/feed.json``) or simple (``…/feed.simple.json``)
+    JSON Feed self URLs produced by :func:`catalog_to_feed_snapshot`.
+    """
+    base = json_feed_url.rstrip("/")
+    simple = base.endswith("/feed.simple.json") or base.endswith("feed.simple.json")
+    if kind == "json":
+        return base
+    if simple:
+        # …/feed.simple.json → …/rss.simple.xml | …/atom.simple.xml
+        if base.endswith("feed.simple.json"):
+            stem = base[: -len("feed.simple.json")]
+            return f"{stem}{kind}.simple.xml"
+        return base
+    if base.endswith("feed.json"):
+        stem = base[: -len("feed.json")]
+        return f"{stem}{kind}.xml"
+    return base
 
 
 def catalog_to_feed_snapshot(
@@ -87,8 +110,11 @@ def catalog_to_feed_snapshot(
 
         observed = entry.observed_updated_at or entry.first_seen_at
         if observed is None:
-            # Reconcile is expected to set observed_updated_at; skip undated.
-            continue
+            # H-17: fail closed — never silently omit catalog entries from feeds.
+            raise FeedError(
+                f"Catalog entry {stable_id!r} lacks observed_updated_at/first_seen_at "
+                "required for feed projection"
+            )
 
         if summary_mode == "title_only":
             summary = _entry_summary(None, entry.title)
@@ -175,9 +201,7 @@ def render_rss(snapshot: FeedSnapshot) -> bytes:
             {
                 "rel": "self",
                 "type": "application/rss+xml",
-                "href": snapshot.feed_url.replace("/feed.json", "/rss.xml").replace(
-                    "/feed.simple.json", "/rss.simple.xml"
-                ),
+                "href": feed_self_url(snapshot.feed_url, kind="rss"),
             },
         )
 
@@ -213,7 +237,13 @@ def render_atom(snapshot: FeedSnapshot) -> bytes:
         },
     )
     ET.SubElement(feed, "title").text = FEED_TITLE
-    ET.SubElement(feed, "id").text = FEED_ID
+    # Distinct Atom feed IDs for simple vs enriched subscriptions (H-15).
+    atom_feed_id = (
+        FEED_ID_SIMPLE
+        if snapshot.feed_url is not None and "simple" in snapshot.feed_url
+        else FEED_ID
+    )
+    ET.SubElement(feed, "id").text = atom_feed_id
     ET.SubElement(feed, "updated").text = rfc3339(snapshot.logical_updated_at)
     ET.SubElement(feed, "subtitle").text = FEED_DESCRIPTION
     author = ET.SubElement(feed, "author")
@@ -227,15 +257,14 @@ def render_atom(snapshot: FeedSnapshot) -> bytes:
     ET.SubElement(feed, "generator").text = snapshot.generator
 
     if snapshot.feed_url is not None:
+        self_href = feed_self_url(snapshot.feed_url, kind="atom")
         ET.SubElement(
             feed,
             "link",
             {
                 "rel": "self",
                 "type": "application/atom+xml",
-                "href": snapshot.feed_url.replace("/feed.json", "/atom.xml").replace(
-                    "/feed.simple.json", "/atom.simple.xml"
-                ),
+                "href": self_href,
             },
         )
 

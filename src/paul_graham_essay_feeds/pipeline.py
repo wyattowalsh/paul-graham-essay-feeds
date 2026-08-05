@@ -36,7 +36,6 @@ from paul_graham_essay_feeds.feeds import (
     catalog_to_feed_snapshot,
     feeds_exist,
     render_snapshot_feeds,
-    write_feeds,
 )
 from paul_graham_essay_feeds.http import decode_html, fetch_index
 from paul_graham_essay_feeds.models import (
@@ -369,11 +368,21 @@ def _publish_catalog_and_feeds(
     min_items: int,
     reporter: ProgressReporter,
 ) -> Catalog:
-    """Verify in memory, write six ``feeds/`` files first, then durable ``catalog.json``.
+    """Verify in memory, then publish via locked staged generation.
 
-    Feeds-then-catalog admits a short tear window (AD-005): projections land
-    before the catalog stamp. Failure before any replace leaves priors intact.
+    Stages all seven artifacts under ``.cache/generations/<id>/``, verifies the
+    staged triple pair, then materializes public ``feeds/*`` + ``catalog.json``
+    under an exclusive writer lock. On crash mid-materialize, re-run recover via
+    :func:`recover_materialize` before the next pipeline (H-01/H-02).
     """
+    from paul_graham_essay_feeds.publication import (
+        acquire_write_lock,
+        materialize_generation,
+        recover_materialize,
+        release_write_lock,
+        write_staging_generation,
+    )
+
     assert_verified(
         rss=rss,
         atom=atom,
@@ -386,18 +395,24 @@ def _publish_catalog_and_feeds(
         json_feed=simple_json_feed,
         min_items=min_items,
     )
+    recover_materialize(root)
+    lock = acquire_write_lock(root)
+    try:
+        recover_materialize(root)
+        gen_id = write_staging_generation(
+            root,
+            catalog=catalog,
+            rss=rss,
+            atom=atom,
+            json_feed=json_feed,
+            simple_rss=simple_rss,
+            simple_atom=simple_atom,
+            simple_json_feed=simple_json_feed,
+        )
+        materialize_generation(root, gen_id=gen_id, reporter=reporter)
+    finally:
+        release_write_lock(lock)
     catalog_path = default_catalog_path(root)
-    write_feeds(
-        root,
-        rss=rss,
-        atom=atom,
-        json_feed=json_feed,
-        simple_rss=simple_rss,
-        simple_atom=simple_atom,
-        simple_json_feed=simple_json_feed,
-        reporter=reporter,
-    )
-    save_catalog(catalog_path, catalog)
     logger.info(
         "Published feeds + catalog → {} + {}",
         root / "feeds",
@@ -488,7 +503,8 @@ def run_catalog_pipeline(
     fingerprint = _material_config_fingerprint(settings)
 
     if from_feeds:
-        # Force bootstrap from feeds/ even when a durable catalog already exists.
+        # Bootstrap in memory only; durable catalog is written only after the
+        # full pipeline succeeds (H-12 — no early save_catalog).
         prior = bootstrap_catalog_from_feeds(
             root,
             now=observed,
@@ -497,9 +513,8 @@ def run_catalog_pipeline(
         fingerprint_changed = prior.material_config_fingerprint != fingerprint
         if fingerprint_changed:
             prior = prior.model_copy(update={"material_config_fingerprint": fingerprint})
-        save_catalog(default_catalog_path(root), prior)
         logger.info(
-            "Bootstrapped catalog from feeds/ ({} entries)",
+            "Bootstrapped catalog from feeds/ in memory ({} entries)",
             len(prior.entry_order),
         )
     else:
@@ -555,12 +570,21 @@ def run_catalog_pipeline(
         )
     else:
         index_hash = content_sha256(index_html)
-        discovered, _report = discover_essays(
+        from paul_graham_essay_feeds.discover import evaluate_discovery_anomaly
+
+        discovered, discovery_report = discover_essays(
             index_html,
             base_url=settings.source_url,
             min_items=settings.min_items,
             allow_fallback=settings.allow_discovery_fallback,
         )
+        quarantine = evaluate_discovery_anomaly(
+            len(prior.entry_order),
+            discovered_count=len(discovered),
+            report=discovery_report,
+        )
+        if quarantine is not None:
+            raise FeedError(f"Discovery quarantined: {quarantine}")
         catalog, changeset = reconcile_discovery(prior, discovered, now=observed)
         essays = [discovery_item_to_essay(item) for item in discovered]
 
@@ -572,7 +596,21 @@ def run_catalog_pipeline(
         enrich=settings.enrich,
         stale_after_days=settings.stale_after_days,
         now=observed,
+        max_page_fetches=settings.max_page_fetches,
     )
+    # Advance fair page-fetch cursor when a budget is active so the next run
+    # continues past the served window (M-04).
+    if settings.max_page_fetches is not None and plan.decisions:
+        served = sum(1 for d in plan.decisions if d.fetch_page)
+        raw_cursor = catalog.versions.get("page_fetch_cursor", "0")
+        try:
+            prev_cursor = max(0, int(raw_cursor))
+        except (TypeError, ValueError):
+            prev_cursor = 0
+        next_cursor = (prev_cursor + max(1, served)) % max(1, len(plan.decisions))
+        versions = dict(catalog.versions)
+        versions["page_fetch_cursor"] = str(next_cursor)
+        catalog = catalog.model_copy(update={"versions": versions})
 
     if not fingerprint_changed and _should_skip_publish(
         root=root, force=settings.force, changeset=changeset, plan=plan
@@ -601,6 +639,10 @@ def run_catalog_pipeline(
     # so live HEAD probes skip those ids (probe the rest first, then enrich).
     enrich_ids = due_ids if settings.enrich else set()
     probe_essays = [e for e in essays if e.stable_id not in enrich_ids] if enrich_ids else essays
+    # Bound dedicated probes independently of enrich budget (H-16).
+    max_links = settings.max_link_validations
+    if max_links is not None and len(probe_essays) > max_links:
+        probe_essays = probe_essays[: max(0, max_links)]
     all_due_use_enrich_get = bool(enrich_ids) and not probe_essays
 
     if settings.validate_links:

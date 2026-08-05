@@ -684,14 +684,19 @@ def test_missing_index_essay_hard_deleted() -> None:
 def test_orphan_prior_entry_not_in_order_is_dropped() -> None:
     a = _item(slug="a", position=1)
     gone = _item(slug="gone", position=2)
-    prior = Catalog(
+    # Intentionally invalid intermediate prior (orphan entry) via model_construct.
+    prior = Catalog.model_construct(
         schema_version=1,
         material_config_fingerprint="default",
+        versions={},
+        index=ResourceState(),
         entry_order=[a.stable_id],
         entries={
             a.stable_id: _entry(a, position=0),
             gone.stable_id: _entry(gone, position=1),
         },
+        last_generation_id=None,
+        migration_history=[],
     )
 
     catalog, changes = reconcile_discovery(prior, [a], now=T1)
@@ -796,12 +801,14 @@ def _refresh_catalog(
     index_last_checked_at: datetime | None = None,
 ) -> Catalog:
     order = [e.stable_id for e in entries]
+    # Ensure unique positions aligned with order for relational invariants.
+    normalized = {e.stable_id: e.model_copy(update={"position": i}) for i, e in enumerate(entries)}
     return Catalog(
         schema_version=1,
         material_config_fingerprint="test",
         index=ResourceState(last_checked_at=index_last_checked_at),
         entry_order=order,
-        entries={e.stable_id: e for e in entries},
+        entries=normalized,
     )
 
 

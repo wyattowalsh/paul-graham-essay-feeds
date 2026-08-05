@@ -44,7 +44,7 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 
 | Area | Responsibility |
 | :--- | :--- |
-| `src/paul_graham_essay_feeds/` | Domain package (~10 modules: cli, settings, pipeline, http, discover, enrich, catalog, feeds, verify, models) |
+| `src/paul_graham_essay_feeds/` | Domain package (~11 modules: cli, settings, pipeline, http, discover, enrich, catalog, feeds, verify, models, publication) |
 | `tests/` | unit / integration / e2e / smoke / live / characterization |
 | `DOCS.md` | Developer + architecture decision SSOT |
 

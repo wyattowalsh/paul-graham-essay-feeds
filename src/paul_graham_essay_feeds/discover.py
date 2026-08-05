@@ -436,6 +436,45 @@ def discover_essays(
     return items, report
 
 
+def evaluate_discovery_anomaly(
+    prior_count: int,
+    *,
+    discovered_count: int,
+    report: ExtractionReport,
+    max_removal_ratio: float = 0.15,
+    max_addition_ratio: float = 0.50,
+    min_overlap_ratio: float = 0.70,
+) -> str | None:
+    """Return a quarantine reason when discovery looks anomalous, else None.
+
+    Floor-satisfying but partial extractions that would hard-delete a large
+    share of the prior catalog are quarantined (H-03).
+    """
+    if prior_count <= 0:
+        return None
+    removed = max(0, prior_count - discovered_count)
+    added = max(0, discovered_count - prior_count)
+    removal_ratio = removed / prior_count
+    addition_ratio = added / prior_count
+    # Approximate overlap when only counts are known: shared ≈ min(prior, new).
+    overlap = min(prior_count, discovered_count) / prior_count
+    if removal_ratio > max_removal_ratio and removed >= 5:
+        return (
+            f"discovery removal ratio {removal_ratio:.2%} "
+            f"({removed} of {prior_count}) exceeds {max_removal_ratio:.0%}"
+        )
+    if addition_ratio > max_addition_ratio and added >= 20:
+        return (
+            f"discovery addition ratio {addition_ratio:.2%} "
+            f"({added} of {prior_count}) exceeds {max_addition_ratio:.0%}"
+        )
+    if overlap < min_overlap_ratio and prior_count >= 20:
+        return f"discovery overlap {overlap:.2%} with prior catalog below {min_overlap_ratio:.0%}"
+    if report.fallback_used and removal_ratio > 0.05:
+        return "fallback extraction with material removals"
+    return None
+
+
 def build_discovery_snapshot(
     html: str,
     *,

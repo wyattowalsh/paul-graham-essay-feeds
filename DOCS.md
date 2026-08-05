@@ -138,7 +138,8 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 | `catalog.py` | atomic root `catalog.json` I/O + reconcile + refresh + bootstrap-from-feeds |
 | `feeds.py` | snapshot-native RSS/Atom/JSON render + write |
 | `verify.py` | deep in-memory cross-format verification |
-| `pipeline.py` | orchestrate + verify-then-atomic root catalog + feeds |
+| `pipeline.py` | orchestrate + verify-then-publish root catalog + feeds |
+| `publication.py` | writer lock, staged `.cache/generations`, materialize/recover |
 | `cli.py` | Typer: `update` / `check` only |
 
 Entry points: `cli:main` / `__main__.py`. Schema SSOT is Pydantic `models.py` (no parallel JSON Schema tree).

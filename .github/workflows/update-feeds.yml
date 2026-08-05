@@ -40,6 +40,9 @@ jobs:
           PG_ESSAY_FEEDS_LINK_WORKERS: "4"
           # Daily no-op budget: avoid day-31 mass re-fetch when index is unchanged.
           PG_ESSAY_FEEDS_STALE_AFTER_DAYS: "90"
+          # Fair per-run caps so a full stale corpus is not re-fetched in one job.
+          PG_ESSAY_FEEDS_MAX_PAGE_FETCHES: "40"
+          PG_ESSAY_FEEDS_MAX_LINK_VALIDATIONS: "40"
           PG_ESSAY_FEEDS_PUBLIC_BASE_URL: "https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds"
         run: uv run pg-essay-feeds update --quiet
 

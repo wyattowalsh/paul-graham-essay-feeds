@@ -456,6 +456,7 @@ def plan_refresh(
     now: datetime,
     canary_ids: frozenset[str] | None = None,
     max_page_fetches: int | None = None,
+    page_fetch_cursor: int | None = None,
 ) -> RefreshPlan:
     """Build a deterministic refresh plan from catalog state and policy knobs.
 
@@ -505,7 +506,17 @@ def plan_refresh(
             )
         )
 
-    decisions = _apply_page_fetch_budget(provisional, max_page_fetches=max_page_fetches)
+    cursor = 0
+    if page_fetch_cursor is not None:
+        cursor = max(0, page_fetch_cursor)
+    else:
+        raw_cursor = catalog.versions.get("page_fetch_cursor")
+        if raw_cursor is not None:
+            with contextlib.suppress(TypeError, ValueError):
+                cursor = max(0, int(raw_cursor))
+    decisions = _apply_page_fetch_budget(
+        provisional, max_page_fetches=max_page_fetches, cursor=cursor
+    )
     return RefreshPlan(fetch_index=fetch_index, decisions=decisions)
 
 
@@ -587,27 +598,50 @@ def _apply_page_fetch_budget(
     decisions: list[RefreshDecision],
     *,
     max_page_fetches: int | None,
+    cursor: int = 0,
 ) -> list[RefreshDecision]:
-    """Keep entry_order; cap how many due entries get ``fetch_page=True``."""
+    """Cap how many due entries get ``fetch_page=True`` with a rotating cursor.
+
+    Starts at ``cursor % len(decisions)`` so repeated runs do not always starve
+    the tail of ``entry_order`` (M-04).
+    """
     if max_page_fetches is None:
         return decisions
 
     budget = max(0, max_page_fetches)
+    if not decisions or budget == 0:
+        return [
+            RefreshDecision(
+                stable_id=d.stable_id,
+                fetch_page=False,
+                reasons=d.reasons,
+            )
+            if d.fetch_page
+            else d
+            for d in decisions
+        ]
+
+    n = len(decisions)
+    start = cursor % n
     used = 0
+    allowed: set[str] = set()
+    for offset in range(n):
+        decision = decisions[(start + offset) % n]
+        if decision.fetch_page and used < budget:
+            allowed.add(decision.stable_id)
+            used += 1
+            # else over budget — clear fetch_page below
+
     out: list[RefreshDecision] = []
     for decision in decisions:
-        if decision.fetch_page:
-            if used < budget:
-                out.append(decision)
-                used += 1
-            else:
-                out.append(
-                    RefreshDecision(
-                        stable_id=decision.stable_id,
-                        fetch_page=False,
-                        reasons=decision.reasons,
-                    )
+        if decision.fetch_page and decision.stable_id not in allowed:
+            out.append(
+                RefreshDecision(
+                    stable_id=decision.stable_id,
+                    fetch_page=False,
+                    reasons=decision.reasons,
                 )
+            )
         else:
             out.append(decision)
     return out

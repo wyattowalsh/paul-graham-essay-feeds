@@ -51,6 +51,7 @@ ALLOWED_HOSTS: Final = frozenset({"paulgraham.com", "sep.turbifycdn.com"})
 EXCLUDED_PATHS: Final = frozenset({"/", "/index.html", "/articles.html", "/rss.html"})
 PROTECTED_PATHS: Final = frozenset({"/ty/cdn/paulgraham/acl1.txt", "/ty/cdn/paulgraham/acl2.txt"})
 FEED_ID: Final = "tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds"
+FEED_ID_SIMPLE: Final = "tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds:simple"
 FEED_TITLE: Final = "Paul Graham: Essays"
 FEED_DESCRIPTION: Final = (
     "Unofficial metadata feeds for Paul Graham's essays, "
@@ -384,13 +385,33 @@ class Catalog(_StrictModel):
     )
 
     @model_validator(mode="after")
-    def _entry_order_subset_of_entries(self) -> Catalog:
+    def _relational_invariants(self) -> Catalog:
+        """Fail closed on order↔entries bijection, key/stable_id match, positions."""
         missing = [sid for sid in self.entry_order if sid not in self.entries]
         if missing:
             raise ValueError(
                 "entry_order references stable_ids missing from entries: "
                 + ", ".join(repr(s) for s in missing[:5])
             )
+        orphans = [sid for sid in self.entries if sid not in set(self.entry_order)]
+        if orphans:
+            raise ValueError(
+                "entries missing from entry_order: " + ", ".join(repr(s) for s in orphans[:5])
+            )
+        if len(self.entry_order) != len(set(self.entry_order)):
+            raise ValueError("entry_order contains duplicate stable_ids")
+        for sid, entry in self.entries.items():
+            if entry.stable_id != sid:
+                raise ValueError(
+                    f"entries key {sid!r} does not match entry.stable_id {entry.stable_id!r}"
+                )
+            if not entry.url.strip():
+                raise ValueError(f"entry {sid!r} has blank url")
+        # Positions are rewritten by reconcile; require uniqueness only.
+        # Temporary order/position drift is allowed until the next reconcile.
+        positions = [self.entries[sid].position for sid in self.entry_order]
+        if len(positions) != len(set(positions)):
+            raise ValueError("catalog entries have duplicate position values")
         return self
 
 
