@@ -227,7 +227,10 @@ def update_cmd(
         bool,
         typer.Option(
             "--from-feeds/--no-from-feeds",
-            help="Bootstrap durable catalog from existing feeds/ before update",
+            help=(
+                "Bootstrap catalog in memory from existing feeds/; "
+                "persist only after a successful publish"
+            ),
         ),
     ] = False,
     result_file: Annotated[

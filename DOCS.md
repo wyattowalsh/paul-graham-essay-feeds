@@ -209,7 +209,7 @@ the same way as dual bools. If both quiet and verbose end up true, quiet wins.
 | `--force` / `--no-force` | off (env) | Bypass refresh-planner no-op (marks work due; not an index-hash skip) |
 | `--validate-links` / `--no-validate-links` | on (env) | Live HEAD/GET; report-only; never drop essays |
 | `--public-base-url URL` | env / unset | Public base for self links |
-| `--from-feeds` | off | Bootstrap durable catalog from existing `feeds/` before update |
+| `--from-feeds` | off | Bootstrap catalog **in memory** from existing `feeds/`; persist only after successful publish (H-12) |
 | `--result-file PATH` | — | Append `action=unchanged\|state_changed\|updated`; also writes `$GITHUB_OUTPUT` when set (quiet success side-channel) |
 | `-q` / `--quiet` | off (env) | Quiet success → zero stdout **and** stderr; errors only; result-file / `$GITHUB_OUTPUT` still write |
 | `-v` / `--verbose` | off (env) | Debug logs |

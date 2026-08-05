@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **RV-R-001:** Publication recover runs only under the writer lock (no pre-lock
+  `recover_materialize` race window).
+- **RV-R-002:** Atom feed ids selected via `FeedSnapshot.variant`, not a
+  `"simple" in feed_url` substring heuristic.
+- **RV-R-003 / RV-R-006:** Staged `MANIFEST.json` digests re-verified before
+  public materialize; materialize pointer writes use atomic text writes.
+- **RV-R-004:** Page (and index when transport provides raw) `raw_sha256` /
+  `decoded_sha256` stay distinct; enrich evidence carries both digests.
+- **RV-R-005:** `settings.host_cooldown_seconds` wired through `HostCooldown`
+  into enrich and live link probes (default still 0).
+- **RV-R-007:** Discovery anomaly quarantine uses true stable-id set overlap
+  (same-size total swap quarantines).
+- **RES-H09:** Position-only reorder is not material (does not bump
+  `observed_updated_at` / material `updated` membership).
+- **RES-H06:** Cross-format title/url/summary payload parity in deep verify.
+- **RV-R-008:** `--from-feeds` docs/help match in-memory bootstrap (H-12).
 - **C-01 / L-14:** Catalog-only freshness updates (post-enrich material noop) now
   report `action=state_changed` with `changed_paths=("catalog.json",)` instead of
   `unchanged`. The scheduled `update-feeds.yml` workflow uploads and commits when
