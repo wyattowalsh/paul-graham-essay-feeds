@@ -437,9 +437,9 @@ def discover_essays(
 
 
 def evaluate_discovery_anomaly(
-    prior_count: int,
+    prior_ids: set[str] | frozenset[str],
+    discovered_ids: set[str] | frozenset[str],
     *,
-    discovered_count: int,
     report: ExtractionReport,
     max_removal_ratio: float = 0.15,
     max_addition_ratio: float = 0.50,
@@ -448,16 +448,19 @@ def evaluate_discovery_anomaly(
     """Return a quarantine reason when discovery looks anomalous, else None.
 
     Floor-satisfying but partial extractions that would hard-delete a large
-    share of the prior catalog are quarantined (H-03).
+    share of the prior catalog are quarantined (H-03). Overlap is true set
+    intersection over stable ids (RV-R-007) — same-size total swaps quarantine.
     """
+    prior_count = len(prior_ids)
     if prior_count <= 0:
         return None
-    removed = max(0, prior_count - discovered_count)
-    added = max(0, discovered_count - prior_count)
+    removed_ids = prior_ids - discovered_ids
+    added_ids = discovered_ids - prior_ids
+    removed = len(removed_ids)
+    added = len(added_ids)
     removal_ratio = removed / prior_count
     addition_ratio = added / prior_count
-    # Approximate overlap when only counts are known: shared ≈ min(prior, new).
-    overlap = min(prior_count, discovered_count) / prior_count
+    overlap = len(prior_ids & discovered_ids) / prior_count
     if removal_ratio > max_removal_ratio and removed >= 5:
         return (
             f"discovery removal ratio {removal_ratio:.2%} "

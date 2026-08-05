@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from selectolax.parser import HTMLParser, Node
 
 from paul_graham_essay_feeds.http import (
+    HostCooldown,
     ResultKind,
     conditional_headers,
     create_http_client,
@@ -501,6 +502,8 @@ class PageEnrichEvidence:
     ok: bool = True
     error_kind: str | None = None
     error_message: str | None = None
+    raw_sha256: str | None = None
+    decoded_sha256: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -512,6 +515,7 @@ class _PageGet:
     etag: str | None = None
     last_modified: str | None = None
     status_code: int | None = None
+    raw_sha256: str | None = None
 
 
 def parse_page_metadata(html: str, *, page_url: str) -> dict[str, str | None]:
@@ -540,8 +544,12 @@ def _fetch_page(
     max_bytes: int,
     etag: str | None = None,
     last_modified: str | None = None,
+    host_cooldown: HostCooldown | None = None,
 ) -> _PageGet:
     """GET essay page with hop-safe redirects and optional conditional validators."""
+    if host_cooldown is not None:
+        host = urlsplit(url).hostname or ""
+        host_cooldown.wait(host)
     cond = conditional_headers(etag=etag, last_modified=last_modified) or None
     result = get_with_evidence(
         client,
@@ -558,6 +566,7 @@ def _fetch_page(
             etag=ev.etag or etag,
             last_modified=ev.last_modified or last_modified,
             status_code=304,
+            raw_sha256=ev.raw_sha256,
         )
     if result.response is None:
         # Transport failure must remain retryable (httpx.TransportError), not a
@@ -571,6 +580,7 @@ def _fetch_page(
         etag=ev.etag,
         last_modified=ev.last_modified,
         status_code=ev.status_code,
+        raw_sha256=ev.raw_sha256,
     )
 
 
@@ -582,6 +592,7 @@ def _enrich_one(
     attempts: int,
     etag: str | None = None,
     last_modified: str | None = None,
+    host_cooldown: HostCooldown | None = None,
 ) -> tuple[Essay, PageEnrichEvidence]:
     """Scrape one page; soft-fail to the original essay on network/parse errors.
 
@@ -596,6 +607,7 @@ def _enrich_one(
             max_bytes=max_bytes,
             etag=etag,
             last_modified=last_modified,
+            host_cooldown=host_cooldown,
         )
 
     try:
@@ -616,6 +628,7 @@ def _enrich_one(
             last_modified=fetched.last_modified,
             status_code=304,
             ok=True,
+            raw_sha256=fetched.raw_sha256,
         )
 
     assert fetched.html is not None
@@ -631,6 +644,7 @@ def _enrich_one(
             ok=False,
             error_kind="parse",
             error_message=str(exc)[:500],
+            raw_sha256=fetched.raw_sha256,
         )
 
     updated = essay.model_copy(
@@ -652,6 +666,8 @@ def _enrich_one(
         last_modified=fetched.last_modified,
         status_code=fetched.status_code,
         ok=True,
+        raw_sha256=fetched.raw_sha256,
+        decoded_sha256=page_hash,
     )
 
 
@@ -665,12 +681,14 @@ def enrich_essays(
     quiet: bool = False,
     page_validators: Mapping[str, tuple[str | None, str | None]] | None = None,
     page_evidence_out: MutableMapping[str, PageEnrichEvidence] | None = None,
+    host_cooldown_seconds: float = 0.0,
 ) -> list[Essay]:
     """Fetch each essay page and attach short summaries (order preserved)."""
     if not essays:
         return essays
     attempts = max(1, retries + 1)
     validators = page_validators or {}
+    cooldown = HostCooldown(host_cooldown_seconds)
     out: dict[int, Essay] = {}
     with (
         create_http_client(
@@ -688,6 +706,7 @@ def enrich_essays(
                 attempts=attempts,
                 etag=validators.get(e.stable_id, (None, None))[0],
                 last_modified=validators.get(e.stable_id, (None, None))[1],
+                host_cooldown=cooldown,
             ): e
             for e in essays
         }
@@ -754,8 +773,17 @@ def validate_essays_structural(
     logger.info("Structural link validation OK ({} urls)", len(essays))
 
 
-def _probe_once(client: httpx.Client, essay: Essay, *, max_bytes: int) -> None:
+def _probe_once(
+    client: httpx.Client,
+    essay: Essay,
+    *,
+    max_bytes: int,
+    host_cooldown: HostCooldown | None = None,
+) -> None:
     """Single probe attempt; raises httpx errors for tenacity."""
+    if host_cooldown is not None:
+        host = urlsplit(essay.url).hostname or ""
+        host_cooldown.wait(host)
     response = hop_safe_request(
         client,
         "HEAD",
@@ -790,11 +818,12 @@ def _probe_one(
     *,
     attempts: int,
     max_bytes: int,
+    host_cooldown: HostCooldown | None = None,
 ) -> str | None:
     """Return error message or None if OK (retries transient failures)."""
     try:
         run_with_retry(
-            lambda: _probe_once(client, essay, max_bytes=max_bytes),
+            lambda: _probe_once(client, essay, max_bytes=max_bytes, host_cooldown=host_cooldown),
             attempts=attempts,
             what=f"probe {essay.url}",
         )
@@ -814,6 +843,7 @@ def validate_essays_live(
     max_bytes: int = MAX_BYTES,
     quiet: bool = False,
     reporter: ProgressReporter | None = None,
+    host_cooldown_seconds: float = 0.0,
 ) -> LinkProbeReport:
     """Live-probe each essay URL; report failures without raising or dropping items."""
     if not essays:
@@ -821,6 +851,7 @@ def validate_essays_live(
 
     errors: list[str] = []
     attempts = max(1, retries + 1)
+    cooldown = HostCooldown(host_cooldown_seconds)
     progress = reporter or ProgressReporter(OutputPolicy(quiet=quiet))
     with (
         httpx.Client(
@@ -838,6 +869,7 @@ def validate_essays_live(
                 e,
                 attempts=attempts,
                 max_bytes=max_bytes,
+                host_cooldown=cooldown,
             ): e
             for e in essays
         }

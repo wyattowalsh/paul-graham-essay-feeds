@@ -446,12 +446,16 @@ def test_apply_enrichment_200_persists_validators() -> None:
         }
     )
     lm = "Wed, 02 Jul 2024 12:00:00 GMT"
+    raw_digest = "a" * 64
+    decoded_digest = "b" * 64
     evidence = {
         sid: PageEnrichEvidence(
             not_modified=False,
             etag='"page-v2"',
             last_modified=lm,
             status_code=200,
+            raw_sha256=raw_digest,
+            decoded_sha256=decoded_digest,
         )
     }
     next_catalog = _apply_enrichment(catalog, [essay], now=now, page_evidence=evidence)
@@ -460,7 +464,9 @@ def test_apply_enrichment_200_persists_validators() -> None:
     assert updated.page.etag == '"page-v2"'
     assert updated.page.last_modified == lm
     assert updated.page.status_code == 200
-    assert updated.page.raw_sha256 == "b" * 64
+    assert updated.page.raw_sha256 == raw_digest
+    assert updated.page.decoded_sha256 == decoded_digest
+    assert updated.page.raw_sha256 != updated.page.decoded_sha256
 
 
 def test_enrich_worker_exception_keeps_essay() -> None:

@@ -24,6 +24,7 @@ from loguru import logger
 
 from paul_graham_essay_feeds.catalog import (
     atomic_write_bytes,
+    atomic_write_text,
     catalog_to_json,
     default_catalog_path,
     save_catalog,
@@ -125,6 +126,34 @@ def write_staging_generation(
     return gen_id
 
 
+def verify_staging_manifest(gen_dir: Path) -> None:
+    """Fail closed when staged files do not match ``MANIFEST.json`` digests."""
+    gen_dir = Path(gen_dir)
+    manifest_path = gen_dir / "MANIFEST.json"
+    if not manifest_path.is_file():
+        raise FeedError(f"Missing staging MANIFEST: {manifest_path}")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise FeedError(f"Unreadable staging MANIFEST: {manifest_path}") from exc
+    if not isinstance(manifest, dict):
+        raise FeedError(f"Invalid staging MANIFEST shape: {manifest_path}")
+    files = manifest.get("files")
+    if not isinstance(files, dict) or not files:
+        raise FeedError(f"Staging MANIFEST missing files map: {manifest_path}")
+    for rel, expected in files.items():
+        if not isinstance(rel, str) or not isinstance(expected, str):
+            raise FeedError(f"Invalid MANIFEST entry for {rel!r}")
+        path = gen_dir / rel
+        if not path.is_file():
+            raise FeedError(f"Staged file missing for MANIFEST entry: {rel}")
+        actual = _sha256(path.read_bytes())
+        if actual != expected:
+            raise FeedError(
+                f"Staged digest mismatch for {rel}: expected {expected[:12]}… got {actual[:12]}…"
+            )
+
+
 def materialize_generation(
     root: Path,
     *,
@@ -138,13 +167,19 @@ def materialize_generation(
     if not gen_dir.is_dir():
         raise FeedError(f"Missing staged generation: {gen_dir}")
 
+    # Integrity gate before any public write (RV-R-003).
+    verify_staging_manifest(gen_dir)
+
     pointer = {
         "gen_id": gen_id,
         "phase": "materializing",
     }
     pointer_path = root / _POINTER_REL
     pointer_path.parent.mkdir(parents=True, exist_ok=True)
-    pointer_path.write_text(json.dumps(pointer, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    atomic_write_text(
+        pointer_path,
+        json.dumps(pointer, sort_keys=True, indent=2) + "\n",
+    )
 
     # Materialize feeds first, catalog last (SSOT flips after projections exist).
     write_feeds(
@@ -161,7 +196,10 @@ def materialize_generation(
     atomic_write_bytes(default_catalog_path(root), catalog_blob)
 
     pointer["phase"] = "complete"
-    pointer_path.write_text(json.dumps(pointer, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    atomic_write_text(
+        pointer_path,
+        json.dumps(pointer, sort_keys=True, indent=2) + "\n",
+    )
     # Clear pointer after successful materialize.
     with suppress(OSError):
         pointer_path.unlink(missing_ok=True)
@@ -207,5 +245,6 @@ __all__ = [
     "recover_materialize",
     "release_write_lock",
     "save_catalog",
+    "verify_staging_manifest",
     "write_staging_generation",
 ]

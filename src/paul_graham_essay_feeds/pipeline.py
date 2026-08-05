@@ -235,8 +235,8 @@ def _apply_enrichment(
         page = ResourceState(
             etag=page_etag,
             last_modified=page_last_modified,
-            raw_sha256=essay.content_hash or entry.page.raw_sha256,
-            decoded_sha256=essay.content_hash or entry.page.decoded_sha256,
+            raw_sha256=ev.raw_sha256 or entry.page.raw_sha256,
+            decoded_sha256=(ev.decoded_sha256 or essay.content_hash or entry.page.decoded_sha256),
             last_checked_at=now,
             last_attempted_at=now,
             last_response_at=now,
@@ -372,8 +372,10 @@ def _publish_catalog_and_feeds(
 
     Stages all seven artifacts under ``.cache/generations/<id>/``, verifies the
     staged triple pair, then materializes public ``feeds/*`` + ``catalog.json``
-    under an exclusive writer lock. On crash mid-materialize, re-run recover via
-    :func:`recover_materialize` before the next pipeline (H-01/H-02).
+    under an exclusive writer lock. Crash recovery via
+    :func:`recover_materialize` runs only while the writer lock is held
+    (H-01/H-02 / RV-R-001). Staged MANIFEST digests are re-checked before
+    public writes (RV-R-003).
     """
     from paul_graham_essay_feeds.publication import (
         acquire_write_lock,
@@ -395,7 +397,6 @@ def _publish_catalog_and_feeds(
         json_feed=simple_json_feed,
         min_items=min_items,
     )
-    recover_materialize(root)
     lock = acquire_write_lock(root)
     try:
         recover_materialize(root)
@@ -528,6 +529,7 @@ def run_catalog_pipeline(
     index_etag: str | None = None
     index_last_modified: str | None = None
     index_status: int | None = 200
+    index_raw_sha256: str | None = None
 
     if html is not None:
         index_html: str | None = html
@@ -550,6 +552,7 @@ def run_catalog_pipeline(
         index_last_modified = fetched.last_modified
         index_status = fetched.status_code
         index_html = fetched.html
+        index_raw_sha256 = fetched.raw_sha256
         _persist_http_cache(
             root,
             etag=index_etag,
@@ -568,6 +571,7 @@ def run_catalog_pipeline(
             or prior.index.raw_sha256
             or content_sha256("304-not-modified")
         )
+        index_raw_sha256 = prior.index.raw_sha256
     else:
         index_hash = content_sha256(index_html)
         from paul_graham_essay_feeds.discover import evaluate_discovery_anomaly
@@ -579,8 +583,8 @@ def run_catalog_pipeline(
             allow_fallback=settings.allow_discovery_fallback,
         )
         quarantine = evaluate_discovery_anomaly(
-            len(prior.entry_order),
-            discovered_count=len(discovered),
+            set(prior.entry_order),
+            {item.stable_id for item in discovered},
             report=discovery_report,
         )
         if quarantine is not None:
@@ -618,7 +622,7 @@ def run_catalog_pipeline(
         # Pre-enrich UNCHANGED: zero tracked writes (no save_catalog / enrich / publish).
         # Page-due plans never reach here (F-001); identity+planner decide skip.
         # http-cache sidecar may update above; tracked paths stay untouched.
-        # from_feeds already persisted the bootstrapped catalog above.
+        # --from-feeds bootstrap remains in-memory only until a later publish (H-12).
         logger.info(
             "Catalog refresh not due (hash {}); skipping enrich/write",
             index_hash[:12],
@@ -663,6 +667,7 @@ def run_catalog_pipeline(
             workers=settings.link_workers,
             max_bytes=settings.max_bytes,
             quiet=settings.quiet,
+            host_cooldown_seconds=settings.host_cooldown_seconds,
         )
 
     if settings.enrich and due_ids:
@@ -691,6 +696,7 @@ def run_catalog_pipeline(
             quiet=settings.quiet,
             page_validators=page_validators,
             page_evidence_out=page_evidence,
+            host_cooldown_seconds=settings.host_cooldown_seconds,
         )
         catalog = _apply_enrichment(
             catalog,
@@ -702,12 +708,13 @@ def run_catalog_pipeline(
         logger.info("Refresh plan: no page fetches due")
 
     # Stamp index validators into catalog only when we continue toward publish.
+    # Never invent raw from decoded when transport did not provide raw (RV-R-004).
     index_state = ResourceState(
         etag=index_etag if index_etag is not None else catalog.index.etag,
         last_modified=(
             index_last_modified if index_last_modified is not None else catalog.index.last_modified
         ),
-        raw_sha256=index_hash,
+        raw_sha256=index_raw_sha256 if index_raw_sha256 is not None else catalog.index.raw_sha256,
         decoded_sha256=index_hash,
         last_checked_at=observed,
         status_code=index_status if index_status is not None else catalog.index.status_code,

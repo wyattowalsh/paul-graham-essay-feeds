@@ -358,11 +358,8 @@ def reconcile_discovery(
             added.append(stable_id)
             continue
 
-        material_changed = (
-            existing.title != item.title
-            or existing.url != item.url
-            or existing.position != position
-        )
+        # Position/order is integrity metadata, not essay material (RES-H09).
+        material_changed = existing.title != item.title or existing.url != item.url
         # model_copy preserves enrichment (summary*, page, published_*) and
         # first_seen_at unless explicitly overwritten.
         next_entries[stable_id] = existing.model_copy(

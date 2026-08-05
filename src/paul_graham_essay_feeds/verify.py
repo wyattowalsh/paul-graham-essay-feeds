@@ -34,6 +34,9 @@ CONTENT_TEXT_MISMATCH: Final = "CONTENT_TEXT_MISMATCH"
 SUMMARY_LENGTH: Final = "SUMMARY_LENGTH"
 UNICODE_REPLACEMENT: Final = "UNICODE_REPLACEMENT"
 ID_ORDER_MISMATCH: Final = "ID_ORDER_MISMATCH"
+TITLE_ORDER_MISMATCH: Final = "TITLE_ORDER_MISMATCH"
+URL_ORDER_MISMATCH: Final = "URL_ORDER_MISMATCH"
+SUMMARY_ORDER_MISMATCH: Final = "SUMMARY_ORDER_MISMATCH"
 ARTIFACT_TOO_LARGE: Final = "ARTIFACT_TOO_LARGE"
 _MAX_ARTIFACT_BYTES: Final = 20 * 1024 * 1024
 
@@ -358,7 +361,8 @@ def verify_feed_bytes(
 
     Checks parseability, size caps, count parity, min-items floor, duplicate
     ids, empty id/title/url/summary, JSON ``content_text == summary``, summary
-    length bounds, U+FFFD integrity, and ordered id parity across formats.
+    length bounds, U+FFFD integrity, ordered id parity, and ordered
+    title/url/summary payload parity across formats.
     """
     violations: list[VerificationViolation] = []
     for label, blob, path in (
@@ -447,6 +451,37 @@ def verify_feed_bytes(
                         message="Ordered id lists differ across RSS/Atom/JSON",
                     )
                 )
+            else:
+                # Cross-format payload parity (RES-H06) after ids align.
+                for i, (r, a, j) in enumerate(zip(rss_items, atom_items, json_items, strict=True)):
+                    if not (r.title == a.title == j.title):
+                        violations.append(
+                            VerificationViolation(
+                                code=TITLE_ORDER_MISMATCH,
+                                message=(
+                                    f"Ordered titles differ at index {i} across RSS/Atom/JSON"
+                                ),
+                                index=i,
+                            )
+                        )
+                    if not (r.url == a.url == j.url):
+                        violations.append(
+                            VerificationViolation(
+                                code=URL_ORDER_MISMATCH,
+                                message=(f"Ordered urls differ at index {i} across RSS/Atom/JSON"),
+                                index=i,
+                            )
+                        )
+                    if not (r.summary == a.summary == j.summary):
+                        violations.append(
+                            VerificationViolation(
+                                code=SUMMARY_ORDER_MISMATCH,
+                                message=(
+                                    f"Ordered summaries differ at index {i} across RSS/Atom/JSON"
+                                ),
+                                index=i,
+                            )
+                        )
 
     return VerificationReport(ok=len(violations) == 0, violations=violations)
 

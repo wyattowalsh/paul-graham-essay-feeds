@@ -144,9 +144,10 @@ def catalog_to_feed_snapshot(
     base = public_base_url.strip() if public_base_url else None
     if not base:
         base = None
-    json_name = (
-        SIMPLE_FEED_NAMES["json"] if summary_mode == "title_only" else ENRICHED_FEED_NAMES["json"]
+    variant: Literal["enriched", "simple"] = (
+        "simple" if summary_mode == "title_only" else "enriched"
     )
+    json_name = SIMPLE_FEED_NAMES["json"] if variant == "simple" else ENRICHED_FEED_NAMES["json"]
     feed_url = f"{base.rstrip('/')}/{json_name}" if base is not None else None
 
     return FeedSnapshot(
@@ -154,6 +155,7 @@ def catalog_to_feed_snapshot(
         generator=generator,
         feed_url=feed_url,
         public_base_url=base,
+        variant=variant,
         index_hash=index_hash,
         index_fingerprint=index_fingerprint,
         items=items,
@@ -237,12 +239,8 @@ def render_atom(snapshot: FeedSnapshot) -> bytes:
         },
     )
     ET.SubElement(feed, "title").text = FEED_TITLE
-    # Distinct Atom feed IDs for simple vs enriched subscriptions (H-15).
-    atom_feed_id = (
-        FEED_ID_SIMPLE
-        if snapshot.feed_url is not None and "simple" in snapshot.feed_url
-        else FEED_ID
-    )
+    # Distinct Atom feed IDs for simple vs enriched subscriptions (H-15 / RV-R-002).
+    atom_feed_id = FEED_ID_SIMPLE if snapshot.variant == "simple" else FEED_ID
     ET.SubElement(feed, "id").text = atom_feed_id
     ET.SubElement(feed, "updated").text = rfc3339(snapshot.logical_updated_at)
     ET.SubElement(feed, "subtitle").text = FEED_DESCRIPTION

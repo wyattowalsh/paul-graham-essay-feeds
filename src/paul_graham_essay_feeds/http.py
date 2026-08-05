@@ -10,6 +10,8 @@ import contextlib
 import hashlib
 import random
 import re
+import threading
+import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -1096,6 +1098,42 @@ def fetch_html(
         return _get_once(url, timeout=timeout, max_bytes=max_bytes, headers=headers)
 
     return run_with_retry(_call, attempts=attempts, what=f"fetch {url}")
+
+
+class HostCooldown:
+    """Minimum inter-request gap for a single host (RV-R-005).
+
+    ``seconds <= 0`` disables waiting. Clock and sleeper are injectable for tests.
+    Thread-safe for concurrent enrich / probe workers.
+    """
+
+    def __init__(
+        self,
+        seconds: float,
+        *,
+        clock: Callable[[], float] | None = None,
+        sleeper: Callable[[float], None] | None = None,
+    ) -> None:
+        self.seconds = float(seconds)
+        self._clock = clock or time.monotonic
+        self._sleeper = sleeper or time.sleep
+        self._last: dict[str, float] = {}
+        self._lock = threading.Lock()
+
+    def wait(self, host: str) -> None:
+        """Block until ``seconds`` have elapsed since the last wait for ``host``."""
+        if self.seconds <= 0:
+            return
+        host_key = host.strip().lower() or host
+        with self._lock:
+            now = self._clock()
+            last = self._last.get(host_key)
+            if last is not None:
+                remaining = self.seconds - (now - last)
+                if remaining > 0:
+                    self._sleeper(remaining)
+                    now = self._clock()
+            self._last[host_key] = now
 
 
 @dataclass(frozen=True, slots=True)

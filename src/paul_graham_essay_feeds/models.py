@@ -449,6 +449,13 @@ class FeedSnapshot(_StrictModel):
     public_base_url: str | None = Field(
         default=None, description="Configured public base URL for self links."
     )
+    variant: Literal["enriched", "simple"] = Field(
+        default="enriched",
+        description=(
+            "Feed product variant for Atom feed id selection "
+            "(enriched vs simple); never inferred from URL substrings."
+        ),
+    )
     index_hash: str | None = Field(
         default=None, description="SHA-256 of the decoded index document when known."
     )

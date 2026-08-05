@@ -629,6 +629,7 @@ def test_material_title_url_position_changes_mark_updated() -> None:
 
     catalog, changes = reconcile_discovery(prior, essays, now=T1)
 
+    # Title + URL are material; both entries update material clocks.
     assert set(changes.updated) == {a.stable_id, b.stable_id}
     assert changes.unchanged == []
     assert catalog.entries[a.stable_id].title == "New Title"
@@ -637,6 +638,35 @@ def test_material_title_url_position_changes_mark_updated() -> None:
     assert catalog.entries[b.stable_id].url == "https://paulgraham.com/b-renamed.html"
     assert catalog.entries[b.stable_id].position == 0
     assert catalog.entries[b.stable_id].observed_updated_at == T1
+    assert catalog.entry_order == [b.stable_id, a.stable_id]
+
+
+def test_position_only_reorder_is_not_material() -> None:
+    """RES-H09: position/order changes alone must not bump observed_updated_at."""
+    a = _item(slug="a", title="A", position=1)
+    b = _item(slug="b", title="B", position=2)
+    prior = Catalog(
+        schema_version=1,
+        material_config_fingerprint="default",
+        entry_order=[a.stable_id, b.stable_id],
+        entries={
+            a.stable_id: _entry(a, position=0),
+            b.stable_id: _entry(b, position=1),
+        },
+    )
+    # Same titles/urls; only list order swaps.
+    essays = [
+        _item(slug="b", title="B", position=1),
+        _item(slug="a", title="A", position=2),
+    ]
+    catalog, changes = reconcile_discovery(prior, essays, now=T1)
+
+    assert changes.updated == []
+    assert set(changes.unchanged) == {a.stable_id, b.stable_id}
+    assert catalog.entries[a.stable_id].position == 1
+    assert catalog.entries[b.stable_id].position == 0
+    assert catalog.entries[a.stable_id].observed_updated_at == T0
+    assert catalog.entries[b.stable_id].observed_updated_at == T0
     assert catalog.entry_order == [b.stable_id, a.stable_id]
 
 
@@ -654,8 +684,10 @@ def test_new_id_is_added() -> None:
     catalog, changes = reconcile_discovery(prior, essays, now=T1)
 
     assert changes.added == [c.stable_id]
-    assert changes.updated == [a.stable_id]
-    assert changes.unchanged == []
+    # Position-only shift for `a` is not material (RES-H09).
+    assert changes.updated == []
+    assert changes.unchanged == [a.stable_id]
+    assert catalog.entries[a.stable_id].position == 1
     assert catalog.entries[c.stable_id].first_seen_at == T1
     assert catalog.entry_order == [c.stable_id, a.stable_id]
 
