@@ -99,7 +99,7 @@ flowchart LR
 | Refresh plan | Always | F-001: never skip solely on index hash |
 | Fetch pages | Default validate on; `--no-validate-links` skips dedicated probes | One user-facing phase: enrich GET = check + summary for due IDs; dedicated probes only for URLs not enriched this run. Report-only; never drop essays |
 | Enrich | Default on; planned pages only | Prior-good summary retained; page GET is the reachability check for those URLs |
-| Publish | Verify both snapshots → write six `feeds/*` → `catalog.json` | Catalog is SSOT (index mirror); feeds are projections. No generation tree / `current.json` |
+| Publish | Verify both snapshots → write six `feeds/*` → `catalog.json` | Public product is root `catalog.json` plus six flat `feeds/*` files. Private gitignored `.cache/generations` + `.cache/materialize.json` + writer lock are implementation-only. No public generation tree / `current.json` |
 
 > [!TIP]
 > CI and offline smoke use `--no-enrich --no-validate-links`. Reachability
@@ -158,11 +158,14 @@ Entry points: `cli:main` / `__main__.py`. Schema SSOT is Pydantic `models.py` (n
 | :--- | :--- |
 | `catalog.json` | **Commit** — durable SSOT (repo root; index mirror) |
 | `feeds/*` | **Commit** — six flat feed projections (enriched + simple) |
-| `.cache/` | **Do not commit** — HTTP validator sidecar |
+| `.cache/` | **Do not commit** — HTTP sidecar, writer lock, private `.cache/generations/<id>/`, `.cache/materialize.json` |
 
 Publish order (AD-005): verify both snapshots in memory → write six `feeds/*` →
-write `catalog.json`. Catalog is SSOT; feeds are projections. No `site/`
-artifact, no `state/generations/`, no `current.json`, no `feeds/validated/`.
+write `catalog.json`. Catalog is SSOT; feeds are projections. The **public**
+product is only those seven files. Private gitignored `.cache/generations`,
+`.cache/materialize.json`, and the writer lock are authorized recovery
+staging — not a second public feed tree. Forbidden: public `state/generations`,
+`current.json`, `site/`, or `feeds/validated/`.
 
 ---
 
@@ -485,9 +488,11 @@ maintainers:
    check + summary for due IDs, dedicated probes only for non-enriched URLs) →
    `uvx … check` → assert six `feeds/{rss,atom,feed}{,.simple}.*` → zip all six →
    optional Colab download when `AUTO_DOWNLOAD`
-4. Status HTML after the zip (report-only): **green** when logs show reachability
-   OK / no failure lines; **amber** panel with failure count + up to
-   ~10 `Link probe issue:` messages when checks fail — zip still downloads
+4. Status HTML after the zip (report-only): **green** only when every attempted
+   probe and enrichment GET succeeded; **amber** when `PGF_REACHABILITY_FAIL`
+   or `PGF_ENRICH_DEGRADED` tokens appear (legacy `Link probe issue:` still
+   counts as reachability). Parse-after-HTTP is metadata degradation, not an
+   unreachable URL. Zip still downloads.
 5. Troubleshooting cell (`#@title` + form-hidden HTML `<details>`)
 
 No package API imports in the kernel; CLI only via `uvx` from floating `main`.
@@ -610,7 +615,10 @@ Feed projections (both deep-verified before write):
 | Field | Meaning | Public use |
 | :--- | :--- | :--- |
 | `first_seen_at` / `last_seen_at` | index observation | catalog only |
-| `last_checked_at` | request attempt | never content time |
+| `last_checked_at` | latest request attempt (success or failure) | never content time; kept in sync with `last_attempted_at` on schema-v2 writes |
+| `last_attempted_at` | explicit lifecycle attempt clock | catalog only |
+| `last_response_at` | latest response or transport outcome | catalog only |
+| `last_success_at` | accepted 200/304/local-source success; schema-v2 freshness TTL | catalog only; empty-item `logical_updated_at` fallback |
 | `observed_updated_at` | material metadata change | Atom entry `updated` |
 | `published_at` | exact trustworthy date only | feed published fields |
 | `logical_updated_at` | generation material clock | feed-level updated |
@@ -637,16 +645,20 @@ Feeds-then-catalog: projections land before the durable catalog stamp. This is
 **not** a multi-file atomic transaction — a crash between feed replaces and
 `catalog.json` can leave feeds ahead of the catalog (`check` catches
 `entry_order` id parity vs both JSON feeds). Failure before any durable replace
-leaves prior catalog + feeds intact. No second feed tree, no generation tree,
-no `current.json`, no `site/`, no `feeds/validated/`.
+leaves prior catalog + feeds intact. Public product stays flat: no second feed
+tree, no public generation tree / `current.json`, no `site/`, no `feeds/validated/`.
+Private gitignored `.cache/generations` + `.cache/materialize.json` + writer lock
+remain the recovery implementation.
 
-Material-noop after enrich may still `save_catalog` so page clocks advance even
-when feed bytes are unchanged. That catalog-only write takes the writer lock and
-honors recover before save (RV-R-001). If recover rematerializes a generation,
-the path re-checks material against post-recover disk: matching material overlays
-clocks onto the recovered catalog; differing material publishes feeds and catalog
-together (RV-C-001). The path returns `action=state_changed` (not `unchanged`)
-when only the catalog is written, so scheduled automation commits the catalog.
+Material-noop after enrich may still persist catalog clocks when feed bytes are
+unchanged. The decisive comparison and chosen write happen **after** acquiring
+the writer lock and after `recover_materialize`, including when recovery is a
+no-op (PGF-P0-001 / RV-R-001). Matching post-lock disk overlays this run's
+non-material clocks onto the **reloaded** catalog. Differing material publishes
+this run's feeds and catalog together in the same lock (RV-C-001). Never
+catalog-only-save the pre-lock object. The path returns `action=state_changed`
+(not `unchanged`) when only the catalog is written, so scheduled automation
+commits the catalog.
 
 ### AD-006 — CLI and Python
 
@@ -659,8 +671,8 @@ when only the catalog is written, so scheduled automation commits the catalog.
 
 | Exit | Meaning |
 | :--- | :--- |
-| `0` | Success |
-| `1` | `ConfigurationError` / plain `FeedError` / `ValidationError` (usage) |
+| `0` | Success and `--help` |
+| `1` | Parser usage, bad option/value, `ConfigurationError`, plain `FeedError`, `ValidationError` |
 | `2` | `VerificationError` |
 | `3` | `NetworkSourceError` |
 | `4` | `OSError` / unexpected internal (`Exception` → `exit_code_for_exception`) |

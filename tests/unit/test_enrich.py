@@ -410,6 +410,10 @@ def test_apply_enrichment_304_retains_prior_good() -> None:
     assert updated.page.etag == '"page-v1"'
     assert updated.page.raw_sha256 == "a" * 64
     assert updated.page.last_checked_at == now
+    assert updated.page.last_attempted_at == now
+    assert updated.page.last_response_at == now
+    assert updated.page.last_success_at == now
+    assert updated.page.failure_count == 0
 
 
 def test_apply_enrichment_200_persists_validators() -> None:
@@ -467,6 +471,10 @@ def test_apply_enrichment_200_persists_validators() -> None:
     assert updated.page.raw_sha256 == raw_digest
     assert updated.page.decoded_sha256 == decoded_digest
     assert updated.page.raw_sha256 != updated.page.decoded_sha256
+    assert updated.page.last_checked_at == now
+    assert updated.page.last_attempted_at == now
+    assert updated.page.last_success_at == now
+    assert updated.page.failure_count == 0
 
 
 def test_enrich_worker_exception_keeps_essay() -> None:

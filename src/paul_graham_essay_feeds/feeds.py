@@ -99,7 +99,7 @@ def catalog_to_feed_snapshot(
     - ``observed_updated_at`` = entry value, else ``first_seen_at``; entries
       missing both are skipped (reconcile should set observation times).
     - ``logical_updated_at`` = max item ``observed_updated_at``, else
-      ``catalog.index.last_checked_at``.
+      ``catalog.index.last_success_at`` (never the attempt clock).
     - Never invents 1970-01-01 observation times.
     """
     items: list[FeedEntrySnapshot] = []
@@ -134,9 +134,9 @@ def catalog_to_feed_snapshot(
     if items:
         logical_updated_at = max(item.observed_updated_at for item in items)
     else:
-        # FeedSnapshot requires ≥1 item; index last_checked is the only
+        # FeedSnapshot requires ≥1 item; index last_success is the only
         # remaining candidate clock (never invent wall-clock or 1970).
-        logical_updated_at = catalog.index.last_checked_at
+        logical_updated_at = catalog.index.last_success_at
 
     if not items or logical_updated_at is None:
         raise FeedError("Catalog has no entries with observation timestamps for feed projection")

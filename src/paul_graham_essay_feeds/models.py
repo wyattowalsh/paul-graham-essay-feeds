@@ -263,8 +263,9 @@ class ResourceState(_StrictModel):
     last_checked_at: datetime | None = Field(
         default=None,
         description=(
-            "Legacy alias for last successful validation (UTC). "
-            "Prefer last_success_at; kept for schema-v1 compatibility."
+            "UTC time of the latest request attempt (success or failure). "
+            "Never used as content time. Synchronized with last_attempted_at "
+            "on schema-v2 writes."
         ),
     )
     last_attempted_at: datetime | None = Field(

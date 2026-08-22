@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **PGF-P0-001:** Catalog-only `state_changed` now re-checks material after the
+  writer lock and recover (including recover-false). Matching disk overlays clocks
+  onto the reloaded catalog; divergence publishes this run's feeds and catalog in
+  the same lock. The pre-lock object is never catalog-only-saved.
+- **PGF-P1-002:** The installed `pg-essay-feeds` / `python -m` boundary maps
+  parser usage and `ConfigurationError` to exit 1 with concise stderr (Click's
+  default usage exit 2 no longer leaks).
+- **PGF-P1-003:** Schema-v2 clocks are one meaning everywhere: `last_checked_at`
+  is the attempt clock (synced with `last_attempted_at`); planner freshness uses
+  `last_success_at` only; accepted index observations persist a complete
+  `ResourceState`.
+- **PGF-P1-004:** Notebook `AUTO_DOWNLOAD` gates Colab download; status panel
+  aggregates `PGF_REACHABILITY_FAIL` and `PGF_ENRICH_DEGRADED` from probes and
+  enrichment GETs (parse-after-HTTP is degradation, not unreachable).
+- **PGF-P2-005:** DOCS distinguish the public seven-file product from authorized
+  private `.cache` staging (forbidden is a public generation tree / `current.json`).
 - **RV-C-001:** After recover rematerializes a generation, catalog-only writes
   re-check post-recover disk and never save the pre-recover catalog (clock overlay
   onto the reloaded catalog, or full publish when material now differs).

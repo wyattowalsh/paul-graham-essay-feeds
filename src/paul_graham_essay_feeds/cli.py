@@ -27,6 +27,7 @@ from paul_graham_essay_feeds.models import (
     FeedError,
     OutputPolicy,
     ProgressReporter,
+    UserFacingError,
     VerificationError,
     exit_code_for_exception,
     format_validation_error,
@@ -167,8 +168,11 @@ def _settings(
             data["verbose"] = False
         return Settings.model_validate(data)
     except ValidationError as exc:
-        # Concise expected-config failure (no traceback) — F-014 / ADR-006.
+        # Concise expected-config failure (no traceback) — F-014 / AD-006.
         print(format_validation_error(exc), file=sys.stderr)
+        raise typer.Exit(code=int(ExitCode.USAGE)) from None
+    except ConfigurationError as exc:
+        print(str(exc), file=sys.stderr)
         raise typer.Exit(code=int(ExitCode.USAGE)) from None
 
 
@@ -350,9 +354,62 @@ def check_cmd(
         raise typer.Exit(code=exit_code_for_exception(exc)) from exc
 
 
+def _parser_usage_error(exc: BaseException) -> bool:
+    """True for Click/Typer parser failures (unknown option, bad value, …)."""
+    if isinstance(exc, typer.BadParameter):
+        return True
+    name = type(exc).__name__
+    module = type(exc).__module__
+    return (
+        name
+        in {
+            "UsageError",
+            "NoSuchOption",
+            "MissingParameter",
+            "NoSuchCommand",
+        }
+        and "click" in module
+    )
+
+
+def _run_cli(args: list[str] | None = None) -> int:
+    """AD-006 executable boundary: map parser/config/runtime failures to 0-4."""
+    try:
+        # Typer/Click returns Exit.exit_code instead of raising when
+        # standalone_mode is False (typer.core._main).
+        result = app(args=args, standalone_mode=False)
+    except typer.Abort:
+        return int(ExitCode.USAGE)
+    except typer.Exit as exc:
+        return int(exc.exit_code)
+    except ValidationError as exc:
+        print(format_validation_error(exc), file=sys.stderr)
+        return int(ExitCode.USAGE)
+    except UserFacingError as exc:
+        print(str(exc), file=sys.stderr)
+        return int(exc.exit_code)
+    except FeedError as exc:
+        print(str(exc), file=sys.stderr)
+        return int(ExitCode.USAGE)
+    except OSError as exc:
+        print(str(exc), file=sys.stderr)
+        return int(ExitCode.INTERNAL)
+    except Exception as exc:
+        if _parser_usage_error(exc):
+            formatter = getattr(exc, "format_message", None)
+            message = formatter() if callable(formatter) else str(exc)
+            print(f"Error: {message}", file=sys.stderr)
+            return int(ExitCode.USAGE)
+        print(str(exc), file=sys.stderr)
+        return int(ExitCode.INTERNAL)
+    if isinstance(result, int):
+        return result
+    return int(ExitCode.SUCCESS)
+
+
 def main() -> None:
-    """Console script entrypoint."""
-    app()
+    """Console script entrypoint (installed ``pg-essay-feeds`` / ``python -m``)."""
+    raise SystemExit(_run_cli())
 
 
 if __name__ == "__main__":

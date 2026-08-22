@@ -465,7 +465,7 @@ def plan_refresh(
     2. ``NEW`` is the reconcile caller's job. For an existing catalog entry,
        ``MISSING_METADATA`` applies when ``enrich`` is True and the summary is
        ``None`` or empty.
-    3. ``STALE`` when ``page.last_checked_at`` is ``None`` or older than
+    3. ``STALE`` when ``page.last_success_at`` is ``None`` or older than
        ``stale_after_days``.
     4. ``CANARY`` when ``stable_id`` is in ``canary_ids``.
     5. Otherwise ``NOT_DUE`` with ``fetch_page=False``.
@@ -553,11 +553,8 @@ def _missing_summary(summary: str | None) -> bool:
 
 
 def _success_clock(page: object) -> datetime | None:
-    """Prefer last_success_at; fall back to legacy last_checked_at."""
-    last_success = getattr(page, "last_success_at", None)
-    if last_success is not None:
-        return last_success  # type: ignore[no-any-return]
-    return getattr(page, "last_checked_at", None)  # type: ignore[no-any-return]
+    """Schema-v2 freshness clock: successful validation only (not attempts)."""
+    return getattr(page, "last_success_at", None)  # type: ignore[no-any-return]
 
 
 def _missing_summary_due(page: object, *, now: datetime) -> bool:

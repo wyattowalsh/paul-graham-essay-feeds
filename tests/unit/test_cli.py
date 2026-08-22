@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -939,3 +940,88 @@ def test_check_unexpected_exception_exits_4(
         ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
     )
     assert result.exit_code == 4
+
+
+def _run_entrypoint(
+    args: list[str],
+    *,
+    env: dict[str, str] | None = None,
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess[bytes]:
+    import os
+    import sys
+
+    merged = os.environ.copy()
+    if env:
+        merged.update(env)
+    return subprocess.run(
+        [sys.executable, "-m", "paul_graham_essay_feeds", *args],
+        check=False,
+        capture_output=True,
+        cwd=cwd,
+        env=merged,
+    )
+
+
+def test_entrypoint_help_exits_0() -> None:
+    proc = _run_entrypoint(["--help"])
+    assert proc.returncode == 0
+    assert b"Traceback" not in proc.stderr
+    assert b"update" in proc.stdout
+
+
+def test_entrypoint_unknown_option_exits_1() -> None:
+    proc = _run_entrypoint(["check", "--definitely-not-an-option"])
+    assert proc.returncode == 1
+    assert b"Traceback" not in proc.stdout + proc.stderr
+    assert proc.stderr
+
+
+def test_entrypoint_invalid_typed_option_exits_1() -> None:
+    proc = _run_entrypoint(["check", "--min-items", "not-an-int"])
+    assert proc.returncode == 1
+    assert b"Traceback" not in proc.stdout + proc.stderr
+    assert proc.stderr
+
+
+def test_entrypoint_invalid_public_base_url_exits_1() -> None:
+    proc = _run_entrypoint(
+        ["check", "--quiet"],
+        env={"PG_ESSAY_FEEDS_PUBLIC_BASE_URL": "http://example.com/feeds"},
+    )
+    assert proc.returncode == 1
+    combined = proc.stdout + proc.stderr
+    assert b"Traceback" not in combined
+    assert b"public_base_url" in combined or b"https" in combined
+    assert proc.stderr
+
+
+def test_entrypoint_quiet_successful_check_empty_streams(repo_root: Path) -> None:
+    _write_one_essay(repo_root)
+    proc = _run_entrypoint(
+        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
+        cwd=repo_root,
+    )
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    assert proc.stdout == b""
+    assert proc.stderr == b""
+
+
+def test_entrypoint_quiet_successful_update_empty_streams(
+    repo_root: Path, sample_html_path: Path
+) -> None:
+    proc = _run_entrypoint(
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--source-file",
+            str(sample_html_path),
+        ],
+        cwd=repo_root,
+    )
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    assert proc.stdout == b""
+    assert proc.stderr == b""

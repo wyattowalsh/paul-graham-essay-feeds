@@ -87,6 +87,14 @@ class PipelineResult:
     changed_paths: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class _LockedWrite:
+    """Result of one lock-protected catalog-only-or-publish decision."""
+
+    catalog: Catalog
+    action: str  # PipelineAction.STATE_CHANGED or MATERIAL_CHANGED
+
+
 def _read_source_file(path: Path, *, max_bytes: int) -> str:
     try:
         size = path.stat().st_size
@@ -132,6 +140,38 @@ def _index_identity_fingerprint(essays: list[Essay]) -> str | None:
     return "\n".join(essay.index_fingerprint() for essay in essays)
 
 
+def _complete_index_state(
+    *,
+    prior: ResourceState,
+    observed: datetime,
+    etag: str | None,
+    last_modified: str | None,
+    raw_sha256: str | None,
+    decoded_sha256: str | None,
+    status_code: int | None,
+) -> ResourceState:
+    """Build a full schema-v2 index ResourceState for an accepted observation.
+
+    Does not invent ``raw_sha256`` when transport omitted it (RV-R-004).
+    """
+    return ResourceState(
+        etag=etag if etag is not None else prior.etag,
+        last_modified=last_modified if last_modified is not None else prior.last_modified,
+        raw_sha256=raw_sha256 if raw_sha256 is not None else prior.raw_sha256,
+        decoded_sha256=decoded_sha256 if decoded_sha256 is not None else prior.decoded_sha256,
+        last_checked_at=observed,
+        last_attempted_at=observed,
+        last_response_at=observed,
+        last_success_at=observed,
+        failure_count=0,
+        last_error_kind=None,
+        last_error_message=None,
+        next_retry_at=None,
+        status_code=status_code if status_code is not None else prior.status_code,
+        selected_encoding=prior.selected_encoding,
+    )
+
+
 def _essays_for_ids(essays: list[Essay], ids: set[str]) -> list[Essay]:
     return [e for e in essays if e.stable_id in ids]
 
@@ -171,6 +211,7 @@ def _apply_enrichment(
             fail_count = int(entry.page.failure_count) + 1
             page = entry.page.model_copy(
                 update={
+                    "last_checked_at": now,
                     "last_attempted_at": now,
                     "last_response_at": now,
                     "failure_count": fail_count,
@@ -383,6 +424,37 @@ def _overlay_observation_clocks(*, base: Catalog, clocks: Catalog) -> Catalog:
     )
 
 
+def _stage_and_materialize(
+    root: Path,
+    *,
+    catalog: Catalog,
+    rss: bytes,
+    atom: bytes,
+    json_feed: bytes,
+    simple_rss: bytes,
+    simple_atom: bytes,
+    simple_json_feed: bytes,
+    reporter: ProgressReporter,
+) -> None:
+    """Stage then materialize public feeds+catalog. Caller must hold the writer lock."""
+    from paul_graham_essay_feeds.publication import (
+        materialize_generation,
+        write_staging_generation,
+    )
+
+    gen_id = write_staging_generation(
+        root,
+        catalog=catalog,
+        rss=rss,
+        atom=atom,
+        json_feed=json_feed,
+        simple_rss=simple_rss,
+        simple_atom=simple_atom,
+        simple_json_feed=simple_json_feed,
+    )
+    materialize_generation(root, gen_id=gen_id, reporter=reporter)
+
+
 def _save_catalog_under_lock(
     root: Path,
     catalog: Catalog,
@@ -393,15 +465,15 @@ def _save_catalog_under_lock(
     simple_rss: bytes,
     simple_atom: bytes,
     simple_json_feed: bytes,
-) -> Catalog | None:
-    """Write ``catalog.json`` under the exclusive writer lock (RV-R-001 / RV-C-001).
+    reporter: ProgressReporter | None = None,
+) -> _LockedWrite:
+    """Lock, recover, then overlay-save or publish in one protected sequence.
 
-    Honors an existing recover pointer before ``save_catalog`` so a catalog-only
-    clock write cannot interleave with an incomplete materialize. If recover
-    rematerializes a generation, re-check material against **post-recover** disk:
-    matching material overlays this-run clocks onto the reloaded catalog; differing
-    material returns ``None`` so the caller publishes feeds and catalog together.
-    Never ``save_catalog`` the pre-recover object after a successful recover.
+    The decisive disk comparison always runs after ``acquire_write_lock`` and
+    ``recover_materialize`` (PGF-P0-001), including when recovery is a no-op.
+    Matching material overlays this-run clocks onto the **reloaded** catalog
+    (never the pre-lock object). Differing material publishes this run's feeds
+    and catalog together **without** releasing the lock (RV-R-001 / RV-C-001).
     """
     from paul_graham_essay_feeds.publication import (
         acquire_write_lock,
@@ -409,36 +481,44 @@ def _save_catalog_under_lock(
         release_write_lock,
     )
 
+    progress = reporter or NULL_REPORTER
     lock = acquire_write_lock(root)
     try:
-        recovered = recover_materialize(root)
-        to_save = catalog
-        if recovered:
-            if not _material_unchanged_vs_disk(
-                root,
-                catalog=catalog,
-                rss=rss,
-                atom=atom,
-                json_feed=json_feed,
-                simple_rss=simple_rss,
-                simple_atom=simple_atom,
-                simple_json_feed=simple_json_feed,
-            ):
-                logger.info(
-                    "Recover rematerialized a generation whose material differs; "
-                    "deferring to locked publish"
-                )
-                return None
+        recover_materialize(root)
+        if _material_unchanged_vs_disk(
+            root,
+            catalog=catalog,
+            rss=rss,
+            atom=atom,
+            json_feed=json_feed,
+            simple_rss=simple_rss,
+            simple_atom=simple_atom,
+            simple_json_feed=simple_json_feed,
+        ):
             reloaded = load_catalog(default_catalog_path(root))
-            if reloaded is None:
-                logger.warning(
-                    "Recover rematerialized but catalog.json is missing; deferring to publish"
+            if reloaded is not None:
+                to_save = _overlay_observation_clocks(base=reloaded, clocks=catalog)
+                save_catalog(default_catalog_path(root), to_save)
+                logger.info("Post-lock material matches; overlaying clocks onto reloaded catalog")
+                return _LockedWrite(
+                    catalog=to_save,
+                    action=PipelineAction.STATE_CHANGED.value,
                 )
-                return None
-            to_save = _overlay_observation_clocks(base=reloaded, clocks=catalog)
-            logger.info("Recover rematerialized; overlaying clocks onto recovered catalog")
-        save_catalog(default_catalog_path(root), to_save)
-        return to_save
+            logger.warning("Post-lock feeds match but catalog.json is missing; publishing")
+        else:
+            logger.info("Post-lock disk material differs; publishing feeds and catalog together")
+        _stage_and_materialize(
+            root,
+            catalog=catalog,
+            rss=rss,
+            atom=atom,
+            json_feed=json_feed,
+            simple_rss=simple_rss,
+            simple_atom=simple_atom,
+            simple_json_feed=simple_json_feed,
+            reporter=progress,
+        )
+        return _LockedWrite(catalog=catalog, action=PipelineAction.MATERIAL_CHANGED.value)
     finally:
         release_write_lock(lock)
 
@@ -467,10 +547,8 @@ def _publish_catalog_and_feeds(
     """
     from paul_graham_essay_feeds.publication import (
         acquire_write_lock,
-        materialize_generation,
         recover_materialize,
         release_write_lock,
-        write_staging_generation,
     )
 
     assert_verified(
@@ -490,7 +568,7 @@ def _publish_catalog_and_feeds(
     lock = acquire_write_lock(root)
     try:
         recover_materialize(root)
-        gen_id = write_staging_generation(
+        _stage_and_materialize(
             root,
             catalog=catalog,
             rss=rss,
@@ -499,8 +577,8 @@ def _publish_catalog_and_feeds(
             simple_rss=simple_rss,
             simple_atom=simple_atom,
             simple_json_feed=simple_json_feed,
+            reporter=reporter,
         )
-        materialize_generation(root, gen_id=gen_id, reporter=reporter)
     finally:
         release_write_lock(lock)
     catalog_path = default_catalog_path(root)
@@ -797,17 +875,16 @@ def run_catalog_pipeline(
     elif settings.enrich and not due_ids:
         logger.info("Refresh plan: no page fetches due")
 
-    # Stamp index validators into catalog only when we continue toward publish.
-    # Never invent raw from decoded when transport did not provide raw (RV-R-004).
-    index_state = ResourceState(
-        etag=index_etag if index_etag is not None else catalog.index.etag,
-        last_modified=(
-            index_last_modified if index_last_modified is not None else catalog.index.last_modified
-        ),
-        raw_sha256=index_raw_sha256 if index_raw_sha256 is not None else catalog.index.raw_sha256,
+    # Stamp complete schema-v2 index evidence (PGF-P1-003). Never invent raw
+    # from decoded when transport did not provide raw (RV-R-004).
+    index_state = _complete_index_state(
+        prior=catalog.index,
+        observed=observed,
+        etag=index_etag,
+        last_modified=index_last_modified,
+        raw_sha256=index_raw_sha256,
         decoded_sha256=index_hash,
-        last_checked_at=observed,
-        status_code=index_status if index_status is not None else catalog.index.status_code,
+        status_code=index_status,
     )
     catalog = catalog.model_copy(
         update={
@@ -867,10 +944,10 @@ def run_catalog_pipeline(
         simple_json_feed=simple_json_feed,
     ):
         logger.info(
-            "Post-enrich material unchanged (hash {}); saving catalog clocks only",
+            "Post-enrich material unchanged (hash {}); committing under writer lock",
             index_hash[:12],
         )
-        saved = _save_catalog_under_lock(
+        committed = _save_catalog_under_lock(
             root,
             catalog,
             rss=rss,
@@ -879,10 +956,11 @@ def run_catalog_pipeline(
             simple_rss=simple_rss,
             simple_atom=simple_atom,
             simple_json_feed=simple_json_feed,
+            reporter=progress,
         )
-        if saved is not None:
+        if committed.action == PipelineAction.STATE_CHANGED.value:
             return PipelineResult(
-                catalog=saved,
+                catalog=committed.catalog,
                 changeset=changeset,
                 refresh_plan=plan,
                 index_hash=index_hash,
@@ -891,8 +969,23 @@ def run_catalog_pipeline(
                 action=PipelineAction.STATE_CHANGED.value,
                 changed_paths=("catalog.json",),
             )
-        logger.info(
-            "Recover rematerialized differing material; publishing feeds + catalog together"
+        return PipelineResult(
+            catalog=committed.catalog,
+            changeset=changeset,
+            refresh_plan=plan,
+            index_hash=index_hash,
+            essay_count=len(essays),
+            skipped=False,
+            action=PipelineAction.MATERIAL_CHANGED.value,
+            changed_paths=(
+                "catalog.json",
+                "feeds/rss.xml",
+                "feeds/atom.xml",
+                "feeds/feed.json",
+                "feeds/rss.simple.xml",
+                "feeds/atom.simple.xml",
+                "feeds/feed.simple.json",
+            ),
         )
 
     published = _publish_catalog_and_feeds(

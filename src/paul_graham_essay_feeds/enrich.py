@@ -52,6 +52,11 @@ _MAX_CONTENT_CHARS = 600
 
 _USER_AGENT = user_agent(" link-check")
 
+# Stable tokens for notebook/status aggregation (PGF-P1-004). Keep the
+# existing ``Link probe issue:`` line as well — tests and logs may depend on it.
+REACHABILITY_FAIL_TOKEN: Final = "PGF_REACHABILITY_FAIL"
+ENRICH_DEGRADED_TOKEN: Final = "PGF_ENRICH_DEGRADED"
+
 # Month+year on the page is a human hint only (AD-003); never invent day-1 dates.
 _MONTH_YEAR = re.compile(
     r"\b(January|February|March|April|May|June|July|August|September|October|"
@@ -614,6 +619,7 @@ def _enrich_one(
         fetched = run_with_retry(_load, attempts=attempts, what=f"enrich {essay.url}")
     except FeedError as exc:
         logger.warning("Enrichment failed for {}: {}", essay.url, exc)
+        logger.warning("{} {} | enrich_fetch | {}", REACHABILITY_FAIL_TOKEN, essay.url, exc)
         kind = type(exc).__name__
         return essay, PageEnrichEvidence(
             ok=False,
@@ -637,6 +643,7 @@ def _enrich_one(
         meta = parse_page_metadata(fetched.html, page_url=essay.url)
     except Exception as exc:
         logger.warning("Enrichment parse failed for {}: {}", essay.url, exc)
+        logger.warning("{} {} | parse | {}", ENRICH_DEGRADED_TOKEN, essay.url, exc)
         return essay, PageEnrichEvidence(
             etag=fetched.etag,
             last_modified=fetched.last_modified,
@@ -723,6 +730,12 @@ def enrich_essays(
                 essay, evidence = fut.result()
             except Exception as exc:
                 logger.warning("Enrich worker failed for position {}: {}", pos, exc)
+                logger.warning(
+                    "{} {} | enrich_fetch | {}",
+                    REACHABILITY_FAIL_TOKEN,
+                    prior.url,
+                    exc,
+                )
                 out[pos] = prior
                 if page_evidence_out is not None:
                     page_evidence_out[prior.stable_id] = PageEnrichEvidence(
@@ -879,9 +892,16 @@ def validate_essays_live(
             desc="Probe links",
             unit="url",
         ):
+            essay = futures[fut]
             err = fut.result()
             if err:
                 errors.append(err)
+                logger.warning(
+                    "{} {} | probe | {}",
+                    REACHABILITY_FAIL_TOKEN,
+                    essay.url,
+                    err,
+                )
                 logger.warning("Link probe issue: {}", err)
 
     failures = tuple(errors)

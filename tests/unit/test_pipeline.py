@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TypedDict
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,11 +19,15 @@ from paul_graham_essay_feeds.catalog import (
     plan_refresh,
     save_catalog,
 )
+from paul_graham_essay_feeds.feeds import all_feed_paths
 from paul_graham_essay_feeds.models import Catalog, CatalogEntry, Essay, ResourceState
 from paul_graham_essay_feeds.pipeline import (
+    _apply_enrichment,
+    _complete_index_state,
     _material_unchanged_vs_disk,
     _save_catalog_under_lock,
     _should_skip_publish,
+    material_catalog_digest,
     run_catalog_pipeline,
 )
 from paul_graham_essay_feeds.settings import Settings
@@ -31,14 +36,24 @@ from tests.html_samples import synthetic_index_html
 T0 = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
 T_LATER = T0 + timedelta(days=40)
 
-_LOCK_FEED_BYTES: dict[str, bytes] = {
-    "rss": b"<rss/>",
-    "atom": b"<feed/>",
-    "json_feed": b"{}",
-    "simple_rss": b"<rss/>",
-    "simple_atom": b"<feed/>",
-    "simple_json_feed": b"{}",
-}
+
+class _LockFeedBytes(TypedDict):
+    rss: bytes
+    atom: bytes
+    json_feed: bytes
+    simple_rss: bytes
+    simple_atom: bytes
+    simple_json_feed: bytes
+
+
+_LOCK_FEED_BYTES = _LockFeedBytes(
+    rss=b"<rss/>",
+    atom=b"<feed/>",
+    json_feed=b"{}",
+    simple_rss=b"<rss/>",
+    simple_atom=b"<feed/>",
+    simple_json_feed=b"{}",
+)
 
 
 def _clock_catalog(
@@ -47,15 +62,17 @@ def _clock_catalog(
     last_seen: datetime,
     generation_id: str | None,
     cursor: str,
+    title: str = "A",
+    summary: str = "Short summary content for tests.",
 ) -> Catalog:
     entry = CatalogEntry(
         stable_id="https://paulgraham.com/a.html",
         url="https://paulgraham.com/a.html",
-        title="A",
+        title=title,
         position=0,
         last_seen_at=last_seen,
         observed_updated_at=T0,
-        summary="Short summary content for tests.",
+        summary=summary,
         page=ResourceState(last_success_at=last_success),
     )
     return Catalog(
@@ -67,6 +84,29 @@ def _clock_catalog(
         entries={entry.stable_id: entry},
         last_generation_id=generation_id,
     )
+
+
+def _write_public_artifacts(
+    root: Path,
+    catalog: Catalog,
+    *,
+    rss: bytes,
+    atom: bytes,
+    json_feed: bytes,
+    simple_rss: bytes,
+    simple_atom: bytes,
+    simple_json_feed: bytes,
+) -> None:
+    """Write catalog.json plus six feed files without a recover pointer."""
+    save_catalog(default_catalog_path(root), catalog)
+    paths = all_feed_paths(root)
+    paths["rss"].parent.mkdir(parents=True, exist_ok=True)
+    paths["rss"].write_bytes(rss)
+    paths["atom"].write_bytes(atom)
+    paths["json"].write_bytes(json_feed)
+    paths["rss_simple"].write_bytes(simple_rss)
+    paths["atom_simple"].write_bytes(simple_atom)
+    paths["json_simple"].write_bytes(simple_json_feed)
 
 
 def _write_pending_generation(
@@ -152,6 +192,13 @@ def test_pipeline_publish_creates_catalog_and_feeds(tmp_path: Path) -> None:
     assert not (tmp_path / "state" / "current.json").exists()
     assert not (tmp_path / "state" / "generations").exists()
     assert len(result.catalog.entry_order) >= MIN_ITEMS
+    index = result.catalog.index
+    assert index.last_checked_at == T0
+    assert index.last_attempted_at == T0
+    assert index.last_response_at == T0
+    assert index.last_success_at == T0
+    assert index.failure_count == 0
+    assert index.status_code == 200
 
 
 def test_pipeline_enriched_summaries_when_enrich_on(
@@ -870,9 +917,22 @@ def test_default_catalog_path_is_repo_root() -> None:
 def test_save_catalog_under_lock_recovers_then_saves(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Catalog-only writes take the writer lock and honor recover (RV-R-001)."""
+    """Matching post-lock disk overlays clocks onto the reloaded catalog (RV-R-001)."""
     order: list[str] = []
-    pre = empty_catalog(material_config_fingerprint="test")
+    disk = _clock_catalog(
+        last_success=T0,
+        last_seen=T0,
+        generation_id="gen-g0",
+        cursor="0",
+    )
+    later = _clock_catalog(
+        last_success=T_LATER,
+        last_seen=T_LATER,
+        generation_id=None,
+        cursor="3",
+    )
+    _write_public_artifacts(tmp_path, disk, **_LOCK_FEED_BYTES)
+    original_save = save_catalog
 
     monkeypatch.setattr(
         "paul_graham_essay_feeds.publication.acquire_write_lock",
@@ -882,18 +942,27 @@ def test_save_catalog_under_lock_recovers_then_saves(
         "paul_graham_essay_feeds.publication.recover_materialize",
         lambda root: order.append("recover") or False,
     )
-    monkeypatch.setattr(
-        "paul_graham_essay_feeds.pipeline.save_catalog",
-        lambda path, catalog: order.append("save"),
-    )
+
+    def _save(path: Path, catalog: Catalog) -> None:
+        order.append("save")
+        original_save(path, catalog)
+
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.save_catalog", _save)
     monkeypatch.setattr(
         "paul_graham_essay_feeds.publication.release_write_lock",
         lambda lock: order.append("release"),
     )
 
-    saved = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
-    assert saved is pre
+    committed = _save_catalog_under_lock(tmp_path, later, **_LOCK_FEED_BYTES)
+    assert committed.action == "state_changed"
+    assert committed.catalog is not later
+    assert committed.catalog.last_generation_id == "gen-g0"
+    assert committed.catalog.index.last_success_at == T_LATER
     assert order == ["acquire", "recover", "save", "release"]
+    on_disk = load_catalog(default_catalog_path(tmp_path))
+    assert on_disk is not None
+    assert on_disk.last_generation_id == "gen-g0"
+    assert on_disk.index.last_success_at == T_LATER
 
 
 def test_save_catalog_under_lock_recover_true_overlays_reloaded_catalog(
@@ -921,9 +990,10 @@ def test_save_catalog_under_lock_recover_true_overlays_reloaded_catalog(
 
     monkeypatch.setattr("paul_graham_essay_feeds.pipeline.save_catalog", _capture_save)
     _write_pending_generation(tmp_path, g1, **_LOCK_FEED_BYTES)
-    saved = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
+    committed = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
 
-    assert saved is not None
+    saved = committed.catalog
+    assert committed.action == "state_changed"
     assert saved is not pre
     assert saved_catalogs == [saved]
     assert saved.last_generation_id == "gen-g1"
@@ -941,7 +1011,7 @@ def test_save_catalog_under_lock_recover_true_overlays_reloaded_catalog(
 def test_save_catalog_under_lock_recover_true_divergent_material_does_not_save_pre(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """RV-C-001: recover True + different feeds must not save the pre-recover catalog."""
+    """RV-C-001: recover True + different feeds publishes this-run bytes under lock."""
     pre = _clock_catalog(
         last_success=T_LATER,
         last_seen=T_LATER,
@@ -955,14 +1025,6 @@ def test_save_catalog_under_lock_recover_true_divergent_material_does_not_save_p
         cursor="0",
     )
     poison = b"<rss>G1-POISON</rss>"
-    saved_catalogs: list[Catalog] = []
-    original_save = save_catalog
-
-    def _capture_save(path: Path, catalog: Catalog) -> None:
-        saved_catalogs.append(catalog)
-        original_save(path, catalog)
-
-    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.save_catalog", _capture_save)
     _write_pending_generation(
         tmp_path,
         g1,
@@ -973,15 +1035,194 @@ def test_save_catalog_under_lock_recover_true_divergent_material_does_not_save_p
         simple_atom=poison,
         simple_json_feed=poison,
     )
-    saved = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
+    committed = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
 
-    assert saved is None
-    assert saved_catalogs == []
+    assert committed.action == "updated"
+    assert committed.catalog is pre
     on_disk = load_catalog(default_catalog_path(tmp_path))
     assert on_disk is not None
-    assert on_disk.last_generation_id == "gen-g1"
-    assert on_disk.index.last_success_at == T0
-    assert (tmp_path / "feeds" / "rss.xml").read_bytes() == poison
+    assert on_disk.index.last_success_at == T_LATER
+    assert on_disk.last_generation_id != "gen-g1"
+    assert (tmp_path / "feeds" / "rss.xml").read_bytes() == _LOCK_FEED_BYTES["rss"]
+    assert (tmp_path / "feeds" / "atom.xml").read_bytes() == _LOCK_FEED_BYTES["atom"]
+
+
+def test_save_catalog_under_lock_no_recovery_concurrent_title_change(tmp_path: Path) -> None:
+    """PGF-P0-001: clean concurrent publisher, same IDs, different title/summary."""
+    candidate = _clock_catalog(
+        last_success=T_LATER,
+        last_seen=T_LATER,
+        generation_id=None,
+        cursor="3",
+        title="A",
+        summary="Short summary content for tests.",
+    )
+    g0 = _clock_catalog(
+        last_success=T0,
+        last_seen=T0,
+        generation_id="gen-g0",
+        cursor="0",
+        title="A",
+        summary="Short summary content for tests.",
+    )
+    g1 = _clock_catalog(
+        last_success=T0,
+        last_seen=T0,
+        generation_id="gen-g1",
+        cursor="1",
+        title="B-changed",
+        summary="Different summary proving ID-only parity is not enough.",
+    )
+    _write_public_artifacts(tmp_path, g0, **_LOCK_FEED_BYTES)
+    assert _material_unchanged_vs_disk(tmp_path, catalog=candidate, **_LOCK_FEED_BYTES)
+    assert g0.entry_order == g1.entry_order
+    assert material_catalog_digest(g0) != material_catalog_digest(g1)
+
+    _write_public_artifacts(tmp_path, g1, **_LOCK_FEED_BYTES)
+    assert not (tmp_path / ".cache" / "materialize.json").exists()
+    assert not _material_unchanged_vs_disk(tmp_path, catalog=candidate, **_LOCK_FEED_BYTES)
+
+    committed = _save_catalog_under_lock(tmp_path, candidate, **_LOCK_FEED_BYTES)
+    assert committed.action == "updated"
+    on_disk = load_catalog(default_catalog_path(tmp_path))
+    assert on_disk is not None
+    entry = next(iter(on_disk.entries.values()))
+    assert entry.title == "A"
+    assert entry.summary == "Short summary content for tests."
+    assert material_catalog_digest(on_disk) == material_catalog_digest(candidate)
+    assert (tmp_path / "feeds" / "rss.xml").read_bytes() == _LOCK_FEED_BYTES["rss"]
+
+
+def test_complete_index_state_200_and_304_advance_success_and_clear_failure() -> None:
+    prior = ResourceState(
+        etag='"old"',
+        last_modified="Tue, 01 Jul 2024 00:00:00 GMT",
+        raw_sha256="a" * 64,
+        decoded_sha256="b" * 64,
+        last_checked_at=T0,
+        last_attempted_at=T0,
+        last_response_at=T0,
+        last_success_at=T0,
+        failure_count=3,
+        last_error_kind="timeout",
+        last_error_message="timed out",
+        next_retry_at=T_LATER,
+        status_code=503,
+        selected_encoding="windows-1252",
+    )
+    state_200 = _complete_index_state(
+        prior=prior,
+        observed=T_LATER,
+        etag='"new"',
+        last_modified="Wed, 02 Jul 2024 00:00:00 GMT",
+        raw_sha256="c" * 64,
+        decoded_sha256="d" * 64,
+        status_code=200,
+    )
+    assert state_200.last_checked_at == T_LATER
+    assert state_200.last_attempted_at == T_LATER
+    assert state_200.last_response_at == T_LATER
+    assert state_200.last_success_at == T_LATER
+    assert state_200.failure_count == 0
+    assert state_200.last_error_kind is None
+    assert state_200.last_error_message is None
+    assert state_200.next_retry_at is None
+    assert state_200.selected_encoding == "windows-1252"
+    assert state_200.raw_sha256 == "c" * 64
+    assert state_200.status_code == 200
+
+    state_304 = _complete_index_state(
+        prior=prior,
+        observed=T_LATER,
+        etag='"old"',
+        last_modified="Tue, 01 Jul 2024 00:00:00 GMT",
+        raw_sha256=None,
+        decoded_sha256=prior.decoded_sha256,
+        status_code=304,
+    )
+    assert state_304.last_success_at == T_LATER
+    assert state_304.last_checked_at == T_LATER
+    assert state_304.last_attempted_at == T_LATER
+    assert state_304.raw_sha256 == prior.raw_sha256
+    assert state_304.decoded_sha256 == prior.decoded_sha256
+    assert state_304.failure_count == 0
+    assert state_304.status_code == 304
+
+
+def test_complete_index_state_local_html_has_coherent_success() -> None:
+    prior = ResourceState()
+    state = _complete_index_state(
+        prior=prior,
+        observed=T_LATER,
+        etag=None,
+        last_modified=None,
+        raw_sha256=None,
+        decoded_sha256="e" * 64,
+        status_code=200,
+    )
+    assert state.last_checked_at == T_LATER
+    assert state.last_attempted_at == T_LATER
+    assert state.last_response_at == T_LATER
+    assert state.last_success_at == T_LATER
+    assert state.raw_sha256 is None
+    assert state.decoded_sha256 == "e" * 64
+    assert state.failure_count == 0
+
+
+def test_apply_enrichment_failure_advances_attempt_not_success() -> None:
+    from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
+    sid = "https://paulgraham.com/a.html"
+    entry = CatalogEntry(
+        stable_id=sid,
+        url=sid,
+        title="A",
+        position=0,
+        summary="prior good",
+        prior_good_summary="prior good",
+        observed_updated_at=T0,
+        page=ResourceState(
+            last_checked_at=T0,
+            last_attempted_at=T0,
+            last_response_at=T0,
+            last_success_at=T0,
+            failure_count=0,
+            status_code=200,
+        ),
+    )
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        entry_order=[sid],
+        entries={sid: entry},
+    )
+    evidence = {
+        sid: PageEnrichEvidence(
+            ok=False,
+            error_kind="timeout",
+            error_message="timed out",
+            status_code=None,
+        )
+    }
+    essay = Essay(
+        position=1,
+        title="A",
+        url=sid,
+        stable_id=sid,
+        is_permalink=True,
+        summary="prior good",
+    )
+    next_catalog = _apply_enrichment(catalog, [essay], now=T_LATER, page_evidence=evidence)
+    page = next_catalog.entries[sid].page
+    assert page.last_checked_at == T_LATER
+    assert page.last_attempted_at == T_LATER
+    assert page.last_response_at == T_LATER
+    assert page.last_success_at == T0
+    assert page.failure_count == 1
+    assert page.last_error_kind == "timeout"
+    assert page.next_retry_at is not None
+    assert next_catalog.entries[sid].observed_updated_at == T0
+    assert next_catalog.entries[sid].summary == "prior good"
 
 
 def test_catalog_only_path_recover_true_divergent_feeds_publishes(

@@ -815,15 +815,21 @@ def _refresh_entry(
     position: int = 0,
     summary: str | None = "A short summary.",
     last_checked_at: datetime | None = None,
+    last_success_at: datetime | None = None,
     title: str | None = None,
 ) -> CatalogEntry:
+    success = last_success_at if last_success_at is not None else last_checked_at
     return CatalogEntry(
         stable_id=stable_id,
         url=stable_id,
         title=title or stable_id.rsplit("/", 1)[-1],
         position=position,
         summary=summary,
-        page=ResourceState(last_checked_at=last_checked_at),
+        page=ResourceState(
+            last_checked_at=last_checked_at,
+            last_attempted_at=last_checked_at,
+            last_success_at=success,
+        ),
     )
 
 
@@ -831,14 +837,22 @@ def _refresh_catalog(
     entries: list[CatalogEntry],
     *,
     index_last_checked_at: datetime | None = None,
+    index_last_success_at: datetime | None = None,
 ) -> Catalog:
     order = [e.stable_id for e in entries]
     # Ensure unique positions aligned with order for relational invariants.
     normalized = {e.stable_id: e.model_copy(update={"position": i}) for i, e in enumerate(entries)}
+    index_success = (
+        index_last_success_at if index_last_success_at is not None else index_last_checked_at
+    )
     return Catalog(
         schema_version=1,
         material_config_fingerprint="test",
-        index=ResourceState(last_checked_at=index_last_checked_at),
+        index=ResourceState(
+            last_checked_at=index_last_checked_at,
+            last_attempted_at=index_last_checked_at,
+            last_success_at=index_success,
+        ),
         entry_order=order,
         entries=normalized,
     )
@@ -1239,3 +1253,35 @@ def test_atomic_write_text_cleans_tmp_on_replace_failure(tmp_path: Path) -> None
 
     assert path.read_text(encoding="utf-8") == prior
     assert list(tmp_path.glob(".x.txt.*")) == []
+
+
+def test_planner_freshness_uses_last_success_not_failed_attempt() -> None:
+    """Recent failed attempt must not keep a page fresh; success TTL is last_success_at."""
+    fresh_attempt = NOW
+    old_success = NOW - timedelta(days=STALE_AFTER + 5)
+    catalog = _refresh_catalog(
+        [
+            _refresh_entry(
+                "https://paulgraham.com/a.html",
+                last_checked_at=fresh_attempt,
+                last_success_at=old_success,
+            )
+        ],
+        index_last_checked_at=fresh_attempt,
+        index_last_success_at=NOW - timedelta(days=1),
+    )
+    plan = plan_refresh(catalog, enrich=True, stale_after_days=STALE_AFTER, now=NOW)
+    assert plan.decisions[0].fetch_page is True
+    assert RefreshReason.STALE in plan.decisions[0].reasons
+
+
+def test_planner_recent_success_not_due_despite_older_attempt_gap() -> None:
+    """Within-TTL last_success_at is NOT_DUE even if last_checked_at is also recent."""
+    fresh = NOW - timedelta(days=1)
+    catalog = _refresh_catalog(
+        [_refresh_entry("https://paulgraham.com/a.html", last_checked_at=fresh)],
+        index_last_checked_at=fresh,
+    )
+    plan = plan_refresh(catalog, enrich=True, stale_after_days=STALE_AFTER, now=NOW)
+    assert plan.decisions[0].fetch_page is False
+    assert plan.decisions[0].reasons == (RefreshReason.NOT_DUE,)

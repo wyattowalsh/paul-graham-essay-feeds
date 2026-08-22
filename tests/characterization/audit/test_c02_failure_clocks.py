@@ -81,3 +81,42 @@ def test_c02_migrate_v1_to_v2_maps_success_clock() -> None:
 def test_c02_failure_backoff_bounded() -> None:
     assert failure_backoff_delta(failure_count=1) == timedelta(hours=1)
     assert failure_backoff_delta(failure_count=20) <= timedelta(days=7)
+
+
+def test_c02_migrate_v1_idempotent_preserves_success_mapping() -> None:
+    raw = {
+        "schema_version": 1,
+        "material_config_fingerprint": "fp",
+        "entry_order": ["https://paulgraham.com/a.html"],
+        "entries": {
+            "https://paulgraham.com/a.html": {
+                "stable_id": "https://paulgraham.com/a.html",
+                "url": "https://paulgraham.com/a.html",
+                "title": "A",
+                "position": 0,
+                "page": {
+                    "last_checked_at": "2024-01-01T00:00:00Z",
+                    "status_code": 200,
+                },
+            }
+        },
+    }
+    first = migrate_catalog(raw)
+    second = migrate_catalog(first.model_dump(mode="json"))
+    assert first.schema_version == 2
+    assert second.schema_version == 2
+    assert second.migration_history == first.migration_history
+    page = second.entries["https://paulgraham.com/a.html"].page
+    assert page.last_success_at is not None
+    assert page.last_attempted_at is not None
+
+
+def test_c02_committed_catalog_is_schema_version_2() -> None:
+    from pathlib import Path
+
+    from paul_graham_essay_feeds.catalog import load_catalog
+
+    root = Path(__file__).resolve().parents[3]
+    catalog = load_catalog(root / "catalog.json")
+    assert catalog is not None
+    assert catalog.schema_version == 2
