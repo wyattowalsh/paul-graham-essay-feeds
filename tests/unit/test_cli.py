@@ -32,6 +32,15 @@ def test_help() -> None:
     assert "catalog-pipeline" not in result.output
 
 
+def test_check_help_requires_catalog() -> None:
+    result = runner.invoke(app, ["check", "--help"])
+    assert result.exit_code == 0
+    plain = _ANSI.sub("", result.output)
+    assert "when present" not in plain
+    assert "optional catalog" not in plain.lower()
+    assert "catalog.json" in plain
+
+
 def test_update_exposes_from_feeds_option() -> None:
     """`--from-feeds` is a real update flag (param + help; ANSI-safe)."""
     click_app = get_command(app)
@@ -419,6 +428,7 @@ def test_check_ok(repo_root: Path) -> None:
     )
     assert result.exit_code == 0
     assert result.stdout == ""
+    assert result.stderr == ""
 
 
 def test_check_fails_wrong_content_text(repo_root: Path) -> None:
@@ -745,6 +755,7 @@ def test_check_env_quiet_without_flag(repo_root: Path, monkeypatch: pytest.Monke
     )
     assert result.exit_code == 0
     assert result.stdout == ""
+    assert result.stderr == ""
 
 
 def test_cli_no_enrich_overrides_env_true(
@@ -882,6 +893,46 @@ def test_check_oserror_exits_4(
     monkeypatch.setattr(
         "paul_graham_essay_feeds.cli.verify_feed_artifacts",
         MagicMock(side_effect=OSError("permission denied")),
+    )
+    result = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
+    )
+    assert result.exit_code == 4
+
+
+def test_update_unexpected_exception_exits_4(
+    repo_root: Path,
+    sample_html_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.cli.run_catalog_pipeline",
+        MagicMock(side_effect=RuntimeError("boom")),
+    )
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--quiet",
+            "--no-enrich",
+            "--source-file",
+            str(sample_html_path),
+        ],
+    )
+    assert result.exit_code == 4
+
+
+def test_check_unexpected_exception_exits_4(
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_one_essay(repo_root)
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.cli.verify_feed_artifacts",
+        MagicMock(side_effect=RuntimeError("boom")),
     )
     result = runner.invoke(
         app,

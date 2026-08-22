@@ -99,7 +99,7 @@ markers = [
   "e2e: full CLI path offline",
   "smoke: subprocess / entrypoint smoke",
   "live: hits paulgraham.com (opt-in only)",
-  "characterization: contract locks for audited defects (may xfail until fixed)",
+  "characterization: contract locks for audited defects",
 ]
 
 [tool.coverage.run]

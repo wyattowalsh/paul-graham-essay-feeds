@@ -6,6 +6,7 @@ import json
 import re
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 import pytest
 
@@ -234,6 +235,101 @@ def test_unparseable_xml_rss_and_atom() -> None:
     assert report2.ok is False
     assert UNPARSEABLE_XML in _codes(report2)
     assert any(v.path == "feeds/atom.xml" for v in report2.violations)
+
+
+def test_unparseable_xml_simple_kind_labels_simple_paths() -> None:
+    rss, atom, jf = _good_triple()
+    report = verify_feed_bytes(
+        rss=b"<not-xml",
+        atom=atom,
+        json_feed=jf,
+        min_items=1,
+        kind="simple",
+    )
+    assert report.ok is False
+    assert UNPARSEABLE_XML in _codes(report)
+    assert any(v.path == "feeds/rss.simple.xml" for v in report.violations)
+    assert all(v.path != "feeds/rss.xml" for v in report.violations)
+
+    report2 = verify_feed_bytes(
+        rss=rss,
+        atom=b"<feed><broken",
+        json_feed=jf,
+        min_items=1,
+        kind="simple",
+    )
+    assert report2.ok is False
+    assert UNPARSEABLE_XML in _codes(report2)
+    assert any(v.path == "feeds/atom.simple.xml" for v in report2.violations)
+    assert all(v.path != "feeds/atom.xml" for v in report2.violations)
+
+
+def test_assert_verified_simple_kind_labels_simple_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _rss, atom, jf = _good_triple()
+    report = verify_feed_bytes(
+        rss=b"<not-xml",
+        atom=atom,
+        json_feed=jf,
+        min_items=1,
+        kind="simple",
+    )
+    assert any(v.path == "feeds/rss.simple.xml" for v in report.violations)
+
+    seen: list[str] = []
+    real = verify_feed_bytes
+
+    def _capture(
+        *,
+        rss: bytes,
+        atom: bytes,
+        json_feed: bytes,
+        min_items: int,
+        kind: Literal["enriched", "simple"] = "enriched",
+    ) -> VerificationReport:
+        seen.append(kind)
+        return real(
+            rss=rss,
+            atom=atom,
+            json_feed=json_feed,
+            min_items=min_items,
+            kind=kind,
+        )
+
+    monkeypatch.setattr("paul_graham_essay_feeds.verify.verify_feed_bytes", _capture)
+    with pytest.raises(VerificationError, match="UNPARSEABLE_XML"):
+        assert_verified(
+            rss=b"<not-xml",
+            atom=atom,
+            json_feed=jf,
+            min_items=1,
+            kind="simple",
+        )
+    assert seen == ["simple"]
+
+
+def test_verify_feed_dir_simple_kind_reads_simple_names(tmp_path: Path) -> None:
+    essays = _sample()
+    snap = _snapshot(essays)
+    simple = snap.model_copy(update={"variant": "simple"})
+    write_feeds(
+        tmp_path,
+        rss=render_rss(snap),
+        atom=render_atom(snap),
+        json_feed=render_json(snap),
+        simple_rss=render_rss(simple),
+        simple_atom=render_atom(simple),
+        simple_json_feed=render_json(simple),
+    )
+    ok = verify_feed_dir(tmp_path, min_items=2, kind="simple")
+    assert ok.ok is True
+
+    (tmp_path / "feeds" / "rss.simple.xml").write_bytes(b"<not-xml")
+    bad = verify_feed_dir(tmp_path, min_items=2, kind="simple")
+    assert bad.ok is False
+    assert UNPARSEABLE_XML in _codes(bad)
+    assert any(v.path == "feeds/rss.simple.xml" for v in bad.violations)
 
 
 def test_unparseable_json_variants() -> None:

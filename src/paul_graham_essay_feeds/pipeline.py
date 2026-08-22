@@ -355,6 +355,94 @@ def _material_unchanged_vs_disk(
     )
 
 
+def _overlay_observation_clocks(*, base: Catalog, clocks: Catalog) -> Catalog:
+    """Keep recovered material/identity; apply this-run observation clocks.
+
+    ``last_generation_id`` and material fields stay on ``base`` (the rematerialized
+    generation). Index/page resource state, ``last_seen_at``, and version cursors
+    come from ``clocks`` (this run).
+    """
+    merged_entries: dict[str, CatalogEntry] = {}
+    for sid, entry in base.entries.items():
+        src = clocks.entries.get(sid)
+        if src is None:
+            merged_entries[sid] = entry
+            continue
+        merged_entries[sid] = entry.model_copy(
+            update={
+                "last_seen_at": src.last_seen_at,
+                "page": src.page,
+            }
+        )
+    return base.model_copy(
+        update={
+            "index": clocks.index,
+            "versions": {**base.versions, **clocks.versions},
+            "entries": merged_entries,
+        }
+    )
+
+
+def _save_catalog_under_lock(
+    root: Path,
+    catalog: Catalog,
+    *,
+    rss: bytes,
+    atom: bytes,
+    json_feed: bytes,
+    simple_rss: bytes,
+    simple_atom: bytes,
+    simple_json_feed: bytes,
+) -> Catalog | None:
+    """Write ``catalog.json`` under the exclusive writer lock (RV-R-001 / RV-C-001).
+
+    Honors an existing recover pointer before ``save_catalog`` so a catalog-only
+    clock write cannot interleave with an incomplete materialize. If recover
+    rematerializes a generation, re-check material against **post-recover** disk:
+    matching material overlays this-run clocks onto the reloaded catalog; differing
+    material returns ``None`` so the caller publishes feeds and catalog together.
+    Never ``save_catalog`` the pre-recover object after a successful recover.
+    """
+    from paul_graham_essay_feeds.publication import (
+        acquire_write_lock,
+        recover_materialize,
+        release_write_lock,
+    )
+
+    lock = acquire_write_lock(root)
+    try:
+        recovered = recover_materialize(root)
+        to_save = catalog
+        if recovered:
+            if not _material_unchanged_vs_disk(
+                root,
+                catalog=catalog,
+                rss=rss,
+                atom=atom,
+                json_feed=json_feed,
+                simple_rss=simple_rss,
+                simple_atom=simple_atom,
+                simple_json_feed=simple_json_feed,
+            ):
+                logger.info(
+                    "Recover rematerialized a generation whose material differs; "
+                    "deferring to locked publish"
+                )
+                return None
+            reloaded = load_catalog(default_catalog_path(root))
+            if reloaded is None:
+                logger.warning(
+                    "Recover rematerialized but catalog.json is missing; deferring to publish"
+                )
+                return None
+            to_save = _overlay_observation_clocks(base=reloaded, clocks=catalog)
+            logger.info("Recover rematerialized; overlaying clocks onto recovered catalog")
+        save_catalog(default_catalog_path(root), to_save)
+        return to_save
+    finally:
+        release_write_lock(lock)
+
+
 def _publish_catalog_and_feeds(
     root: Path,
     *,
@@ -390,12 +478,14 @@ def _publish_catalog_and_feeds(
         atom=atom,
         json_feed=json_feed,
         min_items=min_items,
+        kind="enriched",
     )
     assert_verified(
         rss=simple_rss,
         atom=simple_atom,
         json_feed=simple_json_feed,
         min_items=min_items,
+        kind="simple",
     )
     lock = acquire_write_lock(root)
     try:
@@ -754,12 +844,14 @@ def run_catalog_pipeline(
         atom=atom,
         json_feed=json_feed,
         min_items=settings.min_items,
+        kind="enriched",
     )
     assert_verified(
         rss=simple_rss,
         atom=simple_atom,
         json_feed=simple_json_feed,
         min_items=settings.min_items,
+        kind="simple",
     )
 
     # Post-enrich material-noop: feed bytes match disk, but page clocks may have
@@ -778,16 +870,29 @@ def run_catalog_pipeline(
             "Post-enrich material unchanged (hash {}); saving catalog clocks only",
             index_hash[:12],
         )
-        save_catalog(default_catalog_path(root), catalog)
-        return PipelineResult(
-            catalog=catalog,
-            changeset=changeset,
-            refresh_plan=plan,
-            index_hash=index_hash,
-            essay_count=len(essays),
-            skipped=True,
-            action=PipelineAction.STATE_CHANGED.value,
-            changed_paths=("catalog.json",),
+        saved = _save_catalog_under_lock(
+            root,
+            catalog,
+            rss=rss,
+            atom=atom,
+            json_feed=json_feed,
+            simple_rss=simple_rss,
+            simple_atom=simple_atom,
+            simple_json_feed=simple_json_feed,
+        )
+        if saved is not None:
+            return PipelineResult(
+                catalog=saved,
+                changeset=changeset,
+                refresh_plan=plan,
+                index_hash=index_hash,
+                essay_count=len(essays),
+                skipped=True,
+                action=PipelineAction.STATE_CHANGED.value,
+                changed_paths=("catalog.json",),
+            )
+        logger.info(
+            "Recover rematerialized differing material; publishing feeds + catalog together"
         )
 
     published = _publish_catalog_and_feeds(

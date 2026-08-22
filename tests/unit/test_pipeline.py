@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -17,9 +18,10 @@ from paul_graham_essay_feeds.catalog import (
     plan_refresh,
     save_catalog,
 )
-from paul_graham_essay_feeds.models import Essay, ResourceState
+from paul_graham_essay_feeds.models import Catalog, CatalogEntry, Essay, ResourceState
 from paul_graham_essay_feeds.pipeline import (
     _material_unchanged_vs_disk,
+    _save_catalog_under_lock,
     _should_skip_publish,
     run_catalog_pipeline,
 )
@@ -28,6 +30,75 @@ from tests.html_samples import synthetic_index_html
 
 T0 = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
 T_LATER = T0 + timedelta(days=40)
+
+_LOCK_FEED_BYTES: dict[str, bytes] = {
+    "rss": b"<rss/>",
+    "atom": b"<feed/>",
+    "json_feed": b"{}",
+    "simple_rss": b"<rss/>",
+    "simple_atom": b"<feed/>",
+    "simple_json_feed": b"{}",
+}
+
+
+def _clock_catalog(
+    *,
+    last_success: datetime,
+    last_seen: datetime,
+    generation_id: str | None,
+    cursor: str,
+) -> Catalog:
+    entry = CatalogEntry(
+        stable_id="https://paulgraham.com/a.html",
+        url="https://paulgraham.com/a.html",
+        title="A",
+        position=0,
+        last_seen_at=last_seen,
+        observed_updated_at=T0,
+        summary="Short summary content for tests.",
+        page=ResourceState(last_success_at=last_success),
+    )
+    return Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        versions={"page_fetch_cursor": cursor},
+        index=ResourceState(last_success_at=last_success),
+        entry_order=[entry.stable_id],
+        entries={entry.stable_id: entry},
+        last_generation_id=generation_id,
+    )
+
+
+def _write_pending_generation(
+    root: Path,
+    catalog: Catalog,
+    *,
+    rss: bytes,
+    atom: bytes,
+    json_feed: bytes,
+    simple_rss: bytes,
+    simple_atom: bytes,
+    simple_json_feed: bytes,
+) -> str:
+    from paul_graham_essay_feeds.publication import write_staging_generation
+
+    gen_id = write_staging_generation(
+        root,
+        catalog=catalog,
+        rss=rss,
+        atom=atom,
+        json_feed=json_feed,
+        simple_rss=simple_rss,
+        simple_atom=simple_atom,
+        simple_json_feed=simple_json_feed,
+    )
+    pointer = root / ".cache" / "materialize.json"
+    pointer.parent.mkdir(parents=True, exist_ok=True)
+    pointer.write_text(
+        json.dumps({"gen_id": gen_id, "phase": "materializing"}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return gen_id
 
 
 def _settings(tmp_path: Path, **kwargs: object) -> Settings:
@@ -794,3 +865,181 @@ def test_index_304_page_due_still_enriches(
 def test_default_catalog_path_is_repo_root() -> None:
     root = Path("/tmp/repo")
     assert default_catalog_path(root) == root / "catalog.json"
+
+
+def test_save_catalog_under_lock_recovers_then_saves(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Catalog-only writes take the writer lock and honor recover (RV-R-001)."""
+    order: list[str] = []
+    pre = empty_catalog(material_config_fingerprint="test")
+
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.publication.acquire_write_lock",
+        lambda root, **kwargs: order.append("acquire") or (tmp_path / "write.lock"),
+    )
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.publication.recover_materialize",
+        lambda root: order.append("recover") or False,
+    )
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.pipeline.save_catalog",
+        lambda path, catalog: order.append("save"),
+    )
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.publication.release_write_lock",
+        lambda lock: order.append("release"),
+    )
+
+    saved = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
+    assert saved is pre
+    assert order == ["acquire", "recover", "save", "release"]
+
+
+def test_save_catalog_under_lock_recover_true_overlays_reloaded_catalog(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """RV-C-001: recover True + matching material saves clocks onto reloaded G1."""
+    pre = _clock_catalog(
+        last_success=T_LATER,
+        last_seen=T_LATER,
+        generation_id=None,
+        cursor="3",
+    )
+    g1 = _clock_catalog(
+        last_success=T0,
+        last_seen=T0,
+        generation_id="gen-g1",
+        cursor="0",
+    )
+    saved_catalogs: list[Catalog] = []
+    original_save = save_catalog
+
+    def _capture_save(path: Path, catalog: Catalog) -> None:
+        saved_catalogs.append(catalog)
+        original_save(path, catalog)
+
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.save_catalog", _capture_save)
+    _write_pending_generation(tmp_path, g1, **_LOCK_FEED_BYTES)
+    saved = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
+
+    assert saved is not None
+    assert saved is not pre
+    assert saved_catalogs == [saved]
+    assert saved.last_generation_id == "gen-g1"
+    assert saved.index.last_success_at == T_LATER
+    assert saved.versions["page_fetch_cursor"] == "3"
+    entry = next(iter(saved.entries.values()))
+    assert entry.last_seen_at == T_LATER
+    assert entry.page.last_success_at == T_LATER
+    on_disk = load_catalog(default_catalog_path(tmp_path))
+    assert on_disk is not None
+    assert on_disk.last_generation_id == "gen-g1"
+    assert on_disk.index.last_success_at == T_LATER
+
+
+def test_save_catalog_under_lock_recover_true_divergent_material_does_not_save_pre(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """RV-C-001: recover True + different feeds must not save the pre-recover catalog."""
+    pre = _clock_catalog(
+        last_success=T_LATER,
+        last_seen=T_LATER,
+        generation_id=None,
+        cursor="3",
+    )
+    g1 = _clock_catalog(
+        last_success=T0,
+        last_seen=T0,
+        generation_id="gen-g1",
+        cursor="0",
+    )
+    poison = b"<rss>G1-POISON</rss>"
+    saved_catalogs: list[Catalog] = []
+    original_save = save_catalog
+
+    def _capture_save(path: Path, catalog: Catalog) -> None:
+        saved_catalogs.append(catalog)
+        original_save(path, catalog)
+
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.save_catalog", _capture_save)
+    _write_pending_generation(
+        tmp_path,
+        g1,
+        rss=poison,
+        atom=poison,
+        json_feed=poison,
+        simple_rss=poison,
+        simple_atom=poison,
+        simple_json_feed=poison,
+    )
+    saved = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
+
+    assert saved is None
+    assert saved_catalogs == []
+    on_disk = load_catalog(default_catalog_path(tmp_path))
+    assert on_disk is not None
+    assert on_disk.last_generation_id == "gen-g1"
+    assert on_disk.index.last_success_at == T0
+    assert (tmp_path / "feeds" / "rss.xml").read_bytes() == poison
+
+
+def test_catalog_only_path_recover_true_divergent_feeds_publishes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RV-C-001: catalog-only path publishes when recover rematerializes other feeds."""
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+
+    html = synthetic_index_html()
+    enrich = MagicMock(side_effect=_stable_enrich)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.enrich_essays", enrich)
+
+    settings = _settings(
+        tmp_path,
+        min_items=MIN_ITEMS,
+        enrich=True,
+        stale_after_days=30,
+    )
+    first = run_catalog_pipeline(settings, html=html, now=T0)
+    assert first.action == "updated"
+    first_rss = (tmp_path / "feeds" / "rss.xml").read_bytes()
+
+    seeded = load_catalog(default_catalog_path(tmp_path))
+    assert seeded is not None
+    aged = {
+        sid: entry.model_copy(
+            update={
+                "page": entry.page.model_copy(update={"last_checked_at": T0 - timedelta(days=60)})
+            }
+        )
+        for sid, entry in seeded.entries.items()
+    }
+    save_catalog(
+        default_catalog_path(tmp_path),
+        seeded.model_copy(update={"entries": aged}),
+    )
+
+    poison = b"<rss>G1-POISON</rss>"
+    g1 = seeded.model_copy(update={"last_generation_id": "gen-g1"})
+    _write_pending_generation(
+        tmp_path,
+        g1,
+        rss=poison,
+        atom=poison,
+        json_feed=poison,
+        simple_rss=poison,
+        simple_atom=poison,
+        simple_json_feed=poison,
+    )
+
+    second = run_catalog_pipeline(settings, html=html, now=T_LATER)
+    assert second.action == "updated"
+    assert second.skipped is False
+    assert (tmp_path / "feeds" / "rss.xml").read_bytes() != poison
+    assert (tmp_path / "feeds" / "rss.xml").read_bytes() == first_rss
+    on_disk = load_catalog(default_catalog_path(tmp_path))
+    assert on_disk is not None
+    for entry in on_disk.entries.values():
+        assert entry.page.last_checked_at is not None
+        assert entry.page.last_checked_at >= T_LATER - timedelta(days=1)

@@ -25,6 +25,7 @@ from paul_graham_essay_feeds.feeds import (
 )
 from paul_graham_essay_feeds.models import (
     ATOM_NS,
+    FEED_ID_SIMPLE,
     FEED_SUMMARY_CHARS,
     Catalog,
     CatalogEntry,
@@ -533,6 +534,20 @@ def test_verify_feed_artifacts_checks_enriched_only(repo_root: Path) -> None:
         verify_feed_artifacts(repo_root, min_items=2)
 
 
+def test_verify_feed_artifacts_simple_unparseable_reports_simple_path(repo_root: Path) -> None:
+    _write_sample(repo_root)
+    simple_rss = repo_root / "feeds" / "rss.simple.xml"
+    blob = simple_rss.read_bytes()
+    cut = blob.rfind(b"<description>")
+    assert cut != -1
+    simple_rss.write_bytes(blob[: cut + len(b"<descrip")])
+    with pytest.raises(FeedError, match=r"rss\.simple\.xml is not valid XML") as excinfo:
+        verify_feed_artifacts(repo_root, min_items=2)
+    message = str(excinfo.value)
+    assert "UNPARSEABLE_XML" in message
+    assert "feeds/rss.xml is not valid XML" not in message
+
+
 def test_observed_falls_back_to_first_seen() -> None:
     entry = _catalog_entry(
         sid="https://paulgraham.com/a.html",
@@ -825,6 +840,7 @@ def test_simple_golden_fixtures_parity() -> None:
     snap = FeedSnapshot(
         logical_updated_at=datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC),
         generator="pg-essay-feeds/0.1.0",
+        variant="simple",
         index_hash="abc123",
         index_fingerprint=(
             "1\thttps://paulgraham.com/a.html\thttps://paulgraham.com/a.html\tAlpha"
@@ -853,6 +869,9 @@ def test_simple_golden_fixtures_parity() -> None:
             ),
         ],
     )
+    atom = render_atom(snap)
+    atom_id = ET.fromstring(atom).find(f"{{{ATOM_NS}}}id")
+    assert atom_id is not None and atom_id.text == FEED_ID_SIMPLE
     assert render_rss(snap) == (fixtures / "golden.rss.simple.xml").read_bytes()
-    assert render_atom(snap) == (fixtures / "golden.atom.simple.xml").read_bytes()
+    assert atom == (fixtures / "golden.atom.simple.xml").read_bytes()
     assert render_json(snap) == (fixtures / "golden.feed.simple.json").read_bytes()

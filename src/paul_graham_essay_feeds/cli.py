@@ -292,6 +292,9 @@ def update_cmd(
     except OSError as exc:
         logger.error("{}", exc)
         raise typer.Exit(code=exit_code_for_exception(exc)) from exc
+    except Exception as exc:
+        logger.error("{}", exc)
+        raise typer.Exit(code=exit_code_for_exception(exc)) from exc
 
 
 @app.command("check")
@@ -299,7 +302,7 @@ def check_cmd(
     ctx: typer.Context,
     repo_root: Annotated[
         Path | None,
-        typer.Option("--repo-root", help="Root containing feeds/ (+ optional catalog.json)"),
+        typer.Option("--repo-root", help="Root containing feeds/ and required catalog.json"),
     ] = None,
     min_items: Annotated[
         int | None,
@@ -308,7 +311,7 @@ def check_cmd(
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Errors only")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Debug logs")] = False,
 ) -> None:
-    """Deep-verify ``feeds/``; validate root ``catalog.json`` when present."""
+    """Deep-verify ``feeds/`` and required root ``catalog.json`` (M-25)."""
     settings = _settings(
         repo_root=repo_root,
         min_items=min_items,
@@ -340,6 +343,9 @@ def check_cmd(
         logger.error("{}", exc)
         raise typer.Exit(code=exit_code_for_exception(exc)) from exc
     except OSError as exc:
+        logger.error("{}", exc)
+        raise typer.Exit(code=exit_code_for_exception(exc)) from exc
+    except Exception as exc:
         logger.error("{}", exc)
         raise typer.Exit(code=exit_code_for_exception(exc)) from exc
 

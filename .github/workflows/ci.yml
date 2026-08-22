@@ -81,7 +81,7 @@ jobs:
           Path('${ROOT}/articles.html').write_text(synthetic_index_html(), encoding='utf-8')
           "
           uv run pg-essay-feeds update --repo-root "$ROOT" --quiet --no-enrich \
-            --source-file "$ROOT/articles.html"
+            --no-validate-links --source-file "$ROOT/articles.html"
           uv run pg-essay-feeds check --repo-root "$ROOT" --quiet
           test -f "$ROOT/feeds/rss.xml"
           test -f "$ROOT/feeds/atom.xml"

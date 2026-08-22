@@ -102,9 +102,8 @@ flowchart LR
 | Publish | Verify both snapshots → write six `feeds/*` → `catalog.json` | Catalog is SSOT (index mirror); feeds are projections. No generation tree / `current.json` |
 
 > [!TIP]
-> CI and offline smoke use `--no-enrich` (and typically `--no-validate-links`
-> offline). Reachability checks default on; failures are reported without failing
-> the update.
+> CI and offline smoke use `--no-enrich --no-validate-links`. Reachability
+> checks default on; failures are reported without failing the update.
 
 ---
 
@@ -218,8 +217,8 @@ the same way as dual bools. If both quiet and verbose end up true, quiet wins.
 
 Deep-verifies both enriched and simple `feeds/` sets (item-count parity across
 RSS/Atom/JSON; enriched JSON `content_text` == `summary` with length in
-`[1, FEED_SUMMARY_CHARS]`). When root `catalog.json` is present, also loads it
-and asserts `entry_order` ids match ordered ids in both `feed.json` and
+`[1, FEED_SUMMARY_CHARS]`). Root `catalog.json` is **required** (M-25): `check`
+loads it and asserts `entry_order` ids match ordered ids in both `feed.json` and
 `feed.simple.json`. No `site/` requirement.
 
 | Flag | Default | Meaning |
@@ -272,7 +271,7 @@ export PG_ESSAY_FEEDS_ENRICH=false   # optional: skip per-page scrapes
 | `--force` / `PG_ESSAY_FEEDS_FORCE=true` | Full pipeline | Bypass refresh-planner no-op (not index-hash skip) |
 | `--no-validate-links` | Skip dedicated HEAD/GET probes | Default checks are report-only and never drop essays |
 
-CI and offline smoke use `--no-enrich` (and often `--no-validate-links`). Reachability
+CI and offline smoke use `--no-enrich --no-validate-links`. Reachability
 checks default on; failures are logged without failing the update.
 
 ### Change detection (catalog planner — F-001)
@@ -330,15 +329,16 @@ checks default on; failures are logged without failing the update.
 2. Project six flat `feeds/*` files, then durable `catalog.json`.
 
 CLI `check` validates both `feeds/` projections (count parity, enriched
-`content_text` bounds) and, when `catalog.json` is present, asserts
-`entry_order` id parity with both JSON feeds. Deep verify runs before write.
+`content_text` bounds) and requires `catalog.json`, asserting `entry_order` id
+parity with both JSON feeds. Deep verify runs before write.
 
 ### Feed identity (Atom)
 
-The Atom feed `<id>` is the constant `FEED_ID` in `models.py`
-(`tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds`). That tag string is a
-**permanent feed identity** for readers, not a claim that a site is hosted on
-github.io. Do not change it casually — swapping Atom ids breaks reader state.
+The Atom feed `<id>` is selected from `FeedSnapshot.variant`:
+`FEED_ID` for enriched (`tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds`)
+and `FEED_ID_SIMPLE` for the simple triple (`…:simple`). Those tag strings are
+**permanent feed identities** for readers, not a claim that a site is hosted on
+github.io. Do not change them casually — swapping Atom ids breaks reader state.
 
 ### Non-goals
 
@@ -411,7 +411,7 @@ just cov
 
 | Workflow | Role |
 | :--- | :--- |
-| `ci.yml` | matrix 3.12–3.14; lint/types (3.13); pytest + cov ≥90%; committed-feed `check` on `feeds/`; offline catalog smoke (`feeds/` + `catalog.json`); assert no `feeds/validated/`; dist job |
+| `ci.yml` | matrix 3.12–3.14; lint/types (3.13); pytest + cov ≥90%; committed-feed `check` on `feeds/`; offline catalog smoke (`--no-enrich --no-validate-links`; `feeds/` + `catalog.json`); assert no `feeds/validated/`; dist job |
 | `release.yml` | on tag `v*`: version match, quality gates, `uv build --no-sources`, wheel smoke, GitHub Release |
 | `update-feeds.yml` | scheduled live refresh → validate → commit `feeds/` + `catalog.json` to `main` |
 | Dependabot | weekly `uv` + `github-actions` |
@@ -442,7 +442,8 @@ suite entrypoints (CI / `just test` / `just ci-local`), not on partial path sele
 
 | Recipe | Action |
 | :--- | :--- |
-| `sync` | `uv sync --all-groups` |
+| `sync` | `uv sync --all-groups` (day-to-day, unlocked) |
+| `sync-locked` | `uv sync --locked --all-groups` (gates / `ci-local`) |
 | `lint` | ruff format check + ruff check |
 | `type` | `ty check` |
 | `test` | pytest + **cov ≥ 90%** |
@@ -640,8 +641,12 @@ leaves prior catalog + feeds intact. No second feed tree, no generation tree,
 no `current.json`, no `site/`, no `feeds/validated/`.
 
 Material-noop after enrich may still `save_catalog` so page clocks advance even
-when feed bytes are unchanged. That path returns `action=state_changed` (not
-`unchanged`) so scheduled automation commits the catalog.
+when feed bytes are unchanged. That catalog-only write takes the writer lock and
+honors recover before save (RV-R-001). If recover rematerializes a generation,
+the path re-checks material against post-recover disk: matching material overlays
+clocks onto the recovered catalog; differing material publishes feeds and catalog
+together (RV-C-001). The path returns `action=state_changed` (not `unchanged`)
+when only the catalog is written, so scheduled automation commits the catalog.
 
 ### AD-006 — CLI and Python
 
@@ -658,7 +663,7 @@ when feed bytes are unchanged. That path returns `action=state_changed` (not
 | `1` | `ConfigurationError` / plain `FeedError` / `ValidationError` (usage) |
 | `2` | `VerificationError` |
 | `3` | `NetworkSourceError` |
-| `4` | `OSError` / internal |
+| `4` | `OSError` / unexpected internal (`Exception` → `exit_code_for_exception`) |
 
 ### AD-007 — Governance
 
@@ -671,7 +676,8 @@ when feed bytes are unchanged. That path returns `action=state_changed` (not
 
 Matrix 3.12/3.13/3.14; full-SHA pins; least privilege; offline suite default;
 coverage ≥90% on full suite; `pg-essay-feeds check` on committed feeds; offline smoke
-asserts catalog pipeline + feed projections under `feeds/`.
+uses `--no-enrich --no-validate-links` and asserts catalog pipeline + feed
+projections under `feeds/`.
 
 ---
 

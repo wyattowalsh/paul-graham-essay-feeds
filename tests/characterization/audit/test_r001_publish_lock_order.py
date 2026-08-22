@@ -39,5 +39,14 @@ def test_publish_source_mentions_under_lock_recover() -> None:
     """Under-lock recover remains present in source."""
     path = Path(pipeline.__file__)
     text = path.read_text(encoding="utf-8")
-    # Single recover inside the locked publish path is expected.
-    assert text.count("recover_materialize(root)") == 1
+    # Locked publish + locked catalog-only write; no pre-lock recover.
+    assert text.count("recover_materialize(root)") == 2
+
+
+def test_catalog_only_save_lock_order() -> None:
+    """Catalog-only write: acquire lock, then recover, then save_catalog."""
+    source = inspect.getsource(pipeline._save_catalog_under_lock)
+    lock_at = source.index("acquire_write_lock(")
+    recover_at = source.index("recover_materialize(")
+    save_at = source.index("save_catalog(")
+    assert lock_at < recover_at < save_at

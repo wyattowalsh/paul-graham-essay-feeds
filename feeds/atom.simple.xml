@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
   <title>Paul Graham: Essays</title>
-  <id>tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds</id>
+  <id>tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds:simple</id>
   <updated>2026-07-29T23:10:04Z</updated>
   <subtitle>Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.</subtitle>
   <author>

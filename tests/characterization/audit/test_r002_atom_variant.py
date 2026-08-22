@@ -61,3 +61,11 @@ def test_simple_substring_in_url_does_not_force_simple_id() -> None:
         )
     )
     assert _atom_id(blob) == FEED_ID
+
+
+def test_committed_simple_atom_uses_feed_id_simple() -> None:
+    """Published feeds/atom.simple.xml must not reuse the enriched feed id."""
+    from pathlib import Path
+
+    blob = Path(__file__).resolve().parents[3] / "feeds" / "atom.simple.xml"
+    assert _atom_id(blob.read_bytes()) == FEED_ID_SIMPLE

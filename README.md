@@ -131,7 +131,7 @@ pg-essay-feeds update --force
 pg-essay-feeds update -q --result-file /tmp/pg-action.txt
 # ($GITHUB_OUTPUT also receives action=unchanged|state_changed|updated when set)
 
-# verify feeds (parity + content_text)
+# verify feeds + required catalog.json (parity + content_text)
 pg-essay-feeds check
 
 # skip live link probes (default on; failures are report-only)

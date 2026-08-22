@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **RV-C-001:** After recover rematerializes a generation, catalog-only writes
+  re-check post-recover disk and never save the pre-recover catalog (clock overlay
+  onto the reloaded catalog, or full publish when material now differs).
+- Characterization lock: truncated/unclosed XML on CLI `check` is `UNPARSEABLE_XML` (exit 2), not a fake item count.
+- CI offline smoke now passes `--no-validate-links` (matches `just smoke` / DOCS).
+- Simple Atom feed `<id>` is `FEED_ID_SIMPLE` (golden + committed `feeds/atom.simple.xml`).
+- `assert_verified` and in-memory `update` verify thread `kind`, so simple-triple
+  parse failures label `feeds/*.simple.*` instead of `feeds/rss.xml`.
+- `verify_feed_dir` accepts `kind` (no enriched-only footgun).
+- `state_changed` catalog-only writes take the writer lock and honor recover
+  before `save_catalog` (RV-R-001).
+- Unexpected CLI exceptions map to exit 4 via `exit_code_for_exception` (AD-006).
+- `check` help/docs: `catalog.json` is required (M-25), not optional / "when present".
+
+### Changed
+
+- On-disk `catalog.json` migrated to `schema_version: 2` (offline projection regen).
+
+## [0.1.0] - 2026-08-21
+
+### Fixed
+
 - **RV-R-001:** Publication recover runs only under the writer lock (no pre-lock
   `recover_materialize` race window).
 - **RV-R-002:** Atom feed ids selected via `FeedSnapshot.variant`, not a

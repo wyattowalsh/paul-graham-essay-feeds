@@ -400,8 +400,9 @@ def verify_feed_artifacts(root: Path, *, min_items: int) -> None:
     """Deep-validate on-disk enriched and simple ``feeds/`` projections."""
     from paul_graham_essay_feeds.verify import raise_on_failure, verify_feed_bytes
 
-    for kind in ("enriched", "simple"):
-        kind_paths = feed_paths(root, kind=kind)  # type: ignore[arg-type]
+    kinds: tuple[Literal["enriched", "simple"], ...] = ("enriched", "simple")
+    for kind in kinds:
+        kind_paths = feed_paths(root, kind=kind)
         try:
             rss = kind_paths["rss"].read_bytes()
             atom = kind_paths["atom"].read_bytes()
@@ -409,7 +410,13 @@ def verify_feed_artifacts(root: Path, *, min_items: int) -> None:
         except OSError as exc:
             raise FeedError(f"Missing {kind} feed artifacts under feeds/: {exc}") from exc
         raise_on_failure(
-            verify_feed_bytes(rss=rss, atom=atom, json_feed=json_feed, min_items=min_items)
+            verify_feed_bytes(
+                rss=rss,
+                atom=atom,
+                json_feed=json_feed,
+                min_items=min_items,
+                kind=kind,
+            )
         )
 
 

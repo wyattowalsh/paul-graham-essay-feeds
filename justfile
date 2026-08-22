@@ -43,6 +43,12 @@ alias help := default
 alias s := sync
 alias i := sync
 
+# Install all uv dependency groups from the lockfile (CI / gates)
+[group("setup")]
+[doc("Install all uv dependency groups from the lockfile")]
+@sync-locked:
+    {{ uv }} sync --locked --all-groups
+
 # ---------------------------------------------------------------------------- #
 #                                  CHECKS                                      #
 # ---------------------------------------------------------------------------- #
@@ -79,7 +85,7 @@ alias a := all
 # Offline CI mirror: sync lock, lint, type, test, quiet check, build
 [group("checks")]
 [doc("Offline CI mirror: locked sync, lint, type, test, quiet check, wheel build")]
-ci-local: sync
+ci-local: sync-locked
     {{ uv }} run ruff format --check .
     {{ uv }} run ruff check .
     {{ uv }} run ty check
@@ -155,6 +161,12 @@ smoke:
     {{ uv }} run python -c "from pathlib import Path; from tests.html_samples import synthetic_index_html; import sys; Path(sys.argv[1]).write_text(synthetic_index_html(), encoding='utf-8')" "$ROOT/articles.html"
     {{ uv }} run pg-essay-feeds update --repo-root "$ROOT" --quiet --no-enrich --no-validate-links --source-file "$ROOT/articles.html"
     {{ uv }} run pg-essay-feeds check --repo-root "$ROOT" --quiet
+    test -f "$ROOT/feeds/rss.xml"
+    test -f "$ROOT/feeds/atom.xml"
+    test -f "$ROOT/feeds/feed.json"
+    test -f "$ROOT/feeds/rss.simple.xml"
+    test -f "$ROOT/feeds/atom.simple.xml"
+    test -f "$ROOT/feeds/feed.simple.json"
     test -f "$ROOT/catalog.json"
     test ! -f "$ROOT/state/current.json"
     test ! -d "$ROOT/state/generations"

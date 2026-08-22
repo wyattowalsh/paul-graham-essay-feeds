@@ -10,7 +10,7 @@ import json
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final, cast
+from typing import Final, Literal, cast
 
 from paul_graham_essay_feeds.models import (
     ATOM_NS,
@@ -42,11 +42,30 @@ _MAX_ARTIFACT_BYTES: Final = 20 * 1024 * 1024
 
 _REPLACEMENT = "\ufffd"
 
-_FEED_NAMES = {
+FeedKind = Literal["enriched", "simple"]
+
+_ENRICHED_FEED_NAMES: Final[dict[str, str]] = {
     "rss": "rss.xml",
     "atom": "atom.xml",
     "json": "feed.json",
 }
+_SIMPLE_FEED_NAMES: Final[dict[str, str]] = {
+    "rss": "rss.simple.xml",
+    "atom": "atom.simple.xml",
+    "json": "feed.simple.json",
+}
+
+
+def _feed_names(kind: FeedKind) -> dict[str, str]:
+    return _SIMPLE_FEED_NAMES if kind == "simple" else _ENRICHED_FEED_NAMES
+
+
+def _rel_feed_path(kind: FeedKind, key: str) -> str:
+    return f"feeds/{_feed_names(kind)[key]}"
+
+
+def _feed_basename(path: str) -> str:
+    return path.rsplit("/", 1)[-1]
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,12 +101,14 @@ def _feed_paths(
     root: Path,
     *,
     relative_dir: str = "feeds",
+    kind: FeedKind = "enriched",
 ) -> dict[str, Path]:
     feeds_dir = root / relative_dir
+    names = _feed_names(kind)
     return {
-        "rss": feeds_dir / "rss.xml",
-        "atom": feeds_dir / "atom.xml",
-        "json": feeds_dir / "feed.json",
+        "rss": feeds_dir / names["rss"],
+        "atom": feeds_dir / names["atom"],
+        "json": feeds_dir / names["json"],
     }
 
 
@@ -97,14 +118,15 @@ def _text(el: ET.Element | None) -> str:
     return el.text
 
 
-def _parse_rss_items(raw: bytes) -> list[_ItemView] | VerificationViolation:
+def _parse_rss_items(raw: bytes, *, path: str) -> list[_ItemView] | VerificationViolation:
     try:
         root = ET.fromstring(raw)
     except ET.ParseError as exc:
+        name = _feed_basename(path)
         return VerificationViolation(
             code=UNPARSEABLE_XML,
-            message=f"rss.xml is not valid XML: {exc}",
-            path="feeds/rss.xml",
+            message=f"{name} is not valid XML: {exc}",
+            path=path,
         )
     items: list[_ItemView] = []
     for item in root.findall(".//item"):
@@ -132,14 +154,15 @@ def _atom_link_href(entry: ET.Element) -> str:
     return ""
 
 
-def _parse_atom_items(raw: bytes) -> list[_ItemView] | VerificationViolation:
+def _parse_atom_items(raw: bytes, *, path: str) -> list[_ItemView] | VerificationViolation:
     try:
         root = ET.fromstring(raw)
     except ET.ParseError as exc:
+        name = _feed_basename(path)
         return VerificationViolation(
             code=UNPARSEABLE_XML,
-            message=f"atom.xml is not valid XML: {exc}",
-            path="feeds/atom.xml",
+            message=f"{name} is not valid XML: {exc}",
+            path=path,
         )
     items: list[_ItemView] = []
     for entry in root.findall(f".//{{{ATOM_NS}}}entry"):
@@ -154,36 +177,37 @@ def _parse_atom_items(raw: bytes) -> list[_ItemView] | VerificationViolation:
     return items
 
 
-def _parse_json_items(raw: bytes) -> list[_ItemView] | VerificationViolation:
+def _parse_json_items(raw: bytes, *, path: str) -> list[_ItemView] | VerificationViolation:
+    name = _feed_basename(path)
     try:
         text = raw.decode("utf-8")
         payload = json.loads(text)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         return VerificationViolation(
             code=UNPARSEABLE_JSON,
-            message=f"feed.json is not valid JSON: {exc}",
-            path="feeds/feed.json",
+            message=f"{name} is not valid JSON: {exc}",
+            path=path,
         )
     if not isinstance(payload, dict):
         return VerificationViolation(
             code=UNPARSEABLE_JSON,
-            message="feed.json root must be an object",
-            path="feeds/feed.json",
+            message=f"{name} root must be an object",
+            path=path,
         )
     raw_items = payload.get("items")
     if not isinstance(raw_items, list):
         return VerificationViolation(
             code=UNPARSEABLE_JSON,
-            message="feed.json missing items array",
-            path="feeds/feed.json",
+            message=f"{name} missing items array",
+            path=path,
         )
     items: list[_ItemView] = []
     for i, raw_item in enumerate(raw_items):
         if not isinstance(raw_item, dict):
             return VerificationViolation(
                 code=UNPARSEABLE_JSON,
-                message=f"feed.json items[{i}] must be an object",
-                path="feeds/feed.json",
+                message=f"{name} items[{i}] must be an object",
+                path=path,
                 index=i,
             )
         item = cast(dict[str, object], raw_item)
@@ -356,6 +380,7 @@ def verify_feed_bytes(
     atom: bytes,
     json_feed: bytes,
     min_items: int,
+    kind: FeedKind = "enriched",
 ) -> VerificationReport:
     """Deep-verify an in-memory RSS/Atom/JSON feed triple.
 
@@ -363,12 +388,18 @@ def verify_feed_bytes(
     ids, empty id/title/url/summary, JSON ``content_text == summary``, summary
     length bounds, U+FFFD integrity, ordered id parity, and ordered
     title/url/summary payload parity across formats.
+
+    ``kind`` selects violation ``path`` labels (``feeds/rss.xml`` vs
+    ``feeds/rss.simple.xml`` and siblings).
     """
+    rss_path = _rel_feed_path(kind, "rss")
+    atom_path = _rel_feed_path(kind, "atom")
+    json_path = _rel_feed_path(kind, "json")
     violations: list[VerificationViolation] = []
     for label, blob, path in (
-        ("rss", rss, "feeds/rss.xml"),
-        ("atom", atom, "feeds/atom.xml"),
-        ("json", json_feed, "feeds/feed.json"),
+        ("rss", rss, rss_path),
+        ("atom", atom, atom_path),
+        ("json", json_feed, json_path),
     ):
         if len(blob) > _MAX_ARTIFACT_BYTES:
             violations.append(
@@ -379,9 +410,9 @@ def verify_feed_bytes(
                 )
             )
 
-    rss_result = _parse_rss_items(rss)
-    atom_result = _parse_atom_items(atom)
-    json_result = _parse_json_items(json_feed)
+    rss_result = _parse_rss_items(rss, path=rss_path)
+    atom_result = _parse_atom_items(atom, path=atom_path)
+    json_result = _parse_json_items(json_feed, path=json_path)
 
     if isinstance(rss_result, VerificationViolation):
         violations.append(rss_result)
@@ -404,9 +435,9 @@ def verify_feed_bytes(
     # Structural failures make further parity checks unreliable — still run
     # per-format field checks on whatever parsed successfully.
     for items, path, label, check_ct in (
-        (rss_items, "feeds/rss.xml", "RSS", False),
-        (atom_items, "feeds/atom.xml", "Atom", False),
-        (json_items, "feeds/feed.json", "JSON", True),
+        (rss_items, rss_path, "RSS", False),
+        (atom_items, atom_path, "Atom", False),
+        (json_items, json_path, "JSON", True),
     ):
         if items is None:
             continue
@@ -491,15 +522,21 @@ def verify_feed_dir(
     *,
     min_items: int,
     relative_dir: str = "feeds",
+    kind: FeedKind = "enriched",
 ) -> VerificationReport:
-    """Read ``root / relative_dir / {rss.xml,atom.xml,feed.json}`` and deep-verify."""
-    paths = _feed_paths(root, relative_dir=relative_dir)
+    """Read one on-disk feed triple and deep-verify.
+
+    ``kind`` selects filenames (``rss.xml`` vs ``rss.simple.xml`` and siblings)
+    and the violation ``path`` labels passed to :func:`verify_feed_bytes`.
+    """
+    paths = _feed_paths(root, relative_dir=relative_dir, kind=kind)
     violations: list[VerificationViolation] = []
     blobs: dict[str, bytes] = {}
+    names = _feed_names(kind)
     rel_prefix = relative_dir.strip("/")
 
     for key, path in paths.items():
-        rel = f"{rel_prefix}/{_FEED_NAMES[key]}"
+        rel = f"{rel_prefix}/{names[key]}"
         if not path.is_file():
             violations.append(
                 VerificationViolation(
@@ -528,6 +565,7 @@ def verify_feed_dir(
         atom=blobs["atom"],
         json_feed=blobs["json"],
         min_items=min_items,
+        kind=kind,
     )
     if not violations:
         return report
@@ -560,15 +598,18 @@ def assert_verified(
     json_feed: bytes | None = None,
     root: Path | None = None,
     min_items: int,
+    kind: FeedKind = "enriched",
 ) -> VerificationReport:
     """Verify in-memory bytes or an on-disk root; raise on failure.
 
     Provide either all three byte arguments or ``root`` (not both modes mixed).
+    ``kind`` selects violation ``path`` labels (and on-disk filenames when
+    ``root`` is used).
     """
     if root is not None:
         if rss is not None or atom is not None or json_feed is not None:
             raise FeedError("assert_verified: pass either root or feed bytes, not both")
-        report = verify_feed_dir(root, min_items=min_items)
+        report = verify_feed_dir(root, min_items=min_items, kind=kind)
     else:
         if rss is None or atom is None or json_feed is None:
             raise FeedError("assert_verified: require rss, atom, and json_feed bytes (or root)")
@@ -577,6 +618,7 @@ def assert_verified(
             atom=atom,
             json_feed=json_feed,
             min_items=min_items,
+            kind=kind,
         )
     raise_on_failure(report)
     return report

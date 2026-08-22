@@ -1,8 +1,7 @@
 """Index HTML discovery: extraction strategies and typed diagnostics.
 
-Replaces the sticky-marker approach of ``extract.py`` with row/cell-scoped
-marker binding, fail-closed fallback (F-017), first-wins duplicates with
-anomaly reporting (F-025 / F-026), and an ``ExtractionReport``.
+Row/cell-scoped marker binding, fail-closed fallback (F-017), first-wins
+duplicates with anomaly reporting (F-025 / F-026), and an ``ExtractionReport``.
 """
 
 from __future__ import annotations
