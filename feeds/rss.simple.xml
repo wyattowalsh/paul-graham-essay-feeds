@@ -5,12 +5,20 @@
     <link>https://paulgraham.com/articles.html</link>
     <description>Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.</description>
     <language>en-US</language>
-    <lastBuildDate>Wed, 29 Jul 2026 23:10:04 GMT</lastBuildDate>
+    <lastBuildDate>Tue, 25 Aug 2026 06:29:41 GMT</lastBuildDate>
     <category>Essays</category>
     <generator>pg-essay-feeds/0.1.0</generator>
     <docs>https://www.rssboard.org/rss-specification</docs>
     <ttl>1440</ttl>
     <atom:link rel="self" type="application/rss+xml" href="https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.simple.xml" />
+    <item>
+      <title>How Universities Should Prepare Founders</title>
+      <link>https://paulgraham.com/prepare.html</link>
+      <description>Read “How Universities Should Prepare Founders” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/prepare.html</guid>
+    </item>
     <item>
       <title>How to Earn a Billion Dollars</title>
       <link>https://paulgraham.com/earn.html</link>
