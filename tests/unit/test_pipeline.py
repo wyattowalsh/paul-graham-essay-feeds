@@ -20,11 +20,18 @@ from paul_graham_essay_feeds.catalog import (
     save_catalog,
 )
 from paul_graham_essay_feeds.feeds import all_feed_paths
-from paul_graham_essay_feeds.models import Catalog, CatalogEntry, Essay, ResourceState
+from paul_graham_essay_feeds.models import (
+    MATERIALIZE_POINTER_SCHEMA_VERSION,
+    Catalog,
+    CatalogEntry,
+    Essay,
+    ResourceState,
+)
 from paul_graham_essay_feeds.pipeline import (
     _apply_enrichment,
     _complete_index_state,
     _material_unchanged_vs_disk,
+    _rotate_probe_essays,
     _save_catalog_under_lock,
     _should_skip_publish,
     material_catalog_digest,
@@ -135,7 +142,15 @@ def _write_pending_generation(
     pointer = root / ".cache" / "materialize.json"
     pointer.parent.mkdir(parents=True, exist_ok=True)
     pointer.write_text(
-        json.dumps({"gen_id": gen_id, "phase": "materializing"}, indent=2) + "\n",
+        json.dumps(
+            {
+                "schema_version": MATERIALIZE_POINTER_SCHEMA_VERSION,
+                "gen_id": gen_id,
+                "phase": "materializing",
+            },
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     return gen_id
@@ -1130,6 +1145,8 @@ def test_complete_index_state_200_and_304_advance_success_and_clear_failure() ->
     assert state_200.selected_encoding == "windows-1252"
     assert state_200.raw_sha256 == "c" * 64
     assert state_200.status_code == 200
+    assert state_200.raw_bytes_received is None
+    assert state_200.decoded_bytes_received is None
 
     state_304 = _complete_index_state(
         prior=prior,
@@ -1284,3 +1301,156 @@ def test_catalog_only_path_recover_true_divergent_feeds_publishes(
     for entry in on_disk.entries.values():
         assert entry.page.last_checked_at is not None
         assert entry.page.last_checked_at >= T_LATER - timedelta(days=1)
+
+
+def test_complete_index_state_copies_byte_counts() -> None:
+    prior = ResourceState(raw_bytes_received=10, decoded_bytes_received=8)
+    state = _complete_index_state(
+        prior=prior,
+        observed=T_LATER,
+        etag='"n"',
+        last_modified=None,
+        raw_sha256="a" * 64,
+        decoded_sha256="b" * 64,
+        status_code=200,
+        raw_bytes_received=42,
+        decoded_bytes_received=40,
+    )
+    assert state.raw_bytes_received == 42
+    assert state.decoded_bytes_received == 40
+    kept = _complete_index_state(
+        prior=prior,
+        observed=T_LATER,
+        etag=None,
+        last_modified=None,
+        raw_sha256=None,
+        decoded_sha256=None,
+        status_code=304,
+    )
+    assert kept.raw_bytes_received == 10
+    assert kept.decoded_bytes_received == 8
+
+
+def test_rotate_probe_essays_advances_by_attempted() -> None:
+    essays = [
+        Essay(
+            position=i + 1,
+            title=f"T{i}",
+            url=f"https://paulgraham.com/e{i}.html",
+            stable_id=f"https://paulgraham.com/e{i}.html",
+            is_permalink=True,
+        )
+        for i in range(4)
+    ]
+    first, cursor = _rotate_probe_essays(essays, cursor=0, limit=1)
+    assert [e.stable_id for e in first] == [essays[0].stable_id]
+    assert cursor == 1
+    second, cursor = _rotate_probe_essays(essays, cursor=cursor, limit=1)
+    assert [e.stable_id for e in second] == [essays[1].stable_id]
+    assert cursor == 2
+    empty, cursor = _rotate_probe_essays(essays, cursor=2, limit=0)
+    assert empty == []
+    assert cursor == 2
+    none_left, wrap = _rotate_probe_essays([], cursor=3, limit=1)
+    assert none_left == []
+    assert wrap == 0
+
+
+def test_skip_path_still_acquires_lock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+    from paul_graham_essay_feeds.publication import acquire_write_lock as real_acquire
+
+    html = synthetic_index_html()
+    settings = _settings(tmp_path, min_items=MIN_ITEMS, enrich=False)
+    first = run_catalog_pipeline(settings, html=html, now=T0)
+    assert first.action == "updated"
+
+    order: list[str] = []
+
+    def _acquire(root: Path, *, timeout: float = 120.0) -> object:
+        order.append("acquire")
+        return real_acquire(root, timeout=timeout)
+
+    monkeypatch.setattr("paul_graham_essay_feeds.publication.acquire_write_lock", _acquire)
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.publication.recover_materialize",
+        lambda root: order.append("recover") or False,
+    )
+    second = run_catalog_pipeline(settings, html=html, now=T0)
+    assert second.action == "unchanged"
+    assert order[:2] == ["acquire", "recover"]
+
+
+def test_fetch_index_passes_prior_body_hash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from paul_graham_essay_feeds.http import IndexFetchResult
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+
+    html = synthetic_index_html()
+    settings = _settings(tmp_path, min_items=MIN_ITEMS, enrich=False)
+    first = run_catalog_pipeline(settings, html=html, now=T0)
+    assert first.action == "updated"
+    seeded = load_catalog(default_catalog_path(tmp_path))
+    assert seeded is not None
+    body_hash = "ab" * 32
+    save_catalog(
+        default_catalog_path(tmp_path),
+        seeded.model_copy(
+            update={"index": seeded.index.model_copy(update={"raw_sha256": body_hash})}
+        ),
+    )
+
+    fetch = MagicMock(
+        return_value=IndexFetchResult(
+            html=None,
+            not_modified=True,
+            etag='"idx-hash"',
+            status_code=304,
+            raw_bytes_received=0,
+            decoded_bytes_received=0,
+        )
+    )
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.fetch_index", fetch)
+    second = run_catalog_pipeline(settings, now=T0)
+    assert second.action == "unchanged"
+    assert fetch.call_args.kwargs["prior_body_hash"] == body_hash
+
+
+def test_single_host_cooldown_injected_into_enrich_and_probes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from paul_graham_essay_feeds.http import HostCooldown
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+
+    created: list[HostCooldown] = []
+
+    class Spy(HostCooldown):
+        def __init__(self, seconds: float) -> None:
+            created.append(self)
+            super().__init__(seconds)
+
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.HostCooldown", Spy)
+    enrich = MagicMock(side_effect=_stable_enrich)
+    validate = MagicMock(return_value=None)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.enrich_essays", enrich)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.validate_essays_live", validate)
+    html = synthetic_index_html()
+    settings = _settings(
+        tmp_path,
+        min_items=MIN_ITEMS,
+        enrich=True,
+        validate_links=True,
+        host_cooldown_seconds=0.25,
+    )
+    result = run_catalog_pipeline(settings, html=html, now=T0)
+    assert result.action == "updated"
+    assert len(created) == 1
+    cooldown = enrich.call_args.kwargs["host_cooldown"]
+    assert cooldown is created[0]
+    assert validate.call_args.kwargs["host_cooldown"] is cooldown

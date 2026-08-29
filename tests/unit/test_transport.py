@@ -168,7 +168,9 @@ def test_get_happy_path_evidence_fields() -> None:
     assert ev.last_modified == "Tue, 02 Jan 2024 12:00:00 GMT"
     assert ev.content_length_header == len(body)
     assert ev.raw_sha256 == hashlib.sha256(body).hexdigest()
+    assert ev.decoded_sha256 == hashlib.sha256(body).hexdigest()
     assert ev.bytes_received == len(body)
+    assert ev.decoded_bytes_received == len(body)
     assert ev.error_message is None
     assert result.body == body
     assert result.response is not None
@@ -188,6 +190,7 @@ def test_not_modified_304() -> None:
             allowed_hosts=frozenset({"paulgraham.com"}),
             max_bytes=1024,
             headers={"If-None-Match": '"v1"'},
+            prior_etag='"v1"',
         )
     assert result.evidence.result_kind is ResultKind.NOT_MODIFIED
     assert result.evidence.status_code == 304
@@ -479,3 +482,166 @@ def test_server_error_status_failed_evidence() -> None:
     assert result.evidence.result_kind is ResultKind.FAILED
     assert result.evidence.status_code == 503
     assert result.evidence.error_message == "HTTP 503"
+
+
+@respx.mock
+def test_gzip_wire_hash_distinct_from_decoded() -> None:
+    """AUD-007: raw_sha256 is wire (gzip); decoded_sha256 is the entity."""
+    from pathlib import Path
+
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures" / "http"
+    plain = (fixtures / "plain.html").read_bytes()
+    wire = (fixtures / "plain.html.gz").read_bytes()
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(
+            200,
+            content=wire,
+            headers={"Content-Encoding": "gzip", "Content-Type": "text/html"},
+        )
+    )
+    with httpx.Client(trust_env=False, follow_redirects=False) as client:
+        result = get_with_evidence(
+            client,
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+    ev = result.evidence
+    assert ev.result_kind is ResultKind.FETCHED
+    assert result.body == plain
+    assert result.raw_body == wire
+    assert ev.raw_sha256 == hashlib.sha256(wire).hexdigest()
+    assert ev.decoded_sha256 == hashlib.sha256(plain).hexdigest()
+    assert ev.raw_sha256 != ev.decoded_sha256
+    assert ev.bytes_received == len(wire)
+    assert ev.decoded_bytes_received == len(plain)
+
+
+@respx.mock
+def test_unconditional_304_retries_then_fetches() -> None:
+    """AUD-016: 304 without conditionals retries once without validators."""
+    route = respx.get("https://paulgraham.com/a.html")
+    route.side_effect = [
+        httpx.Response(304, headers={"ETag": '"v1"'}),
+        httpx.Response(200, content=b"<html>ok</html>"),
+    ]
+    with httpx.Client(trust_env=False, follow_redirects=False) as client:
+        result = get_with_evidence(
+            client,
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+    assert result.evidence.result_kind is ResultKind.FETCHED
+    assert result.body == b"<html>ok</html>"
+    assert route.call_count == 2
+    assert "if-none-match" not in route.calls[1].request.headers
+
+
+@respx.mock
+def test_unconditional_304_retries_then_fails() -> None:
+    route = respx.get("https://paulgraham.com/a.html")
+    route.side_effect = [
+        httpx.Response(304),
+        httpx.Response(304),
+    ]
+    with httpx.Client(trust_env=False, follow_redirects=False) as client:
+        result = get_with_evidence(
+            client,
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+    assert result.evidence.result_kind is ResultKind.FAILED
+    assert result.evidence.status_code == 304
+    assert result.evidence.error_message is not None
+    assert "304" in result.evidence.error_message
+    assert route.call_count == 2
+
+
+@respx.mock
+def test_304_without_prior_material_fails_after_retry() -> None:
+    """Conditionals sent but caller has no prior etag/lm/hash → not NOT_MODIFIED."""
+    route = respx.get("https://paulgraham.com/a.html")
+    route.side_effect = [
+        httpx.Response(304, headers={"ETag": '"v1"'}),
+        httpx.Response(304, headers={"ETag": '"v1"'}),
+    ]
+    with httpx.Client(trust_env=False, follow_redirects=False) as client:
+        result = request_with_evidence(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+            headers={"If-None-Match": '"v1"'},
+        )
+    assert result.evidence.result_kind is ResultKind.FAILED
+    assert route.call_count == 2
+
+
+@respx.mock
+def test_304_mismatched_etag_retries_unconditional() -> None:
+    route = respx.get("https://paulgraham.com/a.html")
+    route.side_effect = [
+        httpx.Response(304, headers={"ETag": '"v2"'}),
+        httpx.Response(200, content=b"<html>fresh</html>"),
+    ]
+    with httpx.Client(trust_env=False, follow_redirects=False) as client:
+        result = get_with_evidence(
+            client,
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+            headers={"If-None-Match": '"v1"'},
+            prior_etag='"v1"',
+        )
+    assert result.evidence.result_kind is ResultKind.FETCHED
+    assert result.body == b"<html>fresh</html>"
+    assert route.call_count == 2
+    assert "if-none-match" not in {k.lower() for k in route.calls[1].request.headers}
+
+
+@respx.mock
+def test_userinfo_rejected_on_start_url() -> None:
+    with (
+        httpx.Client(trust_env=False, follow_redirects=False) as client,
+        pytest.raises(FeedError, match="Userinfo"),
+    ):
+        request_with_evidence(
+            client,
+            "GET",
+            "https://user:pass@paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+
+
+@respx.mock
+def test_https_non_443_port_rejected() -> None:
+    with (
+        httpx.Client(trust_env=False, follow_redirects=False) as client,
+        pytest.raises(FeedError, match="Port not allowed"),
+    ):
+        request_with_evidence(
+            client,
+            "GET",
+            "https://paulgraham.com:444/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+
+
+@respx.mock
+def test_fragment_rejected() -> None:
+    with (
+        httpx.Client(trust_env=False, follow_redirects=False) as client,
+        pytest.raises(FeedError, match="Fragment"),
+    ):
+        request_with_evidence(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html#x",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )

@@ -74,3 +74,17 @@ def test_enrich_workers_default_and_env(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setenv("PG_ESSAY_FEEDS_ENRICH_WORKERS", "65")
     with pytest.raises(ValidationError):
         Settings()
+
+
+def test_host_cooldown_seconds_default_and_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AUD-017: production default is a small nonzero per-host gap."""
+    monkeypatch.delenv("PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS", raising=False)
+    s = Settings()
+    assert s.host_cooldown_seconds == 0.05
+    field = Settings.model_fields["host_cooldown_seconds"]
+    assert field.description == "Minimum seconds between requests to the same host."
+    monkeypatch.setenv("PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS", "0")
+    assert Settings().host_cooldown_seconds == 0.0
+    monkeypatch.setenv("PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS", "-0.1")
+    with pytest.raises(ValidationError):
+        Settings()

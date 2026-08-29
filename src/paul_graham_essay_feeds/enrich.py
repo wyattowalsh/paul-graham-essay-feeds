@@ -509,6 +509,8 @@ class PageEnrichEvidence:
     error_message: str | None = None
     raw_sha256: str | None = None
     decoded_sha256: str | None = None
+    raw_bytes_received: int | None = None
+    decoded_bytes_received: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -521,6 +523,9 @@ class _PageGet:
     last_modified: str | None = None
     status_code: int | None = None
     raw_sha256: str | None = None
+    decoded_sha256: str | None = None
+    raw_bytes_received: int | None = None
+    decoded_bytes_received: int | None = None
 
 
 def parse_page_metadata(html: str, *, page_url: str) -> dict[str, str | None]:
@@ -549,6 +554,7 @@ def _fetch_page(
     max_bytes: int,
     etag: str | None = None,
     last_modified: str | None = None,
+    prior_body_hash: str | None = None,
     host_cooldown: HostCooldown | None = None,
 ) -> _PageGet:
     """GET essay page with hop-safe redirects and optional conditional validators."""
@@ -562,9 +568,12 @@ def _fetch_page(
         allowed_hosts=ALLOWED_HOSTS,
         max_bytes=max_bytes,
         headers=cond,
+        prior_etag=etag,
+        prior_last_modified=last_modified,
+        prior_body_hash=prior_body_hash,
     )
     ev = result.evidence
-    if ev.result_kind is ResultKind.NOT_MODIFIED or ev.status_code == 304:
+    if ev.result_kind is ResultKind.NOT_MODIFIED:
         return _PageGet(
             html=None,
             not_modified=True,
@@ -572,10 +581,18 @@ def _fetch_page(
             last_modified=ev.last_modified or last_modified,
             status_code=304,
             raw_sha256=ev.raw_sha256,
+            decoded_sha256=ev.decoded_sha256,
+            raw_bytes_received=ev.bytes_received,
+            decoded_bytes_received=ev.decoded_bytes_received,
         )
+    if ev.result_kind is ResultKind.FAILED:
+        if result.response is None:
+            raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
+        if ev.status_code == 304:
+            raise FeedError(ev.error_message or "Unacceptable HTTP 304")
+        result.response.raise_for_status()
+        raise FeedError(ev.error_message or f"HTTP {ev.status_code}")
     if result.response is None:
-        # Transport failure must remain retryable (httpx.TransportError), not a
-        # permanent FeedError, until Tenacity exhausts the attempt budget.
         raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
     result.response.raise_for_status()
     html = decode_html(result.body, transport_charset=ev.charset)
@@ -586,6 +603,9 @@ def _fetch_page(
         last_modified=ev.last_modified,
         status_code=ev.status_code,
         raw_sha256=ev.raw_sha256,
+        decoded_sha256=ev.decoded_sha256,
+        raw_bytes_received=ev.bytes_received,
+        decoded_bytes_received=ev.decoded_bytes_received,
     )
 
 
@@ -612,6 +632,7 @@ def _enrich_one(
             max_bytes=max_bytes,
             etag=etag,
             last_modified=last_modified,
+            prior_body_hash=essay.content_hash,
             host_cooldown=host_cooldown,
         )
 
@@ -635,6 +656,9 @@ def _enrich_one(
             status_code=304,
             ok=True,
             raw_sha256=fetched.raw_sha256,
+            decoded_sha256=fetched.decoded_sha256,
+            raw_bytes_received=fetched.raw_bytes_received,
+            decoded_bytes_received=fetched.decoded_bytes_received,
         )
 
     assert fetched.html is not None
@@ -652,6 +676,9 @@ def _enrich_one(
             error_kind="parse",
             error_message=str(exc)[:500],
             raw_sha256=fetched.raw_sha256,
+            decoded_sha256=fetched.decoded_sha256,
+            raw_bytes_received=fetched.raw_bytes_received,
+            decoded_bytes_received=fetched.decoded_bytes_received,
         )
 
     updated = essay.model_copy(
@@ -674,7 +701,9 @@ def _enrich_one(
         status_code=fetched.status_code,
         ok=True,
         raw_sha256=fetched.raw_sha256,
-        decoded_sha256=page_hash,
+        decoded_sha256=fetched.decoded_sha256 or page_hash,
+        raw_bytes_received=fetched.raw_bytes_received,
+        decoded_bytes_received=fetched.decoded_bytes_received,
     )
 
 
@@ -689,13 +718,14 @@ def enrich_essays(
     page_validators: Mapping[str, tuple[str | None, str | None]] | None = None,
     page_evidence_out: MutableMapping[str, PageEnrichEvidence] | None = None,
     host_cooldown_seconds: float = 0.0,
+    host_cooldown: HostCooldown | None = None,
 ) -> list[Essay]:
     """Fetch each essay page and attach short summaries (order preserved)."""
     if not essays:
         return essays
     attempts = max(1, retries + 1)
     validators = page_validators or {}
-    cooldown = HostCooldown(host_cooldown_seconds)
+    cooldown = host_cooldown if host_cooldown is not None else HostCooldown(host_cooldown_seconds)
     out: dict[int, Essay] = {}
     with (
         create_http_client(
@@ -857,6 +887,7 @@ def validate_essays_live(
     quiet: bool = False,
     reporter: ProgressReporter | None = None,
     host_cooldown_seconds: float = 0.0,
+    host_cooldown: HostCooldown | None = None,
 ) -> LinkProbeReport:
     """Live-probe each essay URL; report failures without raising or dropping items."""
     if not essays:
@@ -864,7 +895,7 @@ def validate_essays_live(
 
     errors: list[str] = []
     attempts = max(1, retries + 1)
-    cooldown = HostCooldown(host_cooldown_seconds)
+    cooldown = host_cooldown if host_cooldown is not None else HostCooldown(host_cooldown_seconds)
     progress = reporter or ProgressReporter(OutputPolicy(quiet=quiet))
     with (
         httpx.Client(

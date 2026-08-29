@@ -63,7 +63,7 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 | Dates | month+year → `published_hint` only; no invented day-1 dates; no 1970 Atom sentinel |
 | State | Durable **catalog** is SSOT; feeds are projections |
 | Product | Repo `feeds/` + `catalog.json` — no `publish.py`, no `site/` |
-| CLI | `update` + `check` only; flags override Settings only when explicit; quiet success → zero stdout+stderr; success-only side-channels (--result-file, $GITHUB_OUTPUT) allowed |
+| CLI | `update` + `check` only; `update --abandon-recovery` repairs irrecoverable `.cache/materialize.json` (not a third command); flags override Settings only when explicit; quiet success → zero stdout+stderr; success-only side-channels (--result-file, $GITHUB_OUTPUT) allowed |
 | Models | Every Field has a description; `extra="forbid"` where durable; aware UTC |
 | Docs | Fold maintainer guidance into `DOCS.md` only — do not recreate `docs/` |
 

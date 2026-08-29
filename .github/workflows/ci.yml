@@ -70,6 +70,58 @@ jobs:
           test -f feeds/atom.simple.xml
           test -f feeds/feed.simple.json
 
+      - name: Assert feed format contracts
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          ATOM_NS = "http://www.w3.org/2005/Atom"
+          JSON_FEED_VERSION = "https://jsonfeed.org/version/1.1"
+
+          def local_name(tag: str) -> str:
+              return tag.split("}", 1)[-1]
+
+          def assert_rss(path: Path) -> None:
+              root = ET.parse(path).getroot()
+              assert local_name(root.tag) == "rss", f"{path}: root tag {root.tag!r}"
+              assert root.get("version") == "2.0", f"{path}: version {root.get('version')!r}"
+              channels = [child for child in root if local_name(child.tag) == "channel"]
+              assert len(channels) == 1, f"{path}: expected 1 channel, got {len(channels)}"
+
+          def assert_atom(path: Path) -> None:
+              root = ET.parse(path).getroot()
+              if not root.tag.startswith("{"):
+                  raise AssertionError(f"{path}: Atom root missing namespace: {root.tag!r}")
+              ns, local = root.tag[1:].split("}", 1)
+              assert ns == ATOM_NS, f"{path}: default ns {ns!r}"
+              assert local == "feed", f"{path}: root {local!r}"
+              for name in ("id", "title", "updated"):
+                  el = root.find(f"{{{ATOM_NS}}}{name}")
+                  assert el is not None, f"{path}: missing {name}"
+                  assert (el.text or "").strip(), f"{path}: empty {name}"
+
+          def assert_json_feed(path: Path) -> None:
+              payload = json.loads(path.read_text(encoding="utf-8"))
+              assert payload.get("version") == JSON_FEED_VERSION, (
+                  f"{path}: version {payload.get('version')!r}"
+              )
+              title = payload.get("title")
+              assert isinstance(title, str) and title.strip(), f"{path}: title"
+              assert isinstance(payload.get("items"), list), f"{path}: items must be a list"
+
+          assert_rss(Path("feeds/rss.xml"))
+          assert_rss(Path("feeds/rss.simple.xml"))
+          assert_atom(Path("feeds/atom.xml"))
+          assert_atom(Path("feeds/atom.simple.xml"))
+          assert_json_feed(Path("feeds/feed.json"))
+          assert_json_feed(Path("feeds/feed.simple.json"))
+          PY
+
       - name: Offline pipeline smoke
         run: |
           set -euo pipefail

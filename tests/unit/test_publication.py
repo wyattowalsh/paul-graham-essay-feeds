@@ -5,6 +5,7 @@ from __future__ import annotations
 import stat
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 import pytest
 
@@ -37,10 +38,13 @@ def _essay(n: int = 1) -> Essay:
     )
 
 
-def _snapshot(essays: list[Essay]) -> FeedSnapshot:
+def _snapshot(
+    essays: list[Essay], *, variant: Literal["enriched", "simple"] = "enriched"
+) -> FeedSnapshot:
     return FeedSnapshot(
         logical_updated_at=T0,
         generator="pg-essay-feeds/test",
+        variant=variant,
         items=[
             FeedEntrySnapshot(
                 id=e.stable_id,
@@ -77,13 +81,16 @@ def _catalog(count: int = 3) -> Catalog:
     )
 
 
-def _bytes(count: int = 3) -> tuple[bytes, bytes, bytes]:
-    snap = _snapshot([_essay(i) for i in range(1, count + 1)])
+def _bytes(
+    count: int = 3, *, variant: Literal["enriched", "simple"] = "enriched"
+) -> tuple[bytes, bytes, bytes]:
+    snap = _snapshot([_essay(i) for i in range(1, count + 1)], variant=variant)
     return render_rss(snap), render_atom(snap), render_json(snap)
 
 
 def test_publish_writes_catalog_and_feeds_after_verify(tmp_path: Path) -> None:
     rss, atom, jf = _bytes(3)
+    simple_rss, simple_atom, simple_jf = _bytes(3, variant="simple")
     catalog = _catalog(3)
     published = _publish_catalog_and_feeds(
         tmp_path,
@@ -91,9 +98,9 @@ def test_publish_writes_catalog_and_feeds_after_verify(tmp_path: Path) -> None:
         rss=rss,
         atom=atom,
         json_feed=jf,
-        simple_rss=rss,
-        simple_atom=atom,
-        simple_json_feed=jf,
+        simple_rss=simple_rss,
+        simple_atom=simple_atom,
+        simple_json_feed=simple_jf,
         min_items=3,
         reporter=NULL_REPORTER,
     )
@@ -114,6 +121,7 @@ def test_publish_writes_catalog_and_feeds_after_verify(tmp_path: Path) -> None:
 
 def test_publish_does_not_write_on_verify_failure(tmp_path: Path) -> None:
     rss, atom, _jf = _bytes(3)
+    simple_rss, simple_atom, _simple_jf = _bytes(3, variant="simple")
     bad_json = b'{"version":"https://jsonfeed.org/version/1.1","items":[]}'
     with pytest.raises(FeedError):
         _publish_catalog_and_feeds(
@@ -122,8 +130,8 @@ def test_publish_does_not_write_on_verify_failure(tmp_path: Path) -> None:
             rss=rss,
             atom=atom,
             json_feed=bad_json,
-            simple_rss=rss,
-            simple_atom=atom,
+            simple_rss=simple_rss,
+            simple_atom=simple_atom,
             simple_json_feed=bad_json,
             min_items=3,
             reporter=NULL_REPORTER,
@@ -136,14 +144,15 @@ def test_publish_respects_feed_file_mode(tmp_path: Path) -> None:
     from paul_graham_essay_feeds.feeds import write_feeds
 
     rss, atom, jf = _bytes(3)
+    simple_rss, simple_atom, simple_jf = _bytes(3, variant="simple")
     write_feeds(
         tmp_path,
         rss=rss,
         atom=atom,
         json_feed=jf,
-        simple_rss=rss,
-        simple_atom=atom,
-        simple_json_feed=jf,
+        simple_rss=simple_rss,
+        simple_atom=simple_atom,
+        simple_json_feed=simple_jf,
         file_mode=0o600,
     )
     mode = stat.S_IMODE((tmp_path / "feeds" / "rss.xml").stat().st_mode)

@@ -45,11 +45,16 @@ report-only status panel). No local clone required.
 
 ```bash
 mkdir pg-feeds && cd pg-feeds
-uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds \
+uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v0.2.0 \
   pg-essay-feeds update
 ```
 
 Writes `feeds/` into the current directory. Point a feed reader at the local files.
+
+> [!NOTE]
+> User docs pin the immutable `@v0.2.0` tag. `@main` tracks latest (mutable).
+> The `v0.2.0` git tag is not cut in this change; until it is published, run
+> `uv run pg-essay-feeds update` from a local checkout.
 
 > [!TIP]
 > Default `update` enriches each essay (~1 HTTP GET per page) with **4** enrich
@@ -81,6 +86,12 @@ Raw URLs (point a reader at these):
 | :--- | :--- | :--- | :--- |
 | Enriched | [`rss.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.xml) | [`atom.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/atom.xml) | [`feed.json`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/feed.json) |
 | Simple | [`rss.simple.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.simple.xml) | [`atom.simple.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/atom.simple.xml) | [`feed.simple.json`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/feed.simple.json) |
+
+> [!NOTE]
+> **Accepted risk (PGF-AUD-018):** GitHub raw serves these files as `text/plain`
+> (the body is still RSS / Atom / JSON). Strict readers that require
+> `application/rss+xml` (or similar) should point at local `feeds/` files from
+> the CLI or Colab. This project does not add GitHub Pages or `site/`.
 
 ---
 
@@ -121,7 +132,7 @@ pg-essay-feeds update --no-enrich
 # offline HTML file
 pg-essay-feeds update --source-file articles.html --no-enrich
 
-# bootstrap durable catalog from existing feeds/ before update
+# seed in-memory catalog candidate from existing feeds; persist only after successful verification/publication
 pg-essay-feeds update --from-feeds
 
 # bypass refresh-planner no-op (rewrite even when nothing is due)
@@ -136,6 +147,9 @@ pg-essay-feeds check
 
 # skip live link probes (default on; failures are report-only)
 pg-essay-feeds update --no-validate-links
+
+# explicit repair for irrecoverable .cache/materialize.json (quarantines pointer + generation)
+pg-essay-feeds update --abandon-recovery
 ```
 
 > [!NOTE]
@@ -181,6 +195,7 @@ Environment prefix: `PG_ESSAY_FEEDS_` ([pydantic-settings](https://docs.pydantic
 | `PG_ESSAY_FEEDS_STALE_AFTER_DAYS` | `30` |
 | `PG_ESSAY_FEEDS_PUBLIC_BASE_URL` | unset |
 | `PG_ESSAY_FEEDS_ALLOW_DISCOVERY_FALLBACK` | `true` |
+| `PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS` | `0.05` |
 
 ```bash
 export PG_ESSAY_FEEDS_ENRICH=false   # optional: skip per-page scrapes
@@ -207,6 +222,7 @@ export PG_ESSAY_FEEDS_ENRICH=false   # optional: skip per-page scrapes
 | `PG_ESSAY_FEEDS_PUBLIC_BASE_URL` | unset | Public base for feed self links |
 | `PG_ESSAY_FEEDS_STALE_AFTER_DAYS` | `30` | Re-fetch page metadata after N days |
 | `PG_ESSAY_FEEDS_ALLOW_DISCOVERY_FALLBACK` | `true` | Sparse-marker discovery fallback |
+| `PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS` | `0.05` | Min seconds between requests to the same host |
 | `PG_ESSAY_FEEDS_QUIET` / `PG_ESSAY_FEEDS_VERBOSE` | `false` | Log levels |
 
 See also: [DOCS.md → Configuration](./DOCS.md#configuration).

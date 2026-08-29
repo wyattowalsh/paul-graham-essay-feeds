@@ -7,11 +7,14 @@ Owns transport evidence, HTML decoding, retry policy, and :func:`fetch_index` /
 from __future__ import annotations
 
 import contextlib
+import gzip
 import hashlib
+import importlib
 import random
 import re
 import threading
 import time
+import zlib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -426,6 +429,8 @@ def never_retry_status(status_code: int) -> bool:
 
 _LOOPBACK: Final = frozenset({"127.0.0.1", "localhost", "::1"})
 _DEFAULT_MAX_HOPS: Final = 6
+_REDIRECT_STATUS: Final = frozenset({301, 302, 303, 307, 308})
+_HTTPS_PORT: Final = 443
 
 # Soft HTML / text media types (advisory only — never hard-fail here).
 SOFT_HTML_MEDIA_TYPES: Final[frozenset[str]] = frozenset(
@@ -451,8 +456,9 @@ class ResultKind(StrEnum):
 class FetchEvidence:
     """Typed transport evidence for one request (ADR-004).
 
-    Field set follows the W1-06 contract; additional redirect/retry fields may
-    be layered on later without breaking these names.
+    ``raw_sha256`` / ``bytes_received`` are **wire** (pre-content-decode).
+    ``decoded_sha256`` / ``decoded_bytes_received`` are the entity after
+    Content-Encoding is removed. They match for identity encoding.
     """
 
     method: str
@@ -467,6 +473,8 @@ class FetchEvidence:
     content_length_header: int | None = None
     raw_sha256: str | None = None
     bytes_received: int = 0
+    decoded_sha256: str | None = None
+    decoded_bytes_received: int = 0
     error_message: str | None = None
     redirect_urls: tuple[str, ...] = ()
 
@@ -476,13 +484,36 @@ class TransportResult:
     """Outcome of :func:`request_with_evidence`.
 
     ``response`` is a fully buffered :class:`httpx.Response` when the exchange
-    completed (including non-2xx). ``body`` is the final entity bytes for
-    methods that transfer a body (empty for HEAD / 304).
+    completed (including non-2xx). ``body`` is the **decoded entity** for
+    methods that transfer a body (empty for HEAD / 304). ``raw_body`` is the
+    wire bytes (pre-content-decode).
     """
 
     evidence: FetchEvidence
     response: httpx.Response | None = None
     body: bytes = b""
+    raw_body: bytes = b""
+
+
+@dataclass(frozen=True, slots=True)
+class _BodyBuffers:
+    """Wire bytes plus content-decoded entity (AUD-007)."""
+
+    raw: bytes
+    decoded: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class _HopExchange:
+    """One hop-safe exchange (final non-redirect response)."""
+
+    response: httpx.Response
+    decoded: bytes
+    raw: bytes
+    header_snap: dict[str, str | None]
+    final_url: str
+    status_code: int
+    redirect_urls: tuple[str, ...]
 
 
 def parse_content_type(header: str | None) -> tuple[str | None, str | None]:
@@ -521,9 +552,75 @@ def media_type_is_soft_html(media_type: str | None) -> bool:
     return base in SOFT_HTML_MEDIA_TYPES
 
 
+def _idna_hostname(host: str) -> str:
+    """Lowercase, strip trailing dots, IDNA-encode (leave IPs unchanged)."""
+    host = host.strip().rstrip(".").lower()
+    if not host:
+        return host
+    if ":" in host:
+        return host
+    try:
+        return host.encode("idna").decode("ascii").lower().rstrip(".")
+    except (UnicodeError, UnicodeDecodeError, UnicodeEncodeError):
+        return host
+
+
 def _normalize_host(host: str) -> str:
-    host = host.lower()
+    host = _idna_hostname(host)
     return "paulgraham.com" if host == "www.paulgraham.com" else host
+
+
+def _etag_key(value: str) -> str:
+    """Compare ETags ignoring weak-prefix and surrounding quotes."""
+    text = value.strip()
+    if text[:2].upper() == "W/":
+        text = text[2:].strip()
+    if len(text) >= 2 and text[0] == '"' and text[-1] == '"':
+        text = text[1:-1]
+    return text
+
+
+def _if_none_match_covers(header: str, etag: str) -> bool:
+    token = header.strip()
+    if token == "*":
+        return True
+    wanted = _etag_key(etag)
+    return any(_etag_key(part) == wanted for part in token.split(",") if part.strip())
+
+
+def _header_ci(headers: Mapping[str, str] | None, name: str) -> str | None:
+    if not headers:
+        return None
+    target = name.lower()
+    for key, value in headers.items():
+        if key.lower() == target:
+            stripped = value.strip()
+            return stripped or None
+    return None
+
+
+def _304_is_acceptable(
+    *,
+    request_headers: Mapping[str, str] | None,
+    prior_etag: str | None,
+    prior_last_modified: str | None,
+    prior_body_hash: str | None,
+    response_etag: str | None,
+) -> bool:
+    """AUD-016: 304 is success only with sent conditionals and prior material."""
+    inm = _header_ci(request_headers, "If-None-Match")
+    ims = _header_ci(request_headers, "If-Modified-Since")
+    if inm is None and ims is None:
+        return False
+    if not (prior_etag or prior_last_modified or prior_body_hash):
+        return False
+    inm_ok = True
+    if inm is not None and response_etag:
+        inm_ok = _if_none_match_covers(inm, response_etag)
+    prior_ok = True
+    if prior_etag and response_etag:
+        prior_ok = _etag_key(prior_etag) == _etag_key(response_etag)
+    return inm_ok and prior_ok
 
 
 def _assert_hop_allowed(
@@ -532,20 +629,52 @@ def _assert_hop_allowed(
     *,
     allow_loopback: bool,
 ) -> None:
-    """Raise FeedError unless ``url`` scheme/host is permitted for this hop."""
-    parts = urlsplit(url)
+    """Raise FeedError unless ``url`` scheme/host/port is permitted for this hop.
+
+    Tightened hop policy (AUD-008): reject userinfo, fragments, non-443 HTTPS
+    ports, percent-encoded hosts. HTTP loopback may use any explicit port only
+    when ``allow_loopback`` is True. Hostnames are IDNA-normalized.
+    """
+    try:
+        parts = urlsplit(url)
+    except ValueError as exc:
+        raise FeedError(f"Invalid URL: {url!r}") from exc
+
+    if parts.fragment or "#" in url:
+        raise FeedError(f"Fragment not allowed: {url!r}")
+    if parts.username is not None or parts.password is not None or "@" in (parts.netloc or ""):
+        raise FeedError(f"Userinfo not allowed: {url!r}")
+
     scheme = (parts.scheme or "").lower()
-    host = (parts.hostname or "").lower()
-    if host in _LOOPBACK:
+    raw_host = parts.hostname or ""
+    if not raw_host:
+        raise FeedError(f"URL missing host: {url!r}")
+    if "%" in raw_host:
+        raise FeedError(f"Encoded host not allowed: {url!r}")
+
+    try:
+        port = parts.port
+    except (ValueError, OverflowError) as exc:
+        raise FeedError(f"Invalid port: {url!r}") from exc
+
+    host = _normalize_host(raw_host)
+    is_loopback = host in _LOOPBACK
+
+    if is_loopback:
         if not allow_loopback:
             raise FeedError(f"Host not allowed: {host!r}")
-        if not (scheme == "https" or scheme == "http"):
+        if scheme not in {"http", "https"}:
             raise FeedError(f"Need https (or http loopback): {url!r}")
+        if scheme == "https" and port is not None and port != _HTTPS_PORT:
+            raise FeedError(f"Port not allowed: {url!r}")
         return
+
     if scheme != "https":
         raise FeedError(f"Need https (or http loopback): {url!r}")
+    if port is not None and port != _HTTPS_PORT:
+        raise FeedError(f"Port not allowed: {url!r}")
     allowed = {_normalize_host(h) for h in allowed_hosts}
-    if _normalize_host(host) not in allowed:
+    if host not in allowed:
         raise FeedError(f"Host not allowed: {host!r}")
 
 
@@ -563,25 +692,92 @@ def _parse_content_length(response: httpx.Response) -> int | None:
     return _parse_content_length_value(response.headers.get("content-length"))
 
 
+def _brotli_decompress(data: bytes) -> bytes:
+    module = None
+    with contextlib.suppress(ImportError):
+        module = importlib.import_module("brotli")
+    if module is None:
+        with contextlib.suppress(ImportError):
+            module = importlib.import_module("brotlicffi")
+    if module is None:
+        raise FeedError("Unsupported Content-Encoding: br (brotli package not installed)")
+    decompress = getattr(module, "decompress", None)
+    if not callable(decompress):
+        raise FeedError("Unsupported Content-Encoding: br")
+    return bytes(decompress(data))
+
+
+def _decode_content_encoding(raw: bytes, content_encoding: str | None) -> bytes:
+    """Undo Content-Encoding (gzip / deflate / br). Identity when missing/unknown."""
+    if not raw or not content_encoding or not content_encoding.strip():
+        return raw
+    body = raw
+    tokens = [t.strip().lower() for t in content_encoding.split(",") if t.strip()]
+    for token in reversed(tokens):
+        if token in {"identity"}:
+            continue
+        if token in {"gzip", "x-gzip"}:
+            body = gzip.decompress(body)
+        elif token == "deflate":
+            try:
+                body = zlib.decompress(body)
+            except zlib.error:
+                body = zlib.decompress(body, -zlib.MAX_WBITS)
+        elif token in {"br", "brotli"}:
+            body = _brotli_decompress(body)
+        else:
+            continue
+    return body
+
+
+def _consume_entity_body(
+    response: httpx.Response,
+    *,
+    max_bytes: int | None,
+) -> _BodyBuffers:
+    """Read **wire** bytes (capped), then content-decode into the entity buffer.
+
+    ``Content-Length`` (when present) is the wire size. The same ``max_bytes``
+    cap applies to decoded entity bytes (zip-bomb stop).
+    """
+    if max_bytes is not None:
+        declared = _parse_content_length(response)
+        if declared is not None and declared > max_bytes:
+            response.close()
+            raise FeedError(f"Response over {max_bytes} bytes")
+    raw_buf = bytearray()
+    try:
+        for chunk in response.iter_raw():
+            if not chunk:
+                continue
+            raw_buf.extend(chunk)
+            if max_bytes is not None and len(raw_buf) > max_bytes:
+                raise FeedError(f"Response over {max_bytes} bytes")
+    finally:
+        with contextlib.suppress(Exception):
+            response.close()
+    raw = bytes(raw_buf)
+    encoding = response.headers.get("content-encoding")
+    try:
+        decoded = _decode_content_encoding(raw, encoding)
+    except FeedError:
+        raise
+    except (OSError, gzip.BadGzipFile, zlib.error, ValueError) as exc:
+        raise FeedError(f"Failed to decode Content-Encoding: {exc}") from exc
+    if max_bytes is not None and len(decoded) > max_bytes:
+        raise FeedError(f"Response over {max_bytes} bytes")
+    return _BodyBuffers(raw=raw, decoded=decoded)
+
+
 def _read_body_capped(response: httpx.Response, *, max_bytes: int) -> bytes:
     """Read response body with a hard size cap (Content-Length + stream).
 
-    Raises :class:`FeedError` if the declared or actual body exceeds ``max_bytes``.
+    Returns **decoded** entity bytes. Wire bytes are hashed separately in
+    :func:`request_with_evidence`. Raises :class:`FeedError` if the declared
+    wire size or actual wire/decoded body exceeds ``max_bytes``.
     Only for methods that transfer an entity body (GET).
     """
-    declared = _parse_content_length(response)
-    if declared is not None and declared > max_bytes:
-        response.close()
-        raise FeedError(f"Response over {max_bytes} bytes")
-    buf = bytearray()
-    try:
-        for chunk in response.iter_bytes():
-            buf.extend(chunk)
-            if len(buf) > max_bytes:
-                raise FeedError(f"Response over {max_bytes} bytes")
-    finally:
-        response.close()
-    return bytes(buf)
+    return _consume_entity_body(response, max_bytes=max_bytes).decoded
 
 
 def _rebuild_response(
@@ -628,6 +824,8 @@ def _failed_evidence(
     content_length_header: int | None = None,
     bytes_received: int = 0,
     raw_sha256: str | None = None,
+    decoded_sha256: str | None = None,
+    decoded_bytes_received: int = 0,
 ) -> FetchEvidence:
     return FetchEvidence(
         method=method.upper(),
@@ -642,6 +840,8 @@ def _failed_evidence(
         content_length_header=content_length_header,
         raw_sha256=raw_sha256,
         bytes_received=bytes_received,
+        decoded_sha256=decoded_sha256,
+        decoded_bytes_received=decoded_bytes_received,
         error_message=error_message,
         redirect_urls=redirect_urls,
     )
@@ -653,17 +853,25 @@ def _build_evidence(
     requested_url: str,
     final_url: str,
     status_code: int,
-    body: bytes,
+    raw: bytes,
+    decoded: bytes,
     header_snap: Mapping[str, str | None],
     redirect_urls: tuple[str, ...],
+    not_modified_ok: bool = False,
 ) -> FetchEvidence:
     media_type, charset = parse_content_type(header_snap.get("content-type"))
     cl = _parse_content_length_value(header_snap.get("content-length"))
-    bytes_received = len(body)
-    raw_sha256 = hashlib.sha256(body).hexdigest() if body else None
+    bytes_received = len(raw)
+    decoded_bytes_received = len(decoded)
+    raw_sha256 = hashlib.sha256(raw).hexdigest() if raw else None
+    decoded_sha256 = hashlib.sha256(decoded).hexdigest() if decoded else None
     if status_code == 304:
-        kind = ResultKind.NOT_MODIFIED
-        error_message = None
+        if not_modified_ok:
+            kind = ResultKind.NOT_MODIFIED
+            error_message = None
+        else:
+            kind = ResultKind.FAILED
+            error_message = "Unacceptable HTTP 304"
     elif 200 <= status_code < 300:
         kind = ResultKind.FETCHED
         error_message = None
@@ -683,8 +891,111 @@ def _build_evidence(
         content_length_header=cl,
         raw_sha256=raw_sha256,
         bytes_received=bytes_received,
+        decoded_sha256=decoded_sha256,
+        decoded_bytes_received=decoded_bytes_received,
         error_message=error_message,
         redirect_urls=redirect_urls,
+    )
+
+
+def _join_redirect(current: str, location: str) -> str:
+    """Resolve Location against the current hop and re-validate later."""
+    return str(httpx.URL(current).join(location))
+
+
+def _hop_exchange(
+    client: httpx.Client,
+    method_u: str,
+    url: str,
+    *,
+    allowed_hosts: frozenset[str] | set[str],
+    max_bytes: int | None,
+    max_hops: int,
+    allow_loopback: bool,
+    headers: Mapping[str, str] | None,
+) -> _HopExchange:
+    """Issue *method_u* with hop-validated redirects; return the final exchange.
+
+    Raises :class:`FeedError` for policy violations. Transport errors propagate.
+    """
+    apply_body_budget = max_bytes is not None and method_u != "HEAD"
+    current = url
+    redirect_chain: list[str] = []
+    response: httpx.Response | None = None
+    extra_headers = dict(headers) if headers else None
+    header_snap: dict[str, str | None] = {}
+    final_url = url
+    status_code = 0
+    raw = b""
+    decoded = b""
+
+    for _hop in range(max_hops):
+        _assert_hop_allowed(current, allowed_hosts, allow_loopback=allow_loopback)
+        logger.debug("{} {}", method_u, current)
+        req = client.build_request(method_u, current, headers=extra_headers)
+        response = client.send(req, stream=True, follow_redirects=False)
+        try:
+            if response.status_code in _REDIRECT_STATUS:
+                location = response.headers.get("location")
+                response.close()
+                response = None
+                if not location:
+                    raise FeedError(f"Redirect without Location from {current}")
+                next_url = _join_redirect(current, location)
+                _assert_hop_allowed(next_url, allowed_hosts, allow_loopback=allow_loopback)
+                redirect_chain.append(next_url)
+                current = next_url
+                extra_headers = None
+                continue
+
+            header_snap = _header_snapshot(response)
+            final_url = str(response.url)
+            status_code = response.status_code
+
+            if method_u == "HEAD":
+                response.close()
+                decoded = b""
+                raw = b""
+                buffered = _rebuild_response(response, body=decoded)
+                response = buffered
+            elif apply_body_budget:
+                buffers = _consume_entity_body(response, max_bytes=max_bytes)
+                raw = buffers.raw
+                decoded = buffers.decoded
+                buffered = _rebuild_response(response, body=decoded)
+                response = buffered
+            else:
+                buffers = _consume_entity_body(response, max_bytes=None)
+                raw = buffers.raw
+                decoded = buffers.decoded
+                buffered = _rebuild_response(response, body=decoded)
+                response = buffered
+            break
+        except Exception:
+            if response is not None:
+                with contextlib.suppress(Exception):
+                    response.close()
+            raise
+    else:
+        raise FeedError(f"Too many redirects for {url}")
+
+    assert response is not None
+    _assert_hop_allowed(str(response.url), allowed_hosts, allow_loopback=allow_loopback)
+    if (
+        apply_body_budget
+        and max_bytes is not None
+        and (len(raw) > max_bytes or len(decoded) > max_bytes)
+    ):
+        raise FeedError(f"Response over {max_bytes} bytes")
+
+    return _HopExchange(
+        response=response,
+        decoded=decoded,
+        raw=raw,
+        header_snap=header_snap,
+        final_url=final_url,
+        status_code=status_code,
+        redirect_urls=tuple(redirect_chain),
     )
 
 
@@ -698,6 +1009,9 @@ def request_with_evidence(
     max_hops: int = _DEFAULT_MAX_HOPS,
     allow_loopback: bool | None = None,
     headers: Mapping[str, str] | None = None,
+    prior_etag: str | None = None,
+    prior_last_modified: str | None = None,
+    prior_body_hash: str | None = None,
 ) -> TransportResult:
     """Issue *method* with hop-validated redirects and return typed evidence.
 
@@ -712,113 +1026,100 @@ def request_with_evidence(
     - **HEAD:** never fail solely because ``Content-Length`` > *max_bytes*;
       no entity body is budgeted.
     - **GET** (and other body-bearing methods): when *max_bytes* is set, enforce
-      via ``Content-Length`` (when present) and a streaming hard-stop.
+      via ``Content-Length`` (when present) and a streaming hard-stop on **wire**
+      bytes, then content-decode into a second buffer.
+
+    HTTP 304 (**AUD-016**) is ``NOT_MODIFIED`` only when the request sent
+    ``If-None-Match`` and/or ``If-Modified-Since`` **and** the caller supplied
+    prior material (``prior_etag`` / ``prior_last_modified`` / ``prior_body_hash``).
+    Otherwise a GET retries once without conditionals; a second empty/304 outcome
+    is ``FAILED``.
 
     Raises :class:`FeedError` for policy violations (disallowed host, too many
     redirects, oversize GET body). Transport-level exceptions become
     ``result_kind=failed`` evidence (no raise).
     """
     if allow_loopback is None:
-        start_host = (urlsplit(url).hostname or "").lower()
+        start_host = _normalize_host(urlsplit(url).hostname or "")
         allow_loopback = start_host in _LOOPBACK
 
     method_u = method.upper()
-    # Body size budget applies only when we actually read a GET (entity) body.
-    apply_body_budget = max_bytes is not None and method_u != "HEAD"
-
-    current = url
-    redirect_chain: list[str] = []
-    response: httpx.Response | None = None
-    extra_headers = dict(headers) if headers else None
-    header_snap: dict[str, str | None] = {}
-    final_url = url
-    status_code = 0
+    retrying_unconditional = False
+    active_headers = dict(headers) if headers else None
 
     try:
-        for _hop in range(max_hops):
-            _assert_hop_allowed(current, allowed_hosts, allow_loopback=allow_loopback)
-            logger.debug("{} {}", method_u, current)
-            req = client.build_request(method_u, current, headers=extra_headers)
-            # Force no auto-follow even if Client was constructed with
-            # follow_redirects=True — otherwise Location targets are fetched
-            # before the next-hop allowlist check (SSRF).
-            response = client.send(req, stream=True, follow_redirects=False)
-            try:
-                # Explicit hop redirects only (exclude 304 Not Modified).
-                if response.status_code in {301, 302, 303, 307, 308}:
-                    location = response.headers.get("location")
-                    response.close()
-                    response = None
-                    if not location:
-                        raise FeedError(f"Redirect without Location from {current}")
-                    next_url = str(httpx.URL(current).join(location))
-                    redirect_chain.append(next_url)
-                    current = next_url
-                    # Conditional headers apply only to the first hop.
-                    extra_headers = None
+        while True:
+            exchange = _hop_exchange(
+                client,
+                method_u,
+                url,
+                allowed_hosts=allowed_hosts,
+                max_bytes=max_bytes,
+                max_hops=max_hops,
+                allow_loopback=allow_loopback,
+                headers=active_headers,
+            )
+
+            if retrying_unconditional and not exchange.decoded:
+                return TransportResult(
+                    evidence=_failed_evidence(
+                        method=method_u,
+                        requested_url=url,
+                        final_url=exchange.final_url,
+                        status_code=exchange.status_code,
+                        error_message="Unacceptable HTTP 304",
+                        redirect_urls=exchange.redirect_urls,
+                        etag=exchange.header_snap.get("etag"),
+                        last_modified=exchange.header_snap.get("last-modified"),
+                        content_length_header=_parse_content_length_value(
+                            exchange.header_snap.get("content-length")
+                        ),
+                    ),
+                    response=exchange.response,
+                    body=b"",
+                    raw_body=exchange.raw,
+                )
+
+            not_modified_ok = False
+            if exchange.status_code == 304:
+                not_modified_ok = _304_is_acceptable(
+                    request_headers=active_headers,
+                    prior_etag=prior_etag,
+                    prior_last_modified=prior_last_modified,
+                    prior_body_hash=prior_body_hash,
+                    response_etag=exchange.header_snap.get("etag"),
+                )
+                if not not_modified_ok and method_u == "GET" and not retrying_unconditional:
+                    retrying_unconditional = True
+                    active_headers = None
                     continue
 
-                # Snapshot headers before rebuild drops Content-Length / encoding.
-                header_snap = _header_snapshot(response)
-                final_url = str(response.url)
-                status_code = response.status_code
-
-                # Final (non-redirect) response.
-                if method_u == "HEAD":
-                    # F-016: do not apply Content-Length as a body budget.
-                    # Close without draining; HEAD has no entity body to budget.
-                    response.close()
-                    body = b""
-                    buffered = _rebuild_response(response, body=body)
-                    response = buffered
-                elif apply_body_budget:
-                    assert max_bytes is not None
-                    body = _read_body_capped(response, max_bytes=max_bytes)
-                    buffered = _rebuild_response(response, body=body)
-                    response = buffered
-                else:
-                    try:
-                        body = response.read()
-                    finally:
-                        response.close()
-                    buffered = _rebuild_response(response, body=body)
-                    response = buffered
-                break
-            except Exception:
-                if response is not None:
-                    with contextlib.suppress(Exception):
-                        response.close()
-                raise
-        else:
-            raise FeedError(f"Too many redirects for {url}")
-
-        assert response is not None
-        _assert_hop_allowed(str(response.url), allowed_hosts, allow_loopback=allow_loopback)
-
-        body = response.content
-        if apply_body_budget and max_bytes is not None and len(body) > max_bytes:
-            raise FeedError(f"Response over {max_bytes} bytes")
-
-        evidence = _build_evidence(
-            method=method_u,
-            requested_url=url,
-            final_url=final_url,
-            status_code=status_code,
-            body=body,
-            header_snap=header_snap,
-            redirect_urls=tuple(redirect_chain),
-        )
-        return TransportResult(evidence=evidence, response=response, body=body)
+            evidence = _build_evidence(
+                method=method_u,
+                requested_url=url,
+                final_url=exchange.final_url,
+                status_code=exchange.status_code,
+                raw=exchange.raw,
+                decoded=exchange.decoded,
+                header_snap=exchange.header_snap,
+                redirect_urls=exchange.redirect_urls,
+                not_modified_ok=not_modified_ok,
+            )
+            return TransportResult(
+                evidence=evidence,
+                response=exchange.response,
+                body=exchange.decoded,
+                raw_body=exchange.raw,
+            )
 
     except httpx.HTTPError as exc:
         return TransportResult(
             evidence=_failed_evidence(
                 method=method_u,
                 requested_url=url,
-                final_url=current,
+                final_url=url,
                 status_code=None,
                 error_message=str(exc),
-                redirect_urls=tuple(redirect_chain),
             ),
             response=None,
             body=b"",
@@ -834,6 +1135,9 @@ def get_with_evidence(
     max_hops: int = _DEFAULT_MAX_HOPS,
     allow_loopback: bool | None = None,
     headers: Mapping[str, str] | None = None,
+    prior_etag: str | None = None,
+    prior_last_modified: str | None = None,
+    prior_body_hash: str | None = None,
 ) -> TransportResult:
     """GET with hop-validated redirects and body size budget."""
     return request_with_evidence(
@@ -845,6 +1149,9 @@ def get_with_evidence(
         max_hops=max_hops,
         allow_loopback=allow_loopback,
         headers=headers,
+        prior_etag=prior_etag,
+        prior_last_modified=prior_last_modified,
+        prior_body_hash=prior_body_hash,
     )
 
 
@@ -920,15 +1227,12 @@ _INDEX_HOSTS = frozenset({"paulgraham.com"})
 
 def _assert_url(url: str) -> None:
     """Index-only host policy (``paulgraham.com`` + http loopback)."""
-    parts = urlsplit(url)
-    scheme = (parts.scheme or "").lower()
-    host = (parts.hostname or "").lower()
-    if not (scheme == "https" or (scheme == "http" and host in _LOOPBACK)):
-        raise FeedError(f"Need https (or http loopback): {url!r}")
-    if host in _LOOPBACK:
-        return
-    if _normalize_host(host) not in _INDEX_HOSTS:
-        raise FeedError(f"Source host not allowed: {host!r}")
+    try:
+        start_host = _normalize_host(urlsplit(url).hostname or "")
+    except ValueError as exc:
+        raise FeedError(f"Invalid URL: {url!r}") from exc
+    allow_loopback = start_host in _LOOPBACK
+    _assert_hop_allowed(url, _INDEX_HOSTS, allow_loopback=allow_loopback)
 
 
 def hop_safe_request(
@@ -950,7 +1254,7 @@ def hop_safe_request(
     loopback). That fixed boolean applies to every hop, including the final URL.
     """
     if allow_loopback is None:
-        start_host = (urlsplit(url).hostname or "").lower()
+        start_host = _normalize_host(urlsplit(url).hostname or "")
         allow_loopback = start_host in _LOOPBACK
     current = url
     response: httpx.Response | None = None
@@ -974,6 +1278,7 @@ def hop_safe_request(
                     if not location:
                         raise FeedError(f"Redirect without Location from {current}")
                     current = str(httpx.URL(current).join(location))
+                    _assert_hop_allowed(current, allowed_hosts, allow_loopback=allow_loopback)
                     continue
                 response.read()
                 break
@@ -994,6 +1299,7 @@ def hop_safe_request(
                     if not location:
                         raise FeedError(f"Redirect without Location from {current}")
                     current = str(httpx.URL(current).join(location))
+                    _assert_hop_allowed(current, allowed_hosts, allow_loopback=allow_loopback)
                     continue
                 assert budget is not None
                 body = _read_body_capped(response, max_bytes=budget)
@@ -1051,6 +1357,8 @@ def _get_once(
     timeout: float,
     max_bytes: int,
     headers: dict[str, str] | None = None,
+    prior_etag: str | None = None,
+    prior_last_modified: str | None = None,
 ) -> str:
     """Single attempt: hop-validated redirects, then body."""
     with create_http_client(
@@ -1063,11 +1371,21 @@ def _get_once(
             allowed_hosts=_INDEX_HOSTS,
             max_bytes=max_bytes,
             headers=headers,
+            prior_etag=prior_etag,
+            prior_last_modified=prior_last_modified,
         )
+        ev = result.evidence
+        if ev.result_kind is ResultKind.NOT_MODIFIED:
+            raise FeedError(f"HTTP 304 with no body for {url}")
+        if ev.result_kind is ResultKind.FAILED:
+            if result.response is None:
+                raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
+            if ev.status_code == 304:
+                raise FeedError(ev.error_message or "Unacceptable HTTP 304")
+            result.response.raise_for_status()
+            raise FeedError(ev.error_message or f"HTTP {ev.status_code}")
         if result.response is None:
-            # Transport failure: raise retryable httpx error (not FeedError) so
-            # Tenacity can classify retries before terminal conversion.
-            raise httpx.TransportError(result.evidence.error_message or f"Fetch failed for {url}")
+            raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
         result.response.raise_for_status()
         logger.info("Fetched {} ({} bytes)", result.evidence.final_url, len(result.body))
         charset = result.evidence.charset
@@ -1095,7 +1413,14 @@ def fetch_html(
     headers = conditional_headers(etag=etag, last_modified=last_modified) or None
 
     def _call() -> str:
-        return _get_once(url, timeout=timeout, max_bytes=max_bytes, headers=headers)
+        return _get_once(
+            url,
+            timeout=timeout,
+            max_bytes=max_bytes,
+            headers=headers,
+            prior_etag=etag,
+            prior_last_modified=last_modified,
+        )
 
     return run_with_retry(_call, attempts=attempts, what=f"fetch {url}")
 
@@ -1103,8 +1428,11 @@ def fetch_html(
 class HostCooldown:
     """Minimum inter-request gap for a single host (RV-R-005).
 
-    ``seconds <= 0`` disables waiting. Clock and sleeper are injectable for tests.
-    Thread-safe for concurrent enrich / probe workers.
+    ``seconds <= 0`` disables waiting. Clock, sleeper, and RNG are injectable
+    for tests. Optional ``jitter`` (seconds) is added on top of the remaining
+    gap: ``sleep(remaining + random * jitter)``. Default jitter is ``0`` so
+    existing tests stay deterministic. Thread-safe for concurrent enrich /
+    probe workers.
     """
 
     def __init__(
@@ -1113,10 +1441,14 @@ class HostCooldown:
         *,
         clock: Callable[[], float] | None = None,
         sleeper: Callable[[float], None] | None = None,
+        jitter: float = 0.0,
+        rng: random.Random | None = None,
     ) -> None:
         self.seconds = float(seconds)
+        self.jitter = max(0.0, float(jitter))
         self._clock = clock or time.monotonic
         self._sleeper = sleeper or time.sleep
+        self._rng = rng
         self._last: dict[str, float] = {}
         self._lock = threading.Lock()
 
@@ -1130,8 +1462,13 @@ class HostCooldown:
             last = self._last.get(host_key)
             if last is not None:
                 remaining = self.seconds - (now - last)
-                if remaining > 0:
-                    self._sleeper(remaining)
+                extra = 0.0
+                if self.jitter > 0:
+                    draw = self._rng.random() if self._rng is not None else random.random()
+                    extra = draw * self.jitter
+                sleep_for = max(0.0, remaining) + extra
+                if sleep_for > 0:
+                    self._sleeper(sleep_for)
                     now = self._clock()
             self._last[host_key] = now
 
@@ -1146,6 +1483,9 @@ class IndexFetchResult:
     last_modified: str | None = None
     status_code: int | None = None
     raw_sha256: str | None = None
+    decoded_sha256: str | None = None
+    raw_bytes_received: int | None = None
+    decoded_bytes_received: int | None = None
 
 
 def fetch_index(
@@ -1156,10 +1496,14 @@ def fetch_index(
     max_bytes: int = MAX_BYTES,
     etag: str | None = None,
     last_modified: str | None = None,
+    prior_body_hash: str | None = None,
 ) -> IndexFetchResult:
     """Fetch the essays index with optional conditional validators.
 
-    On HTTP 304, ``html`` is ``None`` and ``not_modified`` is True (plan-only path).
+    On an *acceptable* HTTP 304, ``html`` is ``None`` and ``not_modified`` is
+    True (plan-only path). Unacceptable 304 (no conditionals / no prior
+    material) is not treated as success: transport retries once unconditionally,
+    then raises :class:`FeedError`.
     """
     _assert_url(url)
     attempts = max(1, retries + 1)
@@ -1176,9 +1520,12 @@ def fetch_index(
                 allowed_hosts=_INDEX_HOSTS,
                 max_bytes=max_bytes,
                 headers=cond,
+                prior_etag=etag,
+                prior_last_modified=last_modified,
+                prior_body_hash=prior_body_hash,
             )
             ev = result.evidence
-            if ev.result_kind is ResultKind.NOT_MODIFIED or ev.status_code == 304:
+            if ev.result_kind is ResultKind.NOT_MODIFIED:
                 return IndexFetchResult(
                     html=None,
                     not_modified=True,
@@ -1186,9 +1533,18 @@ def fetch_index(
                     last_modified=ev.last_modified or last_modified,
                     status_code=304,
                     raw_sha256=None,
+                    decoded_sha256=None,
+                    raw_bytes_received=ev.bytes_received,
+                    decoded_bytes_received=ev.decoded_bytes_received,
                 )
+            if ev.result_kind is ResultKind.FAILED:
+                if result.response is None:
+                    raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
+                if ev.status_code == 304:
+                    raise FeedError(ev.error_message or "Unacceptable HTTP 304")
+                result.response.raise_for_status()
+                raise FeedError(ev.error_message or f"HTTP {ev.status_code}")
             if result.response is None:
-                # Keep transport failures retryable until run_with_retry exhausts.
                 raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
             result.response.raise_for_status()
             html = decode_html(result.body, transport_charset=ev.charset)
@@ -1199,6 +1555,9 @@ def fetch_index(
                 last_modified=ev.last_modified,
                 status_code=ev.status_code,
                 raw_sha256=ev.raw_sha256,
+                decoded_sha256=ev.decoded_sha256,
+                raw_bytes_received=ev.bytes_received,
+                decoded_bytes_received=ev.decoded_bytes_received,
             )
 
     return run_with_retry(_call, attempts=attempts, what=f"fetch index {url}")
@@ -1274,6 +1633,7 @@ __all__ = [
     "DecodedDocument",
     "EncodingSource",
     "FetchEvidence",
+    "HostCooldown",
     "IndexFetchResult",
     "ResultKind",
     "TimeoutConfig",

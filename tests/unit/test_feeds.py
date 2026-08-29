@@ -16,6 +16,7 @@ from pydantic import ValidationError
 from paul_graham_essay_feeds.feeds import (
     catalog_to_feed_snapshot,
     feed_paths,
+    feed_self_url,
     render_atom,
     render_json,
     render_rss,
@@ -666,6 +667,97 @@ def test_rss_atom_link_self_simple_feed_url() -> None:
     assert len(self_links) == 1
     assert self_links[0].get("href") == "https://example.com/pg-feeds/rss.simple.xml"
     assert self_links[0].get("type") == "application/rss+xml"
+
+
+def _rss_self_href(snap: FeedSnapshot) -> str:
+    root = ET.fromstring(render_rss(snap))
+    self_links = [el for el in root.iter(f"{{{ATOM_NS}}}link") if el.get("rel") == "self"]
+    assert len(self_links) == 1
+    href = self_links[0].get("href")
+    assert href is not None
+    return href
+
+
+def _atom_self_href(snap: FeedSnapshot) -> str:
+    root = ET.fromstring(render_atom(snap))
+    self_links = [el for el in root.iter(f"{{{ATOM_NS}}}link") if el.get("rel") == "self"]
+    assert len(self_links) == 1
+    href = self_links[0].get("href")
+    assert href is not None
+    return href
+
+
+def test_public_base_trailing_slash_same_self_urls() -> None:
+    """AUD-006: slash vs no-slash bases emit identical canonical self links."""
+    entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    cat = _catalog([entry])
+    slash = catalog_to_feed_snapshot(
+        cat,
+        generator=GENERATOR,
+        public_base_url="https://example.com/pg-feeds/",
+    )
+    noslash = catalog_to_feed_snapshot(
+        cat,
+        generator=GENERATOR,
+        public_base_url="https://example.com/pg-feeds",
+    )
+    assert slash.feed_url == noslash.feed_url == "https://example.com/pg-feeds/feed.json"
+    assert slash.feed_url != "https://example.com/feed.json"
+    for snap in (slash, noslash):
+        assert snap.feed_url is not None
+        assert feed_self_url(snap.feed_url, kind="rss") == "https://example.com/pg-feeds/rss.xml"
+        assert feed_self_url(snap.feed_url, kind="atom") == "https://example.com/pg-feeds/atom.xml"
+        assert feed_self_url(snap.feed_url, kind="json") == "https://example.com/pg-feeds/feed.json"
+    expected_rss = "https://example.com/pg-feeds/rss.xml"
+    assert _rss_self_href(slash) == _rss_self_href(noslash) == expected_rss
+    assert _atom_self_href(slash) == _atom_self_href(noslash)
+    assert _atom_self_href(slash) == "https://example.com/pg-feeds/atom.xml"
+    slash_json = json.loads(render_json(slash))["feed_url"]
+    noslash_json = json.loads(render_json(noslash))["feed_url"]
+    assert slash_json == noslash_json
+
+
+def test_public_base_unicode_host_idna_self_urls() -> None:
+    """AUD-006: Unicode hosts are IDNA-encoded in emitted self URLs."""
+    entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    snap = catalog_to_feed_snapshot(
+        _catalog([entry]),
+        generator=GENERATOR,
+        public_base_url="https://münchen.example.com/feeds",
+    )
+    assert snap.feed_url == "https://xn--mnchen-3ya.example.com/feeds/feed.json"
+    assert snap.feed_url is not None
+    assert (
+        feed_self_url(snap.feed_url, kind="rss")
+        == "https://xn--mnchen-3ya.example.com/feeds/rss.xml"
+    )
+    assert _rss_self_href(snap) == "https://xn--mnchen-3ya.example.com/feeds/rss.xml"
+    assert _atom_self_href(snap) == "https://xn--mnchen-3ya.example.com/feeds/atom.xml"
+    assert json.loads(render_json(snap))["feed_url"] == snap.feed_url
+    assert "münchen" not in (snap.feed_url or "")
+    assert feed_self_url("https://münchen.example.com/feeds/feed.json", kind="atom") == (
+        "https://xn--mnchen-3ya.example.com/feeds/atom.xml"
+    )
+
+
+def test_feed_self_url_simple_uses_urljoin() -> None:
+    json_url = "https://example.com/pg-feeds/feed.simple.json"
+    assert feed_self_url(json_url, kind="rss") == "https://example.com/pg-feeds/rss.simple.xml"
+    assert feed_self_url(json_url, kind="atom") == "https://example.com/pg-feeds/atom.simple.xml"
+    assert feed_self_url(json_url, kind="json") == json_url
+
+
+def test_simple_variant_joins_public_base() -> None:
+    entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    snap = catalog_to_feed_snapshot(
+        _catalog([entry]),
+        generator=GENERATOR,
+        public_base_url="https://example.com/pg-feeds",
+        summary_mode="title_only",
+    )
+    assert snap.feed_url == "https://example.com/pg-feeds/feed.simple.json"
+    assert snap.feed_url is not None
+    assert feed_self_url(snap.feed_url, kind="rss") == "https://example.com/pg-feeds/rss.simple.xml"
 
 
 def test_missing_entry_in_order_raises() -> None:

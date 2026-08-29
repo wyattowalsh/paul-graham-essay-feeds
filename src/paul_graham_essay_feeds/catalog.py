@@ -25,19 +25,21 @@ from paul_graham_essay_feeds.models import (
     ConfigurationError,
     DiscoveryItem,
     FeedError,
+    _fill_omitted_catalog_entry_fields,
     require_aware_utc,
 )
 
 DEFAULT_CATALOG_REL: Path = Path("catalog.json")
 """Default catalog path relative to a repository root (repo-root SSOT)."""
 
-CATALOG_SCHEMA_VERSION: Final[Literal[2]] = 2
+CATALOG_SCHEMA_VERSION: Final[Literal[3]] = 3
 """Current durable catalog schema version written by this module."""
 
 _FILE_MODE: int = 0o644
-_DEFAULT_SCHEMA_VERSION: Final[Literal[2]] = 2
 _DEFAULT_FINGERPRINT = "default"
 _MAX_FAILURE_BACKOFF_DAYS: Final[int] = 7
+_MATERIAL_SUMMARY_ID_CAP: Final[int] = 8
+_V2_TO_V3_MIGRATION_NAME: Final[str] = "compact_catalog_diffs"
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +96,7 @@ def empty_catalog(
     material_config_fingerprint: str,
     versions: dict[str, str] | None = None,
 ) -> Catalog:
-    """Return a new empty schema-v2 catalog with the given fingerprint."""
+    """Return a new empty schema-v3 catalog with the given fingerprint."""
     return Catalog(
         schema_version=CATALOG_SCHEMA_VERSION,
         material_config_fingerprint=material_config_fingerprint,
@@ -177,9 +179,30 @@ def _nonempty_str(value: object) -> str | None:
 
 
 def catalog_to_json(catalog: Catalog) -> str:
-    """Serialize ``catalog`` to deterministic JSON (sorted keys, trailing newline)."""
+    """Serialize ``catalog`` to deterministic JSON (sorted keys, trailing newline).
+
+    Schema 3 omits redundant per-entry ``position`` (derived from
+    ``entry_order``) and ``last_seen_at`` when it equals
+    ``index.last_success_at``. In-memory models still carry both fields.
+    """
     payload = catalog.model_dump(mode="json")
+    _omit_redundant_entry_fields(catalog, payload)
     return json.dumps(payload, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
+
+
+def _omit_redundant_entry_fields(catalog: Catalog, payload: dict[str, Any]) -> None:
+    """Pop compact-schema fields from a ``model_dump`` payload (in-place)."""
+    entries_payload = payload.get("entries")
+    if not isinstance(entries_payload, dict):
+        return
+    shared = catalog.index.last_success_at
+    for sid, entry in catalog.entries.items():
+        raw = entries_payload.get(sid)
+        if not isinstance(raw, dict):
+            continue
+        raw.pop("position", None)
+        if shared is not None and entry.last_seen_at == shared:
+            raw.pop("last_seen_at", None)
 
 
 def _migrate_resource_state_v1_to_v2(raw: dict[str, Any]) -> dict[str, Any]:
@@ -204,17 +227,20 @@ def _migrate_resource_state_v1_to_v2(raw: dict[str, Any]) -> dict[str, Any]:
 def migrate_catalog(data: dict[str, Any]) -> Catalog:
     """Validate and migrate raw catalog data to the current schema.
 
-    Accepts schema version 1 (upgrades to 2) and version 2. Missing
-    ``schema_version`` is invalid. Unknown future versions fail closed.
-    Legacy per-entry ``lifecycle`` keys are stripped.
+    Accepts schema versions 1, 2, and 3. Version 1 upgrades to 2 then 2→3.
+    Missing ``schema_version`` is invalid. Unknown future versions fail closed.
+    Legacy per-entry ``lifecycle`` keys are stripped. Compact JSON omissions
+    (``position``, shared ``last_seen_at``) are filled before validate.
     """
     if not isinstance(data, dict):
         raise ConfigurationError("Catalog root must be an object")
     if "schema_version" not in data:
         raise ConfigurationError("Catalog missing schema_version")
     version = data.get("schema_version")
-    if version not in (1, 2):
-        raise ConfigurationError(f"Unsupported catalog schema_version={version!r}; expected 1 or 2")
+    if version not in (1, 2, 3):
+        raise ConfigurationError(
+            f"Unsupported catalog schema_version={version!r}; expected 1, 2, or 3"
+        )
 
     payload = dict(data)
     history = list(payload.get("migration_history") or [])
@@ -223,6 +249,10 @@ def migrate_catalog(data: dict[str, Any]) -> Catalog:
 
     entries = payload.get("entries")
     if isinstance(entries, dict):
+        payload["entries"] = {
+            sid: dict(raw) if isinstance(raw, dict) else raw for sid, raw in entries.items()
+        }
+        entries = payload["entries"]
         for raw_entry in entries.values():
             if isinstance(raw_entry, dict):
                 raw_entry.pop("lifecycle", None)
@@ -244,7 +274,7 @@ def migrate_catalog(data: dict[str, Any]) -> Catalog:
                     entry["page"] = _migrate_resource_state_v1_to_v2(page)
                 migrated_entries[sid] = entry
             payload["entries"] = migrated_entries
-        payload["schema_version"] = CATALOG_SCHEMA_VERSION
+        payload["schema_version"] = 2
         history.append(
             {
                 "from": 1,
@@ -253,7 +283,20 @@ def migrate_catalog(data: dict[str, Any]) -> Catalog:
             }
         )
         payload["migration_history"] = history
+        version = 2
 
+    if version == 2:
+        payload["schema_version"] = CATALOG_SCHEMA_VERSION
+        history.append(
+            {
+                "from": 2,
+                "to": 3,
+                "name": _V2_TO_V3_MIGRATION_NAME,
+            }
+        )
+        payload["migration_history"] = history
+
+    _fill_omitted_catalog_entry_fields(payload)
     try:
         return Catalog.model_validate(payload)
     except ValidationError as exc:
@@ -286,6 +329,49 @@ def save_catalog(path: Path, catalog: Catalog) -> None:
     """Atomically write ``catalog`` to ``path``."""
     blob = catalog_to_json(catalog).encode("utf-8")
     atomic_write_bytes(Path(path), blob, mode=_FILE_MODE)
+
+
+def catalog_material_summary(prior: Catalog | None, current: Catalog) -> str:
+    """Return a one-line machine summary of catalog membership/material churn.
+
+    Format: ``added=N removed=N changed=N ids=...`` with a capped id list.
+    ``changed`` ignores derived ``position`` and shared observation
+    ``last_seen_at`` (and other non-material clocks).
+    """
+    prior_ids = set(prior.entry_order) if prior is not None else set()
+    current_ids = set(current.entry_order)
+    added = [sid for sid in current.entry_order if sid not in prior_ids]
+    removed = sorted(prior_ids - current_ids)
+    changed: list[str] = []
+    if prior is not None:
+        for sid in current.entry_order:
+            if sid not in prior_ids:
+                continue
+            if _entry_material_changed(prior.entries[sid], current.entries[sid]):
+                changed.append(sid)
+    ids = [*added, *removed, *changed]
+    shown = ids[:_MATERIAL_SUMMARY_ID_CAP]
+    extra = len(ids) - len(shown)
+    ids_text = ",".join(shown)
+    if extra:
+        ids_text = f"{ids_text},...(+{extra})" if shown else f"...(+{extra})"
+    return f"added={len(added)} removed={len(removed)} changed={len(changed)} ids={ids_text}"
+
+
+def _entry_material_changed(prior: CatalogEntry, current: CatalogEntry) -> bool:
+    """True when durable material fields differ (not position / last_seen_at)."""
+    return (
+        prior.url != current.url
+        or prior.title != current.title
+        or prior.summary != current.summary
+        or prior.summary_source != current.summary_source
+        or prior.summary_quality != current.summary_quality
+        or prior.prior_good_summary != current.prior_good_summary
+        or prior.published_at != current.published_at
+        or prior.published_hint != current.published_hint
+        or prior.observed_updated_at != current.observed_updated_at
+        or prior.page.raw_sha256 != current.page.raw_sha256
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -382,7 +468,7 @@ def reconcile_discovery(
 
     if prior is None:
         catalog = Catalog(
-            schema_version=_DEFAULT_SCHEMA_VERSION,
+            schema_version=CATALOG_SCHEMA_VERSION,
             material_config_fingerprint=_DEFAULT_FINGERPRINT,
             versions={},
             entry_order=entry_order,

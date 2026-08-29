@@ -37,7 +37,7 @@ from paul_graham_essay_feeds.feeds import (
     feeds_exist,
     render_snapshot_feeds,
 )
-from paul_graham_essay_feeds.http import decode_html, fetch_index
+from paul_graham_essay_feeds.http import HostCooldown, decode_html, fetch_index
 from paul_graham_essay_feeds.models import (
     GENERATOR,
     NULL_REPORTER,
@@ -53,9 +53,19 @@ from paul_graham_essay_feeds.models import (
     utc_now,
 )
 from paul_graham_essay_feeds.settings import Settings
-from paul_graham_essay_feeds.verify import assert_verified
+from paul_graham_essay_feeds.verify import assert_verified, raise_on_failure, verify_feed_dir
 
 _HTTP_CACHE_REL: Path = Path(".cache") / "http-cache.json"
+_LINK_VALIDATION_CURSOR_KEY = "link_validation_cursor"
+_MATERIAL_CHANGED_PATHS: tuple[str, ...] = (
+    "catalog.json",
+    "feeds/rss.xml",
+    "feeds/atom.xml",
+    "feeds/feed.json",
+    "feeds/rss.simple.xml",
+    "feeds/atom.simple.xml",
+    "feeds/feed.simple.json",
+)
 
 
 class PipelineAction(StrEnum):
@@ -92,7 +102,7 @@ class _LockedWrite:
     """Result of one lock-protected catalog-only-or-publish decision."""
 
     catalog: Catalog
-    action: str  # PipelineAction.STATE_CHANGED or MATERIAL_CHANGED
+    action: str  # unchanged | state_changed | updated
 
 
 def _read_source_file(path: Path, *, max_bytes: int) -> str:
@@ -149,6 +159,8 @@ def _complete_index_state(
     raw_sha256: str | None,
     decoded_sha256: str | None,
     status_code: int | None,
+    raw_bytes_received: int | None = None,
+    decoded_bytes_received: int | None = None,
 ) -> ResourceState:
     """Build a full schema-v2 index ResourceState for an accepted observation.
 
@@ -159,6 +171,14 @@ def _complete_index_state(
         last_modified=last_modified if last_modified is not None else prior.last_modified,
         raw_sha256=raw_sha256 if raw_sha256 is not None else prior.raw_sha256,
         decoded_sha256=decoded_sha256 if decoded_sha256 is not None else prior.decoded_sha256,
+        raw_bytes_received=(
+            raw_bytes_received if raw_bytes_received is not None else prior.raw_bytes_received
+        ),
+        decoded_bytes_received=(
+            decoded_bytes_received
+            if decoded_bytes_received is not None
+            else prior.decoded_bytes_received
+        ),
         last_checked_at=observed,
         last_attempted_at=observed,
         last_response_at=observed,
@@ -304,7 +324,7 @@ def _apply_enrichment(
 
 
 def material_catalog_digest(catalog: Catalog) -> str:
-    """Hash material catalog fields only (exclude volatile observation clocks)."""
+    """Hash material catalog fields only (exclude clocks and schema_version)."""
     material_entries: dict[str, dict[str, object]] = {}
     for stable_id, entry in catalog.entries.items():
         material_entries[stable_id] = {
@@ -328,7 +348,6 @@ def material_catalog_digest(catalog: Catalog) -> str:
             "page_raw_sha256": entry.page.raw_sha256,
         }
     payload = {
-        "schema_version": catalog.schema_version,
         "material_config_fingerprint": catalog.material_config_fingerprint,
         "entry_order": list(catalog.entry_order),
         "entries": material_entries,
@@ -344,9 +363,11 @@ def _should_skip_publish(
     changeset: ChangeSet,
     plan: RefreshPlan,
 ) -> bool:
-    """Skip rewrite when reconcile is inert and no page work is due (F-001).
+    """Skip enrich and page fetches when reconcile is inert and no page work is due.
 
-    Missing root ``catalog.json`` or any of the six ``feeds/`` files always publishes.
+    Does **not** skip the writer critical section (lock / recover / verify).
+    Missing root ``catalog.json`` or any of the six ``feeds/`` files always
+    proceeds to enrich/publish (never a no-op).
     """
     if force:
         return False
@@ -424,6 +445,97 @@ def _overlay_observation_clocks(*, base: Catalog, clocks: Catalog) -> Catalog:
     )
 
 
+def _public_bundle_present(root: Path) -> bool:
+    """True when root ``catalog.json`` and all six ``feeds/`` artifacts exist."""
+    return feeds_exist(root) and default_catalog_path(root).is_file()
+
+
+def _version_cursor(versions: Mapping[str, str], key: str) -> int:
+    """Parse a non-negative integer cursor from ``catalog.versions``."""
+    raw = versions.get(key, "0")
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _rotate_probe_essays(
+    essays: list[Essay],
+    *,
+    cursor: int,
+    limit: int | None,
+) -> tuple[list[Essay], int]:
+    """Rotate eligible probe essays from ``cursor`` and cap; return slice + next cursor.
+
+    ``next_cursor`` advances by the number **attempted** (len of the returned
+    slice), not by successes. An empty attempt leaves the cursor unchanged.
+    """
+    n = len(essays)
+    if n == 0:
+        return [], 0
+    start = cursor % n
+    rotated = essays[start:] + essays[:start]
+    selected = list(rotated) if limit is None else rotated[: max(0, limit)]
+    attempted = len(selected)
+    next_cursor = (start + attempted) % n if attempted else start
+    return selected, next_cursor
+
+
+def _verify_public_bundle(
+    root: Path,
+    *,
+    min_items: int,
+    public_base_url: str | None,
+) -> None:
+    """Deep-verify the on-disk enriched and simple triples (AUD-001 no-op path)."""
+    raise_on_failure(
+        verify_feed_dir(
+            root,
+            min_items=min_items,
+            kind="enriched",
+            public_base_url=public_base_url,
+        )
+    )
+    raise_on_failure(
+        verify_feed_dir(
+            root,
+            min_items=min_items,
+            kind="simple",
+            public_base_url=public_base_url,
+        )
+    )
+
+
+def _result_for_locked_write(
+    committed: _LockedWrite,
+    *,
+    changeset: ChangeSet,
+    refresh_plan: RefreshPlan,
+    index_hash: str,
+    essay_count: int,
+) -> PipelineResult:
+    """Map a lock-section outcome onto ``PipelineResult`` side-channel fields."""
+    if committed.action == PipelineAction.NO_CHANGE.value:
+        changed_paths: tuple[str, ...] = ()
+        skipped = True
+    elif committed.action == PipelineAction.STATE_CHANGED.value:
+        changed_paths = ("catalog.json",)
+        skipped = True
+    else:
+        changed_paths = _MATERIAL_CHANGED_PATHS
+        skipped = False
+    return PipelineResult(
+        catalog=committed.catalog,
+        changeset=changeset,
+        refresh_plan=refresh_plan,
+        index_hash=index_hash,
+        essay_count=essay_count,
+        skipped=skipped,
+        action=committed.action,
+        changed_paths=changed_paths,
+    )
+
+
 def _stage_and_materialize(
     root: Path,
     *,
@@ -455,6 +567,111 @@ def _stage_and_materialize(
     materialize_generation(root, gen_id=gen_id, reporter=reporter)
 
 
+def _finalize_under_lock(
+    root: Path,
+    catalog: Catalog,
+    *,
+    rss: bytes,
+    atom: bytes,
+    json_feed: bytes,
+    simple_rss: bytes,
+    simple_atom: bytes,
+    simple_json_feed: bytes,
+    reporter: ProgressReporter,
+    overlay_clocks: bool,
+    verify_existing_on_noop: bool,
+    force_publish: bool,
+    min_items: int,
+    public_base_url: str | None,
+) -> _LockedWrite:
+    """Single writer critical section: lock → recover → verify/recompute → write.
+
+    Network stays outside. ``verify_existing_on_noop`` (skip-enrich path) deep-
+    verifies the on-disk seven-file bundle before allowing ``unchanged``. Catalog
+    material digest (not feed-byte equality) decides skip no-op vs publish so a
+    304 index_hash representation cannot churn feeds. Catalog-only compares
+    digest **and** feed bytes. ``force_publish`` always stages after recover.
+    """
+    from paul_graham_essay_feeds.publication import (
+        acquire_write_lock,
+        recover_materialize,
+        release_write_lock,
+    )
+
+    lock = acquire_write_lock(root)
+    try:
+        recover_materialize(root)
+        if verify_existing_on_noop and _public_bundle_present(root):
+            _verify_public_bundle(
+                root,
+                min_items=min_items,
+                public_base_url=public_base_url,
+            )
+        if not force_publish:
+            if verify_existing_on_noop:
+                reloaded = load_catalog(default_catalog_path(root))
+                if (
+                    reloaded is not None
+                    and feeds_exist(root)
+                    and material_catalog_digest(reloaded) == material_catalog_digest(catalog)
+                ):
+                    if overlay_clocks:
+                        to_save = _overlay_observation_clocks(base=reloaded, clocks=catalog)
+                        save_catalog(default_catalog_path(root), to_save)
+                        logger.info(
+                            "Post-lock material matches; overlaying clocks onto reloaded catalog"
+                        )
+                        return _LockedWrite(
+                            catalog=to_save,
+                            action=PipelineAction.STATE_CHANGED.value,
+                        )
+                    logger.info("Post-lock public bundle verified; no durable write")
+                    return _LockedWrite(
+                        catalog=reloaded,
+                        action=PipelineAction.NO_CHANGE.value,
+                    )
+            elif _material_unchanged_vs_disk(
+                root,
+                catalog=catalog,
+                rss=rss,
+                atom=atom,
+                json_feed=json_feed,
+                simple_rss=simple_rss,
+                simple_atom=simple_atom,
+                simple_json_feed=simple_json_feed,
+            ):
+                reloaded = load_catalog(default_catalog_path(root))
+                if reloaded is not None:
+                    to_save = _overlay_observation_clocks(base=reloaded, clocks=catalog)
+                    save_catalog(default_catalog_path(root), to_save)
+                    logger.info(
+                        "Post-lock material matches; overlaying clocks onto reloaded catalog"
+                    )
+                    return _LockedWrite(
+                        catalog=to_save,
+                        action=PipelineAction.STATE_CHANGED.value,
+                    )
+                logger.warning("Post-lock feeds match but catalog.json is missing; publishing")
+            else:
+                logger.info(
+                    "Post-lock disk material differs; publishing feeds and catalog together"
+                )
+        _stage_and_materialize(
+            root,
+            catalog=catalog,
+            rss=rss,
+            atom=atom,
+            json_feed=json_feed,
+            simple_rss=simple_rss,
+            simple_atom=simple_atom,
+            simple_json_feed=simple_json_feed,
+            reporter=reporter,
+        )
+        return _LockedWrite(catalog=catalog, action=PipelineAction.MATERIAL_CHANGED.value)
+    finally:
+        release_write_lock(lock)
+
+
 def _save_catalog_under_lock(
     root: Path,
     catalog: Catalog,
@@ -475,52 +692,22 @@ def _save_catalog_under_lock(
     (never the pre-lock object). Differing material publishes this run's feeds
     and catalog together **without** releasing the lock (RV-R-001 / RV-C-001).
     """
-    from paul_graham_essay_feeds.publication import (
-        acquire_write_lock,
-        recover_materialize,
-        release_write_lock,
+    return _finalize_under_lock(
+        root,
+        catalog,
+        rss=rss,
+        atom=atom,
+        json_feed=json_feed,
+        simple_rss=simple_rss,
+        simple_atom=simple_atom,
+        simple_json_feed=simple_json_feed,
+        reporter=reporter or NULL_REPORTER,
+        overlay_clocks=True,
+        verify_existing_on_noop=False,
+        force_publish=False,
+        min_items=1,
+        public_base_url=None,
     )
-
-    progress = reporter or NULL_REPORTER
-    lock = acquire_write_lock(root)
-    try:
-        recover_materialize(root)
-        if _material_unchanged_vs_disk(
-            root,
-            catalog=catalog,
-            rss=rss,
-            atom=atom,
-            json_feed=json_feed,
-            simple_rss=simple_rss,
-            simple_atom=simple_atom,
-            simple_json_feed=simple_json_feed,
-        ):
-            reloaded = load_catalog(default_catalog_path(root))
-            if reloaded is not None:
-                to_save = _overlay_observation_clocks(base=reloaded, clocks=catalog)
-                save_catalog(default_catalog_path(root), to_save)
-                logger.info("Post-lock material matches; overlaying clocks onto reloaded catalog")
-                return _LockedWrite(
-                    catalog=to_save,
-                    action=PipelineAction.STATE_CHANGED.value,
-                )
-            logger.warning("Post-lock feeds match but catalog.json is missing; publishing")
-        else:
-            logger.info("Post-lock disk material differs; publishing feeds and catalog together")
-        _stage_and_materialize(
-            root,
-            catalog=catalog,
-            rss=rss,
-            atom=atom,
-            json_feed=json_feed,
-            simple_rss=simple_rss,
-            simple_atom=simple_atom,
-            simple_json_feed=simple_json_feed,
-            reporter=progress,
-        )
-        return _LockedWrite(catalog=catalog, action=PipelineAction.MATERIAL_CHANGED.value)
-    finally:
-        release_write_lock(lock)
 
 
 def _publish_catalog_and_feeds(
@@ -535,6 +722,7 @@ def _publish_catalog_and_feeds(
     simple_json_feed: bytes,
     min_items: int,
     reporter: ProgressReporter,
+    public_base_url: str | None = None,
 ) -> Catalog:
     """Verify in memory, then publish via locked staged generation.
 
@@ -545,18 +733,13 @@ def _publish_catalog_and_feeds(
     (H-01/H-02 / RV-R-001). Staged MANIFEST digests are re-checked before
     public writes (RV-R-003).
     """
-    from paul_graham_essay_feeds.publication import (
-        acquire_write_lock,
-        recover_materialize,
-        release_write_lock,
-    )
-
     assert_verified(
         rss=rss,
         atom=atom,
         json_feed=json_feed,
         min_items=min_items,
         kind="enriched",
+        public_base_url=public_base_url,
     )
     assert_verified(
         rss=simple_rss,
@@ -564,30 +747,31 @@ def _publish_catalog_and_feeds(
         json_feed=simple_json_feed,
         min_items=min_items,
         kind="simple",
+        public_base_url=public_base_url,
     )
-    lock = acquire_write_lock(root)
-    try:
-        recover_materialize(root)
-        _stage_and_materialize(
-            root,
-            catalog=catalog,
-            rss=rss,
-            atom=atom,
-            json_feed=json_feed,
-            simple_rss=simple_rss,
-            simple_atom=simple_atom,
-            simple_json_feed=simple_json_feed,
-            reporter=reporter,
-        )
-    finally:
-        release_write_lock(lock)
+    committed = _finalize_under_lock(
+        root,
+        catalog,
+        rss=rss,
+        atom=atom,
+        json_feed=json_feed,
+        simple_rss=simple_rss,
+        simple_atom=simple_atom,
+        simple_json_feed=simple_json_feed,
+        reporter=reporter,
+        overlay_clocks=True,
+        verify_existing_on_noop=False,
+        force_publish=True,
+        min_items=min_items,
+        public_base_url=public_base_url,
+    )
     catalog_path = default_catalog_path(root)
     logger.info(
         "Published feeds + catalog → {} + {}",
         root / "feeds",
         catalog_path,
     )
-    return catalog
+    return committed.catalog
 
 
 def _essays_from_catalog(catalog: Catalog) -> list[Essay]:
@@ -698,6 +882,9 @@ def run_catalog_pipeline(
     index_last_modified: str | None = None
     index_status: int | None = 200
     index_raw_sha256: str | None = None
+    index_decoded_sha256: str | None = None
+    index_raw_bytes: int | None = None
+    index_decoded_bytes: int | None = None
 
     if html is not None:
         index_html: str | None = html
@@ -714,13 +901,22 @@ def run_catalog_pipeline(
             max_bytes=settings.max_bytes,
             etag=etag,
             last_modified=last_modified,
+            prior_body_hash=prior.index.raw_sha256,
         )
         index_not_modified = fetched.not_modified
         index_etag = fetched.etag
         index_last_modified = fetched.last_modified
         index_status = fetched.status_code
-        index_html = fetched.html
         index_raw_sha256 = fetched.raw_sha256
+        index_decoded_sha256 = fetched.decoded_sha256
+        index_raw_bytes = fetched.raw_bytes_received
+        index_decoded_bytes = fetched.decoded_bytes_received
+        if fetched.not_modified:
+            index_html = None
+        elif fetched.html is None:
+            raise FeedError("Index fetch returned no body")
+        else:
+            index_html = fetched.html
         _persist_http_cache(
             root,
             etag=index_etag,
@@ -728,8 +924,9 @@ def run_catalog_pipeline(
             status_code=index_status,
         )
 
-    if index_not_modified or index_html is None:
-        # 304 / plan-only: no discovery without a body.
+    if index_not_modified:
+        # Acceptable 304 only: fetch_index.not_modified (AUD-016). Never treat a
+        # missing body as plan-only unless the fetch reported not_modified.
         logger.info("Index not modified (304); plan-only refresh path")
         essays = _essays_from_catalog(prior)
         catalog = prior
@@ -740,7 +937,10 @@ def run_catalog_pipeline(
             or content_sha256("304-not-modified")
         )
         index_raw_sha256 = prior.index.raw_sha256
+        index_decoded_sha256 = prior.index.decoded_sha256
     else:
+        if index_html is None:
+            raise FeedError("Index fetch returned no body")
         index_hash = content_sha256(index_html)
         from paul_graham_essay_feeds.discover import evaluate_discovery_anomaly
 
@@ -774,128 +974,128 @@ def run_catalog_pipeline(
     # continues past the served window (M-04).
     if settings.max_page_fetches is not None and plan.decisions:
         served = sum(1 for d in plan.decisions if d.fetch_page)
-        raw_cursor = catalog.versions.get("page_fetch_cursor", "0")
-        try:
-            prev_cursor = max(0, int(raw_cursor))
-        except (TypeError, ValueError):
-            prev_cursor = 0
+        prev_cursor = _version_cursor(catalog.versions, "page_fetch_cursor")
         next_cursor = (prev_cursor + max(1, served)) % max(1, len(plan.decisions))
         versions = dict(catalog.versions)
         versions["page_fetch_cursor"] = str(next_cursor)
         catalog = catalog.model_copy(update={"versions": versions})
 
-    if not fingerprint_changed and _should_skip_publish(
+    skip_network = (not fingerprint_changed) and _should_skip_publish(
         root=root, force=settings.force, changeset=changeset, plan=plan
-    ):
-        # Pre-enrich UNCHANGED: zero tracked writes (no save_catalog / enrich / publish).
-        # Page-due plans never reach here (F-001); identity+planner decide skip.
-        # http-cache sidecar may update above; tracked paths stay untouched.
-        # --from-feeds bootstrap remains in-memory only until a later publish (H-12).
+    )
+    link_cursor_next: str | None = None
+
+    if skip_network:
         logger.info(
-            "Catalog refresh not due (hash {}); skipping enrich/write",
+            "Catalog refresh not due (hash {}); skipping enrich/page fetches",
             index_hash[:12],
         )
-        return PipelineResult(
-            catalog=catalog,
-            changeset=changeset,
-            refresh_plan=plan,
-            index_hash=index_hash,
-            essay_count=len(essays),
-            skipped=True,
-            action=PipelineAction.NO_CHANGE.value,
-            changed_paths=(),
+    else:
+        host_cooldown = HostCooldown(settings.host_cooldown_seconds)
+        due_ids = {d.stable_id for d in plan.decisions if d.fetch_page}
+        # URLs we will GET for enrich this run — a successful enrich implies
+        # reachability, so live HEAD probes skip those ids.
+        enrich_ids = due_ids if settings.enrich else set()
+        probe_essays: list[Essay] = []
+        all_due_use_enrich_get = bool(enrich_ids)
+        if settings.validate_links:
+            eligible_probes = (
+                [e for e in essays if e.stable_id not in enrich_ids] if enrich_ids else list(essays)
+            )
+            probe_essays, next_link_cursor = _rotate_probe_essays(
+                eligible_probes,
+                cursor=_version_cursor(catalog.versions, _LINK_VALIDATION_CURSOR_KEY),
+                limit=settings.max_link_validations,
+            )
+            if probe_essays:
+                link_cursor_next = str(next_link_cursor)
+            all_due_use_enrich_get = bool(enrich_ids) and not probe_essays
+            if enrich_ids and probe_essays:
+                logger.info(
+                    "Live-checking {} URLs not enriched this run…",
+                    len(probe_essays),
+                )
+            elif all_due_use_enrich_get:
+                logger.info(
+                    "Checking and enriching {} essay pages (one GET each)…",
+                    len(essays),
+                )
+            validate_essays_live(
+                probe_essays,
+                timeout=settings.link_timeout,
+                retries=settings.retries,
+                workers=settings.link_workers,
+                max_bytes=settings.max_bytes,
+                quiet=settings.quiet,
+                host_cooldown_seconds=settings.host_cooldown_seconds,
+                host_cooldown=host_cooldown,
+            )
+
+        if settings.enrich and due_ids:
+            due_essays = _essays_for_ids(essays, due_ids)
+            if not (settings.validate_links and all_due_use_enrich_get):
+                logger.info(
+                    "Enriching {}/{} essays selected by refresh plan…",
+                    len(due_essays),
+                    len(essays),
+                )
+            page_validators = {
+                sid: (
+                    catalog.entries[sid].page.etag,
+                    catalog.entries[sid].page.last_modified,
+                )
+                for sid in due_ids
+                if sid in catalog.entries
+            }
+            page_evidence: dict[str, PageEnrichEvidence] = {}
+            enriched = enrich_essays(
+                due_essays,
+                timeout=settings.enrich_timeout,
+                workers=settings.enrich_workers,
+                retries=settings.retries,
+                max_bytes=settings.max_bytes,
+                quiet=settings.quiet,
+                page_validators=page_validators,
+                page_evidence_out=page_evidence,
+                host_cooldown_seconds=settings.host_cooldown_seconds,
+                host_cooldown=host_cooldown,
+            )
+            catalog = _apply_enrichment(
+                catalog,
+                enriched,
+                now=observed,
+                page_evidence=page_evidence,
+            )
+        elif settings.enrich and not due_ids:
+            logger.info("Refresh plan: no page fetches due")
+
+        # Stamp complete schema-v2 index evidence (PGF-P1-003). Never invent raw
+        # from decoded when transport did not provide raw (RV-R-004).
+        index_state = _complete_index_state(
+            prior=catalog.index,
+            observed=observed,
+            etag=index_etag,
+            last_modified=index_last_modified,
+            raw_sha256=index_raw_sha256,
+            decoded_sha256=index_decoded_sha256 or index_hash,
+            status_code=index_status,
+            raw_bytes_received=index_raw_bytes,
+            decoded_bytes_received=index_decoded_bytes,
         )
-
-    due_ids = {d.stable_id for d in plan.decisions if d.fetch_page}
-    # URLs we will GET for enrich this run — a successful enrich implies reachability,
-    # so live HEAD probes skip those ids (probe the rest first, then enrich).
-    enrich_ids = due_ids if settings.enrich else set()
-    probe_essays = [e for e in essays if e.stable_id not in enrich_ids] if enrich_ids else essays
-    # Bound dedicated probes independently of enrich budget (H-16).
-    max_links = settings.max_link_validations
-    if max_links is not None and len(probe_essays) > max_links:
-        probe_essays = probe_essays[: max(0, max_links)]
-    all_due_use_enrich_get = bool(enrich_ids) and not probe_essays
-
-    if settings.validate_links:
-        if enrich_ids and probe_essays:
-            logger.info(
-                "Live-checking {} URLs not enriched this run…",
-                len(probe_essays),
-            )
-        elif all_due_use_enrich_get:
-            logger.info(
-                "Checking and enriching {} essay pages (one GET each)…",
-                len(essays),
-            )
-        validate_essays_live(
-            probe_essays,
-            timeout=settings.link_timeout,
-            retries=settings.retries,
-            workers=settings.link_workers,
-            max_bytes=settings.max_bytes,
-            quiet=settings.quiet,
-            host_cooldown_seconds=settings.host_cooldown_seconds,
-        )
-
-    if settings.enrich and due_ids:
-        due_essays = _essays_for_ids(essays, due_ids)
-        if not (settings.validate_links and all_due_use_enrich_get):
-            logger.info(
-                "Enriching {}/{} essays selected by refresh plan…",
-                len(due_essays),
-                len(essays),
-            )
-        page_validators = {
-            sid: (
-                catalog.entries[sid].page.etag,
-                catalog.entries[sid].page.last_modified,
-            )
-            for sid in due_ids
-            if sid in catalog.entries
+        next_versions = {
+            **dict(catalog.versions),
+            "generator": GENERATOR,
+            "package": __version__,
         }
-        page_evidence: dict[str, PageEnrichEvidence] = {}
-        enriched = enrich_essays(
-            due_essays,
-            timeout=settings.enrich_timeout,
-            workers=settings.enrich_workers,
-            retries=settings.retries,
-            max_bytes=settings.max_bytes,
-            quiet=settings.quiet,
-            page_validators=page_validators,
-            page_evidence_out=page_evidence,
-            host_cooldown_seconds=settings.host_cooldown_seconds,
+        if link_cursor_next is not None:
+            next_versions[_LINK_VALIDATION_CURSOR_KEY] = link_cursor_next
+        catalog = catalog.model_copy(
+            update={
+                "index": index_state,
+                "versions": next_versions,
+            }
         )
-        catalog = _apply_enrichment(
-            catalog,
-            enriched,
-            now=observed,
-            page_evidence=page_evidence,
-        )
-    elif settings.enrich and not due_ids:
-        logger.info("Refresh plan: no page fetches due")
 
-    # Stamp complete schema-v2 index evidence (PGF-P1-003). Never invent raw
-    # from decoded when transport did not provide raw (RV-R-004).
-    index_state = _complete_index_state(
-        prior=catalog.index,
-        observed=observed,
-        etag=index_etag,
-        last_modified=index_last_modified,
-        raw_sha256=index_raw_sha256,
-        decoded_sha256=index_hash,
-        status_code=index_status,
-    )
-    catalog = catalog.model_copy(
-        update={
-            "index": index_state,
-            "versions": {
-                **dict(catalog.versions),
-                "generator": GENERATOR,
-                "package": __version__,
-            },
-        }
-    )
     snapshot = catalog_to_feed_snapshot(
         catalog,
         generator=GENERATOR,
@@ -922,6 +1122,7 @@ def run_catalog_pipeline(
         json_feed=json_feed,
         min_items=settings.min_items,
         kind="enriched",
+        public_base_url=settings.public_base_url,
     )
     assert_verified(
         rss=simple_rss,
@@ -929,7 +1130,33 @@ def run_catalog_pipeline(
         json_feed=simple_json_feed,
         min_items=settings.min_items,
         kind="simple",
+        public_base_url=settings.public_base_url,
     )
+
+    if skip_network:
+        committed = _finalize_under_lock(
+            root,
+            catalog,
+            rss=rss,
+            atom=atom,
+            json_feed=json_feed,
+            simple_rss=simple_rss,
+            simple_atom=simple_atom,
+            simple_json_feed=simple_json_feed,
+            reporter=progress,
+            overlay_clocks=False,
+            verify_existing_on_noop=True,
+            force_publish=False,
+            min_items=settings.min_items,
+            public_base_url=settings.public_base_url,
+        )
+        return _result_for_locked_write(
+            committed,
+            changeset=changeset,
+            refresh_plan=plan,
+            index_hash=index_hash,
+            essay_count=len(essays),
+        )
 
     # Post-enrich material-noop: feed bytes match disk, but page clocks may have
     # advanced in memory — persist catalog only so freshness gates work next run.
@@ -958,34 +1185,12 @@ def run_catalog_pipeline(
             simple_json_feed=simple_json_feed,
             reporter=progress,
         )
-        if committed.action == PipelineAction.STATE_CHANGED.value:
-            return PipelineResult(
-                catalog=committed.catalog,
-                changeset=changeset,
-                refresh_plan=plan,
-                index_hash=index_hash,
-                essay_count=len(essays),
-                skipped=True,
-                action=PipelineAction.STATE_CHANGED.value,
-                changed_paths=("catalog.json",),
-            )
-        return PipelineResult(
-            catalog=committed.catalog,
+        return _result_for_locked_write(
+            committed,
             changeset=changeset,
             refresh_plan=plan,
             index_hash=index_hash,
             essay_count=len(essays),
-            skipped=False,
-            action=PipelineAction.MATERIAL_CHANGED.value,
-            changed_paths=(
-                "catalog.json",
-                "feeds/rss.xml",
-                "feeds/atom.xml",
-                "feeds/feed.json",
-                "feeds/rss.simple.xml",
-                "feeds/atom.simple.xml",
-                "feeds/feed.simple.json",
-            ),
         )
 
     published = _publish_catalog_and_feeds(
@@ -999,6 +1204,7 @@ def run_catalog_pipeline(
         simple_json_feed=simple_json_feed,
         min_items=settings.min_items,
         reporter=progress,
+        public_base_url=settings.public_base_url,
     )
 
     return PipelineResult(
@@ -1009,13 +1215,5 @@ def run_catalog_pipeline(
         essay_count=len(essays),
         skipped=False,
         action=PipelineAction.MATERIAL_CHANGED.value,
-        changed_paths=(
-            "catalog.json",
-            "feeds/rss.xml",
-            "feeds/atom.xml",
-            "feeds/feed.json",
-            "feeds/rss.simple.xml",
-            "feeds/atom.simple.xml",
-            "feeds/feed.simple.json",
-        ),
+        changed_paths=_MATERIAL_CHANGED_PATHS,
     )

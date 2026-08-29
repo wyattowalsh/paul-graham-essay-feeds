@@ -33,6 +33,7 @@ from paul_graham_essay_feeds.models import (
     format_validation_error,
 )
 from paul_graham_essay_feeds.pipeline import run_catalog_pipeline
+from paul_graham_essay_feeds.publication import abandon_recovery as abandon_publication_recovery
 from paul_graham_essay_feeds.settings import Settings
 
 console = Console(stderr=True)
@@ -232,8 +233,18 @@ def update_cmd(
         typer.Option(
             "--from-feeds/--no-from-feeds",
             help=(
-                "Bootstrap catalog in memory from existing feeds/; "
-                "persist only after a successful publish"
+                "Seed the in-memory catalog candidate from existing feeds; "
+                "persist only after successful verification/publication."
+            ),
+        ),
+    ] = False,
+    abandon_recovery: Annotated[
+        bool,
+        typer.Option(
+            "--abandon-recovery/--no-abandon-recovery",
+            help=(
+                "Explicit repair for irrecoverable `.cache/materialize.json` "
+                "(quarantines pointer + generation)."
             ),
         ),
     ] = False,
@@ -265,6 +276,8 @@ def update_cmd(
         reporter = ProgressReporter(
             OutputPolicy(quiet=settings.quiet, machine=not sys.stderr.isatty())
         )
+        if abandon_recovery:
+            abandon_publication_recovery(settings.repo_root)
         result = run_catalog_pipeline(
             settings,
             source_file=source_file,

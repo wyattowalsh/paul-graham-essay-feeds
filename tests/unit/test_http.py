@@ -535,3 +535,178 @@ def test_hop_safe_request_stream_oversize() -> None:
             allowed_hosts=frozenset({"paulgraham.com"}),
             max_bytes=50,
         )
+
+
+def test_assert_hop_rejects_userinfo() -> None:
+    from paul_graham_essay_feeds.http import _assert_hop_allowed
+
+    with pytest.raises(FeedError, match="Userinfo"):
+        _assert_hop_allowed(
+            "https://alice:secret@paulgraham.com/a.html",
+            frozenset({"paulgraham.com"}),
+            allow_loopback=False,
+        )
+
+
+def test_assert_hop_rejects_https_port_444() -> None:
+    from paul_graham_essay_feeds.http import _assert_hop_allowed
+
+    with pytest.raises(FeedError, match="Port not allowed"):
+        _assert_hop_allowed(
+            "https://paulgraham.com:444/a.html",
+            frozenset({"paulgraham.com"}),
+            allow_loopback=False,
+        )
+
+
+def test_assert_hop_allows_https_443() -> None:
+    from paul_graham_essay_feeds.http import _assert_hop_allowed
+
+    _assert_hop_allowed(
+        "https://paulgraham.com:443/a.html",
+        frozenset({"paulgraham.com"}),
+        allow_loopback=False,
+    )
+
+
+def test_assert_hop_rejects_fragment() -> None:
+    from paul_graham_essay_feeds.http import _assert_hop_allowed
+
+    with pytest.raises(FeedError, match="Fragment"):
+        _assert_hop_allowed(
+            "https://paulgraham.com/a.html#section",
+            frozenset({"paulgraham.com"}),
+            allow_loopback=False,
+        )
+
+
+def test_assert_hop_rejects_encoded_host() -> None:
+    from paul_graham_essay_feeds.http import _assert_hop_allowed
+
+    with pytest.raises(FeedError, match="Encoded host"):
+        _assert_hop_allowed(
+            "https://paulgraham.com%2eevil.com/a.html",
+            frozenset({"paulgraham.com"}),
+            allow_loopback=False,
+        )
+
+
+def test_assert_hop_loopback_http_any_port() -> None:
+    from paul_graham_essay_feeds.http import _assert_hop_allowed
+
+    _assert_hop_allowed(
+        "http://127.0.0.1:8765/index.html",
+        frozenset({"paulgraham.com"}),
+        allow_loopback=True,
+    )
+    with pytest.raises(FeedError, match="not allowed"):
+        _assert_hop_allowed(
+            "http://127.0.0.1:8765/index.html",
+            frozenset({"paulgraham.com"}),
+            allow_loopback=False,
+        )
+
+
+def test_assert_hop_https_loopback_rejects_non_443() -> None:
+    from paul_graham_essay_feeds.http import _assert_hop_allowed
+
+    with pytest.raises(FeedError, match="Port not allowed"):
+        _assert_hop_allowed(
+            "https://127.0.0.1:8443/x",
+            frozenset({"paulgraham.com"}),
+            allow_loopback=True,
+        )
+
+
+def test_assert_hop_idna_www_trailing_dot() -> None:
+    from paul_graham_essay_feeds.http import _assert_hop_allowed
+
+    _assert_hop_allowed(
+        "https://www.paulgraham.com./a.html",
+        frozenset({"paulgraham.com"}),
+        allow_loopback=False,
+    )
+
+
+@respx.mock
+def test_hop_safe_rejects_userinfo_location() -> None:
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(
+            302,
+            headers={"Location": "https://user:pass@paulgraham.com/b.html"},
+        )
+    )
+    with (
+        httpx.Client(follow_redirects=False, trust_env=False) as client,
+        pytest.raises(FeedError, match="Userinfo"),
+    ):
+        hop_safe_get(
+            client,
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+
+
+@respx.mock
+def test_hop_safe_protocol_relative_location_allowed_host() -> None:
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(302, headers={"Location": "//paulgraham.com/b.html"})
+    )
+    respx.get("https://paulgraham.com/b.html").mock(
+        return_value=httpx.Response(200, text="<html>rel</html>")
+    )
+    with httpx.Client(follow_redirects=False, trust_env=False) as client:
+        response = hop_safe_get(
+            client,
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+    assert "rel" in response.text
+
+
+@respx.mock
+def test_hop_safe_protocol_relative_port_444_rejected() -> None:
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(302, headers={"Location": "//paulgraham.com:444/b.html"})
+    )
+    with (
+        httpx.Client(follow_redirects=False, trust_env=False) as client,
+        pytest.raises(FeedError, match="Port not allowed"),
+    ):
+        hop_safe_get(
+            client,
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+
+
+@respx.mock
+def test_fetch_index_304_with_prior() -> None:
+    from paul_graham_essay_feeds.http import fetch_index
+
+    respx.get("https://paulgraham.com/articles.html").mock(
+        return_value=httpx.Response(304, headers={"ETag": '"idx"'})
+    )
+    result = fetch_index(
+        "https://paulgraham.com/articles.html",
+        timeout=5.0,
+        retries=0,
+        etag='"idx"',
+    )
+    assert result.not_modified is True
+    assert result.html is None
+    assert result.status_code == 304
+
+
+@respx.mock
+def test_fetch_index_unconditional_304_raises() -> None:
+    from paul_graham_essay_feeds.http import fetch_index
+
+    route = respx.get("https://paulgraham.com/articles.html")
+    route.side_effect = [httpx.Response(304), httpx.Response(304)]
+    with pytest.raises(FeedError, match="304"):
+        fetch_index("https://paulgraham.com/articles.html", timeout=5.0, retries=0)
+    assert route.call_count == 2

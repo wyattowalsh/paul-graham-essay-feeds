@@ -5,9 +5,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from paul_graham_essay_feeds.catalog import load_catalog
-from paul_graham_essay_feeds.models import Catalog, CatalogEntry
+from paul_graham_essay_feeds.models import Catalog, CatalogEntry, FeedError
 from paul_graham_essay_feeds.publication import (
+    WriteLock,
     acquire_write_lock,
     materialize_generation,
     recover_materialize,
@@ -51,6 +54,7 @@ def test_stage_materialize_and_recover(tmp_path: Path) -> None:
         simple_json_feed=b'{"items":[]}\n',
     )
     lock = acquire_write_lock(tmp_path)
+    assert isinstance(lock, WriteLock)
     try:
         materialize_generation(tmp_path, gen_id=gen)
     finally:
@@ -67,12 +71,52 @@ def test_stage_materialize_and_recover(tmp_path: Path) -> None:
 
 def test_lock_exclusive(tmp_path: Path) -> None:
     a = acquire_write_lock(tmp_path, timeout=0.2)
+    assert isinstance(a, WriteLock)
+    assert a.fd >= 0
+    assert a.token
     try:
-        import pytest
-
-        from paul_graham_essay_feeds.models import FeedError
-
         with pytest.raises(FeedError, match="Timed out"):
             acquire_write_lock(tmp_path, timeout=0.15)
     finally:
         release_write_lock(a)
+
+
+def test_double_release_is_safe(tmp_path: Path) -> None:
+    lock = acquire_write_lock(tmp_path, timeout=1.0)
+    release_write_lock(lock)
+    release_write_lock(lock)
+    waiter = acquire_write_lock(tmp_path, timeout=1.0)
+    try:
+        assert isinstance(waiter, WriteLock)
+    finally:
+        release_write_lock(waiter)
+
+
+def test_orphaned_lockfile_without_holder_is_acquirable(tmp_path: Path) -> None:
+    lock_path = tmp_path / ".cache" / "write.lock"
+    lock_path.parent.mkdir(parents=True)
+    lock_path.write_text("stale-orphaned\n", encoding="utf-8")
+    lock = acquire_write_lock(tmp_path, timeout=1.0)
+    try:
+        assert isinstance(lock, WriteLock)
+        assert lock.path == lock_path
+    finally:
+        release_write_lock(lock)
+
+
+def test_lock_write_failure_releases_flock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import paul_graham_essay_feeds.publication as pub
+
+    def boom(*_args: object, **_kwargs: object) -> None:
+        raise OSError("disk full")
+
+    original = pub._write_lock_fd
+    monkeypatch.setattr(pub, "_write_lock_fd", boom)
+    with pytest.raises(FeedError, match="Failed to write write lock"):
+        acquire_write_lock(tmp_path, timeout=1.0)
+    monkeypatch.setattr(pub, "_write_lock_fd", original)
+    waiter = acquire_write_lock(tmp_path, timeout=1.0)
+    try:
+        assert isinstance(waiter, WriteLock)
+    finally:
+        release_write_lock(waiter)

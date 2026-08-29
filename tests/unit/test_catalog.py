@@ -20,6 +20,7 @@ from paul_graham_essay_feeds.catalog import (
     atomic_write_bytes,
     atomic_write_text,
     bootstrap_catalog_from_feeds,
+    catalog_material_summary,
     catalog_to_json,
     default_catalog_path,
     empty_catalog,
@@ -129,7 +130,7 @@ def test_default_catalog_path() -> None:
 
 def test_empty_catalog_schema_current() -> None:
     cat = empty_catalog(material_config_fingerprint="abc")
-    assert cat.schema_version == CATALOG_SCHEMA_VERSION == 2
+    assert cat.schema_version == CATALOG_SCHEMA_VERSION == 3
     assert cat.material_config_fingerprint == "abc"
     assert cat.versions == {}
     assert cat.entries == {}
@@ -167,12 +168,13 @@ def test_save_load_roundtrip(tmp_path: Path) -> None:
     save_catalog(path, original)
     loaded = load_catalog(path)
     assert loaded is not None
-    # Load migrates schema v1 → v2 (resource lifecycle clocks).
-    assert loaded.schema_version == 2
+    # Load migrates schema v1 → current (resource clocks, then compact diffs).
+    assert loaded.schema_version == CATALOG_SCHEMA_VERSION
     assert loaded.entries[entry.stable_id].title == "A"
     assert loaded.material_config_fingerprint == "fp-round"
     assert loaded.migration_history
-    assert loaded.migration_history[-1]["to"] == 2
+    assert loaded.migration_history[-1]["to"] == CATALOG_SCHEMA_VERSION
+    assert loaded.entries[entry.stable_id].position == 0
 
 
 def test_deterministic_json_sorted_keys_and_newline(tmp_path: Path) -> None:
@@ -186,6 +188,7 @@ def test_deterministic_json_sorted_keys_and_newline(tmp_path: Path) -> None:
     again = catalog_to_json(Catalog.model_validate(json.loads(text)))
     assert again == text
     payload = json.loads(text)
+    assert payload["schema_version"] == CATALOG_SCHEMA_VERSION
     assert list(payload.keys()) == sorted(payload.keys())
     assert list(payload["versions"].keys()) == ["a", "b"]
 
@@ -232,15 +235,40 @@ def test_migrate_requires_schema_version() -> None:
 def test_migrate_valid_current_schema() -> None:
     cat = migrate_catalog(
         {
+            "schema_version": CATALOG_SCHEMA_VERSION,
+            "material_config_fingerprint": "fp",
+        }
+    )
+    assert cat.schema_version == CATALOG_SCHEMA_VERSION
+    assert cat.migration_history == []
+    assert cat.material_config_fingerprint == "fp"
+
+
+def test_migrate_v1_upgrades_through_v2_to_current() -> None:
+    cat = migrate_catalog(
+        {
             "schema_version": 1,
             "material_config_fingerprint": "fp",
         }
     )
-    assert cat.schema_version == 2
+    assert cat.schema_version == CATALOG_SCHEMA_VERSION
     assert cat.migration_history
-    assert cat.migration_history[-1]["from"] == 1
-    assert cat.migration_history[-1]["to"] == 2
+    assert [h["from"] for h in cat.migration_history] == [1, 2]
+    assert [h["to"] for h in cat.migration_history] == [2, 3]
+    assert cat.migration_history[0]["name"] == "resource_lifecycle_clocks"
+    assert cat.migration_history[-1]["name"] == "compact_catalog_diffs"
     assert cat.material_config_fingerprint == "fp"
+
+
+def test_migrate_v2_upgrades_to_v3() -> None:
+    cat = migrate_catalog(
+        {
+            "schema_version": 2,
+            "material_config_fingerprint": "fp",
+        }
+    )
+    assert cat.schema_version == 3
+    assert cat.migration_history[-1] == {"from": 2, "to": 3, "name": "compact_catalog_diffs"}
 
 
 def test_migrate_rejects_unknown_schema_version() -> None:
@@ -283,6 +311,136 @@ def test_migrate_strips_legacy_lifecycle_keys() -> None:
     )
     assert "lifecycle" not in cat.entries["https://paulgraham.com/a.html"].model_dump()
     assert cat.entry_order == ["https://paulgraham.com/a.html"]
+
+
+def test_catalog_to_json_omits_position() -> None:
+    sid = "https://paulgraham.com/a.html"
+    cat = Catalog(
+        schema_version=3,
+        material_config_fingerprint="fp",
+        entry_order=[sid],
+        entries={
+            sid: CatalogEntry(
+                stable_id=sid,
+                url=sid,
+                title="A",
+                position=0,
+            )
+        },
+    )
+    payload = json.loads(catalog_to_json(cat))
+    assert "position" not in payload["entries"][sid]
+    assert cat.entries[sid].position == 0
+
+
+def test_catalog_to_json_omits_last_seen_when_shared_with_index() -> None:
+    sid = "https://paulgraham.com/a.html"
+    cat = Catalog(
+        schema_version=3,
+        material_config_fingerprint="fp",
+        index=ResourceState(last_success_at=T0),
+        entry_order=[sid],
+        entries={
+            sid: CatalogEntry(
+                stable_id=sid,
+                url=sid,
+                title="A",
+                position=0,
+                last_seen_at=T0,
+            )
+        },
+    )
+    payload = json.loads(catalog_to_json(cat))
+    assert "last_seen_at" not in payload["entries"][sid]
+    restored = Catalog.model_validate(payload)
+    assert restored.entries[sid].last_seen_at == T0
+    assert restored.entries[sid].position == 0
+
+
+def test_catalog_to_json_keeps_distinct_last_seen() -> None:
+    sid = "https://paulgraham.com/a.html"
+    cat = Catalog(
+        schema_version=3,
+        material_config_fingerprint="fp",
+        index=ResourceState(last_success_at=T0),
+        entry_order=[sid],
+        entries={
+            sid: CatalogEntry(
+                stable_id=sid,
+                url=sid,
+                title="A",
+                position=0,
+                last_seen_at=T1,
+            )
+        },
+    )
+    payload = json.loads(catalog_to_json(cat))
+    assert payload["entries"][sid]["last_seen_at"] is not None
+
+
+def test_migrate_v2_missing_position_fills_from_entry_order() -> None:
+    a = "https://paulgraham.com/a.html"
+    b = "https://paulgraham.com/b.html"
+    cat = migrate_catalog(
+        {
+            "schema_version": 2,
+            "material_config_fingerprint": "fp",
+            "entry_order": [a, b],
+            "entries": {
+                a: {"stable_id": a, "url": a, "title": "A"},
+                b: {"stable_id": b, "url": b, "title": "B"},
+            },
+        }
+    )
+    assert cat.schema_version == 3
+    assert cat.entries[a].position == 0
+    assert cat.entries[b].position == 1
+
+
+def test_migrate_v3_fills_last_seen_from_index() -> None:
+    sid = "https://paulgraham.com/a.html"
+    cat = migrate_catalog(
+        {
+            "schema_version": 3,
+            "material_config_fingerprint": "fp",
+            "index": {"last_success_at": "2024-01-01T12:00:00Z"},
+            "entry_order": [sid],
+            "entries": {sid: {"stable_id": sid, "url": sid, "title": "A"}},
+        }
+    )
+    assert cat.entries[sid].last_seen_at == cat.index.last_success_at
+    assert cat.entries[sid].position == 0
+    assert cat.migration_history == []
+
+
+def test_catalog_material_summary_added_removed_changed() -> None:
+    a = "https://paulgraham.com/a.html"
+    b = "https://paulgraham.com/b.html"
+    c = "https://paulgraham.com/c.html"
+    prior = Catalog(
+        schema_version=3,
+        material_config_fingerprint="fp",
+        entry_order=[a, b],
+        entries={
+            a: CatalogEntry(stable_id=a, url=a, title="A", position=0),
+            b: CatalogEntry(stable_id=b, url=b, title="B", position=1),
+        },
+    )
+    current = Catalog(
+        schema_version=3,
+        material_config_fingerprint="fp",
+        entry_order=[c, a],
+        entries={
+            c: CatalogEntry(stable_id=c, url=c, title="C", position=0),
+            a: CatalogEntry(stable_id=a, url=a, title="A-new", position=1),
+        },
+    )
+    summary = catalog_material_summary(prior, current)
+    assert summary.startswith("added=1 removed=1 changed=1 ids=")
+    assert c in summary
+    assert b in summary
+    assert a in summary
+    assert catalog_material_summary(None, current) == (f"added=2 removed=0 changed=0 ids={c},{a}")
 
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX mode bits only")
@@ -367,7 +525,7 @@ def test_bootstrap_from_synthetic_feed_json(tmp_path: Path) -> None:
 
     catalog = bootstrap_catalog_from_feeds(tmp_path, now=now)
 
-    assert catalog.schema_version == 2
+    assert catalog.schema_version == CATALOG_SCHEMA_VERSION
     assert catalog.material_config_fingerprint == "bootstrap"
     assert catalog.entry_order == [
         "https://paulgraham.com/a.html",
@@ -397,7 +555,7 @@ def test_missing_feeds_returns_empty_catalog(tmp_path: Path) -> None:
     now = datetime(2026, 7, 25, 12, 0, 0, tzinfo=UTC)
     catalog = bootstrap_catalog_from_feeds(tmp_path, now=now)
 
-    assert catalog.schema_version == 2
+    assert catalog.schema_version == CATALOG_SCHEMA_VERSION
     assert catalog.material_config_fingerprint == "bootstrap"
     assert catalog.entry_order == []
     assert catalog.entries == {}
@@ -535,7 +693,7 @@ def test_bootstrap_from_empty_prior() -> None:
     essays = [_item(slug="a", position=1), _item(slug="b", position=2)]
     catalog, changes = reconcile_discovery(None, essays, now=T1)
 
-    assert catalog.schema_version == 2
+    assert catalog.schema_version == CATALOG_SCHEMA_VERSION
     assert catalog.material_config_fingerprint == "default"
     assert catalog.versions == {}
     assert catalog.entry_order == [

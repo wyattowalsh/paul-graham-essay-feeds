@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import format_datetime
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 from typing import Any, Final, Literal, TypeVar
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
@@ -63,8 +63,22 @@ AUTHOR_URL: Final = "https://paulgraham.com/"
 GENERATOR: Final = f"pg-essay-feeds/{__version__}"
 FEED_SUMMARY_CHARS: Final = 400
 _REPO_URL: Final = "https://github.com/wyattowalsh/paul-graham-essay-feeds"
+STAGING_MANIFEST_SCHEMA_VERSION: Final[Literal[1]] = 1
+MATERIALIZE_POINTER_SCHEMA_VERSION: Final[Literal[1]] = 1
+# Exact public artifact set (catalog + six flat feeds), stable POSIX order.
+STAGING_ARTIFACT_RELS: Final[tuple[str, ...]] = (
+    "catalog.json",
+    "feeds/rss.xml",
+    "feeds/atom.xml",
+    "feeds/feed.json",
+    "feeds/rss.simple.xml",
+    "feeds/atom.simple.xml",
+    "feeds/feed.simple.json",
+)
 
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+_SHA256_HEX = re.compile(r"[0-9a-f]{64}")
+_GENERATION_ID_HEX = re.compile(r"[0-9a-f]{32}")
 _T = TypeVar("_T")
 
 
@@ -245,6 +259,104 @@ class _StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
 
+def _require_relative_posix_path(path: str) -> str:
+    """Reject absolute, traversing, Windows, or empty-segment POSIX paths."""
+    if not path:
+        raise ValueError("artifact path must be a non-empty relative POSIX path")
+    if path.startswith("/"):
+        raise ValueError(f"artifact path must be relative (no leading /): {path!r}")
+    if "\\" in path:
+        raise ValueError(f"artifact path must be POSIX (no backslash): {path!r}")
+    parts = path.split("/")
+    if any(part == "" for part in parts):
+        raise ValueError(f"artifact path has empty segment: {path!r}")
+    if any(part == ".." for part in parts):
+        raise ValueError(f"artifact path must not contain '..': {path!r}")
+    return path
+
+
+def _require_sha256_hex(digest: str) -> str:
+    """Reject empty or malformed SHA-256 hex (exactly 64 lowercase hex chars)."""
+    if _SHA256_HEX.fullmatch(digest) is None:
+        raise ValueError("digest must be 64 lowercase hexadecimal characters")
+    return digest
+
+
+def require_generation_id(value: str) -> str:
+    """Reject generation ids that are not a 32-character lowercase hex token."""
+    if _GENERATION_ID_HEX.fullmatch(value) is None:
+        raise ValueError("gen_id must be a 32-character lowercase hex generation id")
+    return value
+
+
+class MaterializePhase(StrEnum):
+    """Recovery pointer phase for staged → public materialize."""
+
+    MATERIALIZING = "materializing"
+    COMPLETE = "complete"
+
+
+class StagingManifest(_StrictModel):
+    """Private staging ``MANIFEST.json``: exact seven public artifact digests."""
+
+    schema_version: Literal[1] = Field(
+        description="Staging manifest schema version (1 = seven-file digest map).",
+    )
+    gen_id: str = Field(
+        min_length=1,
+        description="32-character lowercase hex generation id (uuid4.hex).",
+    )
+    files: dict[str, str] = Field(
+        description="Relative POSIX path → lowercase SHA-256 hex of file bytes.",
+    )
+
+    @field_validator("gen_id")
+    @classmethod
+    def _generation_id(cls, value: str) -> str:
+        return require_generation_id(value)
+
+    @model_validator(mode="after")
+    def _exact_artifact_files(self) -> StagingManifest:
+        """Fail closed unless ``files`` is exactly ``STAGING_ARTIFACT_RELS``."""
+        for rel, digest in self.files.items():
+            _require_relative_posix_path(rel)
+            _require_sha256_hex(digest)
+        expected = frozenset(STAGING_ARTIFACT_RELS)
+        actual = frozenset(self.files)
+        if actual != expected:
+            missing = sorted(expected - actual)
+            extra = sorted(actual - expected)
+            details: list[str] = []
+            if missing:
+                details.append("missing " + ", ".join(missing))
+            if extra:
+                details.append("extra " + ", ".join(extra))
+            raise ValueError(
+                "files keys must be exactly the seven staging artifact paths ("
+                + "; ".join(details)
+                + ")"
+            )
+        return self
+
+
+class MaterializePointer(_StrictModel):
+    """Private ``.cache/materialize.json`` recovery pointer (fail closed)."""
+
+    schema_version: Literal[1] = Field(
+        description="Materialize pointer schema version (1 = gen_id + phase).",
+    )
+    gen_id: str = Field(
+        min_length=1,
+        description="32-character lowercase hex generation id (uuid4.hex).",
+    )
+    phase: MaterializePhase = Field(description="Materialize recovery phase.")
+
+    @field_validator("gen_id")
+    @classmethod
+    def _generation_id(cls, value: str) -> str:
+        return require_generation_id(value)
+
+
 class ResourceState(_StrictModel):
     """HTTP resource cache evidence for index or essay pages.
 
@@ -256,9 +368,26 @@ class ResourceState(_StrictModel):
     last_modified: str | None = Field(
         default=None, description="Last observed Last-Modified validator."
     )
-    raw_sha256: str | None = Field(default=None, description="SHA-256 of raw response body.")
+    raw_sha256: str | None = Field(
+        default=None,
+        description=(
+            "SHA-256 of wire/raw transfer bytes (pre-content-decode); "
+            "never the decoded HTML entity."
+        ),
+    )
     decoded_sha256: str | None = Field(
-        default=None, description="SHA-256 of decoded text when HTML was decoded."
+        default=None,
+        description="SHA-256 of decoded text/entity bytes when HTML was decoded.",
+    )
+    raw_bytes_received: int | None = Field(
+        default=None,
+        ge=0,
+        description="Wire byte count of the raw transfer when captured; unset when unknown.",
+    )
+    decoded_bytes_received: int | None = Field(
+        default=None,
+        ge=0,
+        description="Decoded entity size in bytes when known; unset when unknown.",
     )
     last_checked_at: datetime | None = Field(
         default=None,
@@ -315,12 +444,22 @@ class CatalogEntry(_StrictModel):
     stable_id: str = Field(min_length=1, description="Stable feed id / guid.")
     url: str = Field(min_length=1, description="Normalized absolute allowlisted URL.")
     title: str = Field(min_length=1, description="Display title from discovery or page.")
-    position: int = Field(ge=0, description="0-based catalog order (newest first).")
+    position: int = Field(
+        ge=0,
+        description=(
+            "0-based catalog order (newest first). In-memory only for schema 3: "
+            "derived from entry_order on load and omitted from catalog JSON."
+        ),
+    )
     first_seen_at: datetime | None = Field(
         default=None, description="First successful index observation (UTC)."
     )
     last_seen_at: datetime | None = Field(
-        default=None, description="Latest successful index observation (UTC)."
+        default=None,
+        description=(
+            "Latest successful index observation (UTC). Omitted from schema-3 JSON "
+            "when it equals catalog index.last_success_at."
+        ),
     )
     observed_updated_at: datetime | None = Field(
         default=None, description="Latest material metadata change (UTC)."
@@ -356,11 +495,45 @@ class CatalogEntry(_StrictModel):
         return None if value is None else require_aware_utc(value)
 
 
+def _fill_omitted_catalog_entry_fields(payload: dict[str, Any]) -> None:
+    """Fill omitted ``position`` / ``last_seen_at`` on raw entry dicts (in-place).
+
+    Schema 3 omits redundant ``position`` (derived from ``entry_order``) and
+    ``last_seen_at`` when it matches ``index.last_success_at``. Load/migrate
+    must restore both before ``CatalogEntry`` validation.
+    """
+    order = payload.get("entry_order")
+    entries = payload.get("entries")
+    if not isinstance(order, list) or not isinstance(entries, dict):
+        return
+    index = payload.get("index")
+    shared_last_seen: object
+    if isinstance(index, dict):
+        shared_last_seen = index.get("last_success_at")
+    elif index is None:
+        shared_last_seen = None
+    else:
+        shared_last_seen = getattr(index, "last_success_at", None)
+    for position, sid in enumerate(order):
+        if not isinstance(sid, str):
+            continue
+        raw = entries.get(sid)
+        if not isinstance(raw, dict):
+            continue
+        if raw.get("position") is None:
+            raw["position"] = position
+        if raw.get("last_seen_at") is None and shared_last_seen is not None:
+            raw["last_seen_at"] = shared_last_seen
+
+
 class Catalog(_StrictModel):
     """Schema-versioned durable catalog (SSOT for generation inputs)."""
 
-    schema_version: Literal[1, 2] = Field(
-        description="Catalog schema version (2 = resource lifecycle clocks)."
+    schema_version: Literal[1, 2, 3] = Field(
+        description=(
+            "Catalog schema version (2 = resource lifecycle clocks; "
+            "3 = compact JSON: omit position and shared last_seen_at)."
+        ),
     )
     material_config_fingerprint: str = Field(
         min_length=1, description="Fingerprint of material generator settings."
@@ -384,6 +557,21 @@ class Catalog(_StrictModel):
     migration_history: list[dict[str, Any]] = Field(
         default_factory=list, description="Idempotent migration records."
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _fill_omitted_entry_fields(cls, data: Any) -> Any:
+        """Restore compact-JSON omissions before nested CatalogEntry validate."""
+        if not isinstance(data, dict):
+            return data
+        payload = dict(data)
+        entries = payload.get("entries")
+        if isinstance(entries, dict):
+            payload["entries"] = {
+                sid: dict(raw) if isinstance(raw, dict) else raw for sid, raw in entries.items()
+            }
+        _fill_omitted_catalog_entry_fields(payload)
+        return payload
 
     @model_validator(mode="after")
     def _relational_invariants(self) -> Catalog:

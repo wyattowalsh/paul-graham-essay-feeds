@@ -14,7 +14,7 @@ from typer.testing import CliRunner
 
 from paul_graham_essay_feeds.catalog import save_catalog
 from paul_graham_essay_feeds.cli import app
-from paul_graham_essay_feeds.feeds import render_snapshot_feeds, write_feeds
+from paul_graham_essay_feeds.feeds import render_atom, render_snapshot_feeds, write_feeds
 from paul_graham_essay_feeds.models import (
     Catalog,
     CatalogEntry,
@@ -52,7 +52,14 @@ def _seed_well_formed_bundle(repo_root: Path) -> bytes:
         atom=atom,
         json_feed=jf,
         simple_rss=rss,
-        simple_atom=atom,
+        simple_atom=render_atom(
+            FeedSnapshot(
+                logical_updated_at=now,
+                generator="pg-essay-feeds/test",
+                variant="simple",
+                items=snapshot.items,
+            )
+        ),
         simple_json_feed=jf,
     )
     save_catalog(

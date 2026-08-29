@@ -6,7 +6,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -20,6 +20,19 @@ from paul_graham_essay_feeds.models import FeedEntrySnapshot, FeedSnapshot, utc_
 
 runner = CliRunner()
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
+_FROM_FEEDS_HELP = (
+    "Seed the in-memory catalog candidate from existing feeds; "
+    "persist only after successful verification/publication."
+)
+_ABANDON_RECOVERY_HELP = (
+    "Explicit repair for irrecoverable `.cache/materialize.json` "
+    "(quarantines pointer + generation)."
+)
+
+
+def _plain_help(output: str) -> str:
+    """Strip ANSI and box-drawing so wrapped Rich help is searchable."""
+    return " ".join(_ANSI.sub("", output).replace("│", " ").split())
 
 
 def test_help() -> None:
@@ -47,13 +60,49 @@ def test_update_exposes_from_feeds_option() -> None:
     click_app = get_command(app)
     assert isinstance(click_app, TyperGroup)
     update = click_app.commands["update"]
-    from_feeds = next(p for p in update.params if p.name == "from_feeds")
+    from_feeds = cast(Any, next(p for p in update.params if p.name == "from_feeds"))
     assert "--from-feeds" in from_feeds.opts
+    assert from_feeds.help == _FROM_FEEDS_HELP
 
     result = runner.invoke(app, ["update", "--help"])
     assert result.exit_code == 0
     plain = _ANSI.sub("", result.output)
+    collapsed = _plain_help(result.output)
     assert "from-feeds" in plain
+    assert "Seed the in-memory catalog candidate from existing feeds" in collapsed
+    assert "persist only after successful" in collapsed
+    assert "verification/public" in collapsed
+
+
+def test_update_from_feeds_help_does_not_claim_durable_bootstrap() -> None:
+    """AUD-012: help seeds in-memory candidate; does not persist catalog first."""
+    result = runner.invoke(app, ["update", "--help"])
+    assert result.exit_code == 0
+    collapsed = _plain_help(result.output)
+    assert "Seed the in-memory catalog candidate from existing feeds" in collapsed
+    assert "persist only after successful" in collapsed
+    assert "verification/public" in collapsed
+    assert "bootstrap durable catalog from existing feeds/ before update" not in collapsed
+
+
+def test_update_exposes_abandon_recovery_option() -> None:
+    """`--abandon-recovery` is a real update flag (param + help; ANSI-safe)."""
+    click_app = get_command(app)
+    assert isinstance(click_app, TyperGroup)
+    update = click_app.commands["update"]
+    flag = cast(Any, next(p for p in update.params if p.name == "abandon_recovery"))
+    assert "--abandon-recovery" in flag.opts
+    assert "--no-abandon-recovery" in flag.secondary_opts
+    assert flag.default is False
+    assert flag.help == _ABANDON_RECOVERY_HELP
+
+    result = runner.invoke(app, ["update", "--help"])
+    assert result.exit_code == 0
+    plain = _ANSI.sub("", result.output)
+    collapsed = _plain_help(result.output)
+    assert "abandon-recovery" in plain
+    assert ".cache/materialize" in collapsed
+    assert "quarantines pointer" in collapsed
 
 
 def test_check_missing_feeds(repo_root: Path) -> None:
@@ -274,6 +323,119 @@ def test_update_from_feeds_bootstraps_catalog(
     )
     assert result.exit_code == 0, result.output
     assert catalog.is_file()
+
+
+def test_update_from_feeds_failure_before_publish_leaves_no_catalog(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CLI does not persist catalog.json when the pipeline raises after --from-feeds."""
+    from paul_graham_essay_feeds.models import FeedError
+
+    pipeline = MagicMock(side_effect=FeedError("verification failed"))
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.run_catalog_pipeline", pipeline)
+    catalog = tmp_path / "catalog.json"
+    assert not catalog.exists()
+
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(tmp_path),
+            "--quiet",
+            "--from-feeds",
+        ],
+    )
+    assert result.exit_code == 1
+    assert pipeline.call_args.kwargs["from_feeds"] is True
+    assert not catalog.exists()
+
+
+def test_update_abandon_recovery_runs_before_pipeline_quietly(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`--abandon-recovery --quiet` calls repair before the pipeline with empty streams."""
+    order: list[str] = []
+
+    def fake_abandon(root: Path) -> None:
+        order.append("abandon")
+        assert root == tmp_path.expanduser().resolve()
+
+    def fake_pipeline(*_args: object, **_kwargs: object) -> MagicMock:
+        order.append("pipeline")
+        outcome = MagicMock()
+        outcome.action = "updated"
+        outcome.essay_count = 1
+        return outcome
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.abandon_publication_recovery", fake_abandon)
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.run_catalog_pipeline", fake_pipeline)
+
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(tmp_path),
+            "--quiet",
+            "--abandon-recovery",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert result.stdout == ""
+    assert result.stderr == ""
+    assert order == ["abandon", "pipeline"]
+
+
+@pytest.mark.parametrize("extra", [[], ["--no-abandon-recovery"]])
+def test_update_does_not_abandon_recovery_by_default(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    extra: list[str],
+) -> None:
+    abandon = MagicMock()
+    pipeline = MagicMock()
+    pipeline.return_value.action = "updated"
+    pipeline.return_value.essay_count = 0
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.abandon_publication_recovery", abandon)
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.run_catalog_pipeline", pipeline)
+
+    result = runner.invoke(
+        app,
+        ["update", "--repo-root", str(tmp_path), "--quiet", *extra],
+    )
+    assert result.exit_code == 0, result.output
+    abandon.assert_not_called()
+    pipeline.assert_called_once()
+
+
+def test_update_abandon_recovery_error_skips_pipeline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from paul_graham_essay_feeds.models import FeedError
+
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.cli.abandon_publication_recovery",
+        MagicMock(side_effect=FeedError("stuck pointer")),
+    )
+    pipeline = MagicMock()
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.run_catalog_pipeline", pipeline)
+
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(tmp_path),
+            "--quiet",
+            "--abandon-recovery",
+        ],
+    )
+    assert result.exit_code == 1
+    pipeline.assert_not_called()
 
 
 def test_update_result_file_and_github_output(

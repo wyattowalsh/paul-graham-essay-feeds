@@ -15,6 +15,7 @@ import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Final, Literal
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from loguru import logger
 
@@ -58,26 +59,52 @@ SIMPLE_FEED_NAMES: Final[dict[str, str]] = {
 }
 
 
+def _ascii_public_url(url: str) -> str:
+    """Emit an ASCII URI: IDNA host, no query/fragment."""
+    parts = urlsplit(url.strip())
+    try:
+        host = parts.hostname
+        port = parts.port
+    except ValueError:
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    if not host:
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    try:
+        ascii_host = host.encode("idna").decode("ascii")
+    except UnicodeError:
+        ascii_host = host
+    netloc = f"[{ascii_host}]" if ":" in ascii_host else ascii_host
+    if port is not None:
+        netloc = f"{netloc}:{port}"
+    return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+
+
+def _directory_base_url(base: str) -> str:
+    """Treat ``base`` as a directory URL so ``urljoin`` keeps the last segment."""
+    emitted = _ascii_public_url(base)
+    parts = urlsplit(emitted)
+    directory_path = (parts.path or "").rstrip("/") + "/"
+    return urlunsplit((parts.scheme, parts.netloc, directory_path, "", ""))
+
+
+def _join_public_artifact(base: str, name: str) -> str:
+    """Join a public directory base to an artifact filename via ``urljoin``."""
+    return urljoin(_directory_base_url(base), name)
+
+
 def feed_self_url(json_feed_url: str, *, kind: Literal["rss", "atom", "json"]) -> str:
     """Derive a self-link URL from the JSON Feed public URL without brittle replaces.
 
     Accepts either enriched (``…/feed.json``) or simple (``…/feed.simple.json``)
     JSON Feed self URLs produced by :func:`catalog_to_feed_snapshot`.
+    Joins with :func:`urllib.parse.urljoin` so the sibling artifact replaces the
+    JSON filename.
     """
-    base = json_feed_url.rstrip("/")
-    simple = base.endswith("/feed.simple.json") or base.endswith("feed.simple.json")
-    if kind == "json":
-        return base
-    if simple:
-        # …/feed.simple.json → …/rss.simple.xml | …/atom.simple.xml
-        if base.endswith("feed.simple.json"):
-            stem = base[: -len("feed.simple.json")]
-            return f"{stem}{kind}.simple.xml"
-        return base
-    if base.endswith("feed.json"):
-        stem = base[: -len("feed.json")]
-        return f"{stem}{kind}.xml"
-    return base
+    emitted = _ascii_public_url(json_feed_url)
+    path = urlsplit(emitted).path
+    simple = path.endswith("feed.simple.json")
+    names = SIMPLE_FEED_NAMES if simple else ENRICHED_FEED_NAMES
+    return urljoin(emitted, names[kind])
 
 
 def catalog_to_feed_snapshot(
@@ -148,7 +175,7 @@ def catalog_to_feed_snapshot(
         "simple" if summary_mode == "title_only" else "enriched"
     )
     json_name = SIMPLE_FEED_NAMES["json"] if variant == "simple" else ENRICHED_FEED_NAMES["json"]
-    feed_url = f"{base.rstrip('/')}/{json_name}" if base is not None else None
+    feed_url = _join_public_artifact(base, json_name) if base is not None else None
 
     return FeedSnapshot(
         logical_updated_at=logical_updated_at,

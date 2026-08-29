@@ -3,11 +3,85 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import SplitResult, urlsplit, urlunsplit
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from paul_graham_essay_feeds.models import MAX_BYTES, MIN_ITEMS, SOURCE_URL
+from paul_graham_essay_feeds.models import MAX_BYTES, MIN_ITEMS, SOURCE_URL, ConfigurationError
+
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+
+
+def _require_absolute_http_url(field_name: str, raw: str) -> SplitResult:
+    """Parse an absolute http(s) URL; reject userinfo and empty hosts."""
+    parts = urlsplit(raw.strip())
+    if parts.scheme not in {"https", "http"}:
+        raise ConfigurationError(f"{field_name} must use https (or http for tests): {raw!r}")
+    if parts.username or parts.password:
+        raise ConfigurationError(f"{field_name} must not include userinfo: {raw!r}")
+    try:
+        host = parts.hostname
+    except ValueError as exc:
+        raise ConfigurationError(f"{field_name} must be absolute: {raw!r}") from exc
+    if not parts.netloc or not host:
+        raise ConfigurationError(f"{field_name} must be absolute: {raw!r}")
+    return parts
+
+
+def _ascii_netloc(parts: SplitResult, *, field_name: str, raw: str) -> str:
+    """IDNA-encode hostname; keep an explicit port; bracket IPv6."""
+    try:
+        host = parts.hostname
+        port = parts.port
+    except ValueError as exc:
+        raise ConfigurationError(f"{field_name} must be absolute: {raw!r}") from exc
+    if not host:
+        raise ConfigurationError(f"{field_name} must be absolute: {raw!r}")
+    try:
+        ascii_host = host.encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise ConfigurationError(
+            f"{field_name} host is not a valid IDNA hostname: {raw!r}"
+        ) from exc
+    netloc = f"[{ascii_host}]" if ":" in ascii_host else ascii_host
+    if port is not None:
+        netloc = f"{netloc}:{port}"
+    return netloc
+
+
+def _last_segment_looks_like_file(path: str) -> bool:
+    """True when the last path segment looks like ``name.ext`` (ambiguous as a base)."""
+    segment = path.rstrip("/").rsplit("/", 1)[-1]
+    if not segment or "." not in segment or segment.startswith("."):
+        return False
+    ext = segment.rsplit(".", 1)[-1]
+    return bool(ext) and ext.isascii() and ext.isalnum() and ext[:1].isalpha()
+
+
+def _normalize_public_base_url(raw: str) -> str:
+    """Validate and canonicalize ``public_base_url`` as an IDNA directory URL."""
+    text = raw.strip()
+    if "?" in text:
+        raise ConfigurationError(f"public_base_url must not include a query string: {raw!r}")
+    if "#" in text:
+        raise ConfigurationError(f"public_base_url must not include a fragment: {raw!r}")
+    parts = _require_absolute_http_url("public_base_url", text)
+    if parts.query:
+        raise ConfigurationError(f"public_base_url must not include a query string: {raw!r}")
+    if parts.fragment:
+        raise ConfigurationError(f"public_base_url must not include a fragment: {raw!r}")
+    if parts.scheme != "https":
+        host = (parts.hostname or "").lower()
+        if host not in _LOOPBACK_HOSTS:
+            raise ConfigurationError(f"public_base_url must be https (got {raw!r})")
+    if _last_segment_looks_like_file(parts.path or ""):
+        raise ConfigurationError(
+            f"public_base_url must be a directory base URL, not a file: {raw!r}"
+        )
+    netloc = _ascii_netloc(parts, field_name="public_base_url", raw=raw)
+    directory_path = (parts.path or "").rstrip("/") + "/"
+    return urlunsplit((parts.scheme, netloc, directory_path, "", ""))
 
 
 class Settings(BaseSettings):
@@ -96,7 +170,10 @@ class Settings(BaseSettings):
     )
     public_base_url: str | None = Field(
         default=None,
-        description="Optional public base URL for feed self links / feed_url (https).",
+        description=(
+            "Optional public base URL for feed self links / feed_url "
+            "(https directory URL; no query, fragment, or userinfo)."
+        ),
     )
     stale_after_days: int = Field(
         default=30,
@@ -124,9 +201,9 @@ class Settings(BaseSettings):
         ),
     )
     host_cooldown_seconds: float = Field(
-        default=0.0,
+        default=0.05,
         ge=0.0,
-        description="Minimum seconds between requests to the same host (0 = off).",
+        description="Minimum seconds between requests to the same host.",
     )
 
     @field_validator("repo_root", mode="before")
@@ -137,34 +214,17 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _validate_public_urls(self) -> Settings:
         """Reject unsafe/malformed public_base_url and source_url at construct."""
-        from urllib.parse import urlsplit
+        source = self.source_url.strip()
+        if not source:
+            raise ConfigurationError("source_url must not be blank")
+        _require_absolute_http_url("source_url", source)
 
-        from paul_graham_essay_feeds.models import ConfigurationError
-
-        for field_name, raw in (
-            ("source_url", self.source_url),
-            ("public_base_url", self.public_base_url),
-        ):
-            if raw is None:
-                continue
-            text = raw.strip()
-            if not text:
-                if field_name == "public_base_url":
-                    object.__setattr__(self, "public_base_url", None)
-                    continue
-                raise ConfigurationError(f"{field_name} must not be blank")
-            parts = urlsplit(text)
-            if parts.scheme not in {"https", "http"}:
-                raise ConfigurationError(
-                    f"{field_name} must use https (or http for tests): {raw!r}"
-                )
-            if parts.username or parts.password:
-                raise ConfigurationError(f"{field_name} must not include userinfo: {raw!r}")
-            if not parts.netloc or not parts.hostname:
-                raise ConfigurationError(f"{field_name} must be absolute: {raw!r}")
-            if field_name == "public_base_url" and parts.scheme != "https":
-                # Allow http only for localhost/loopback test harnesses.
-                host = (parts.hostname or "").lower()
-                if host not in {"localhost", "127.0.0.1", "::1"}:
-                    raise ConfigurationError(f"public_base_url must be https (got {raw!r})")
+        raw = self.public_base_url
+        if raw is None:
+            return self
+        text = raw.strip()
+        if not text:
+            object.__setattr__(self, "public_base_url", None)
+            return self
+        object.__setattr__(self, "public_base_url", _normalize_public_base_url(text))
         return self

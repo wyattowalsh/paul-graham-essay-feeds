@@ -34,6 +34,7 @@ from paul_graham_essay_feeds.verify import (
     EMPTY_URL,
     ID_ORDER_MISMATCH,
     MISSING_FILE,
+    SELF_LINK_MISMATCH,
     SUMMARY_LENGTH,
     UNICODE_REPLACEMENT,
     UNPARSEABLE_JSON,
@@ -95,6 +96,20 @@ def _good_triple(essays: list[Essay] | None = None) -> tuple[bytes, bytes, bytes
 
 def _codes(report: VerificationReport) -> list[str]:
     return [v.code for v in report.violations]
+
+
+def _write_both_variants(tmp_path: Path, essays: list[Essay] | None = None) -> None:
+    snap = _snapshot(essays)
+    simple = snap.model_copy(update={"variant": "simple"})
+    write_feeds(
+        tmp_path,
+        rss=render_rss(snap),
+        atom=render_atom(snap),
+        json_feed=render_json(snap),
+        simple_rss=render_rss(simple),
+        simple_atom=render_atom(simple),
+        simple_json_feed=render_json(simple),
+    )
 
 
 def test_verify_feed_bytes_happy_path() -> None:
@@ -182,16 +197,7 @@ def test_duplicate_ids() -> None:
 
 def test_verify_feed_dir_happy_and_missing(tmp_path: Path) -> None:
     essays = _sample()
-    snap = _snapshot(essays)
-    write_feeds(
-        tmp_path,
-        rss=render_rss(snap),
-        atom=render_atom(snap),
-        json_feed=render_json(snap),
-        simple_rss=render_rss(snap),
-        simple_atom=render_atom(snap),
-        simple_json_feed=render_json(snap),
-    )
+    _write_both_variants(tmp_path, essays)
     ok = verify_feed_dir(tmp_path, min_items=2)
     assert ok.ok is True
 
@@ -287,6 +293,8 @@ def test_assert_verified_simple_kind_labels_simple_paths(
         json_feed: bytes,
         min_items: int,
         kind: Literal["enriched", "simple"] = "enriched",
+        public_base_url: str | None = None,
+        expected_self: dict[str, str] | None = None,
     ) -> VerificationReport:
         seen.append(kind)
         return real(
@@ -295,6 +303,8 @@ def test_assert_verified_simple_kind_labels_simple_paths(
             json_feed=json_feed,
             min_items=min_items,
             kind=kind,
+            public_base_url=public_base_url,
+            expected_self=expected_self,
         )
 
     monkeypatch.setattr("paul_graham_essay_feeds.verify.verify_feed_bytes", _capture)
@@ -438,16 +448,7 @@ def test_id_order_mismatch_across_formats() -> None:
 
 def test_assert_verified_root_and_mode_errors(tmp_path: Path) -> None:
     essays = _sample()
-    snap = _snapshot(essays)
-    write_feeds(
-        tmp_path,
-        rss=render_rss(snap),
-        atom=render_atom(snap),
-        json_feed=render_json(snap),
-        simple_rss=render_rss(snap),
-        simple_atom=render_atom(snap),
-        simple_json_feed=render_json(snap),
-    )
+    _write_both_variants(tmp_path, essays)
     report = assert_verified(root=tmp_path, min_items=2)
     assert report.ok is True
 
@@ -518,16 +519,7 @@ def test_atom_link_fallback_without_alternate_rel() -> None:
 
 def test_verify_feed_dir_unreadable_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     essays = _sample()
-    snap = _snapshot(essays)
-    write_feeds(
-        tmp_path,
-        rss=render_rss(snap),
-        atom=render_atom(snap),
-        json_feed=render_json(snap),
-        simple_rss=render_rss(snap),
-        simple_atom=render_atom(snap),
-        simple_json_feed=render_json(snap),
-    )
+    _write_both_variants(tmp_path, essays)
     feeds = tmp_path / "feeds"
     real_read = Path.read_bytes
 
@@ -543,3 +535,57 @@ def test_verify_feed_dir_unreadable_file(tmp_path: Path, monkeypatch: pytest.Mon
     assert any("Unreadable" in v.message for v in report.violations)
     # Silence unused local (feeds dir must exist for the monkeypatch path).
     assert feeds.is_dir()
+
+
+def test_verify_feed_bytes_exact_self_links_when_public_base_url_set() -> None:
+    snap = _snapshot().model_copy(
+        update={
+            "feed_url": "https://example.com/feeds/feed.json",
+            "public_base_url": "https://example.com/feeds",
+        }
+    )
+    rss, atom, jf = render_rss(snap), render_atom(snap), render_json(snap)
+    report = verify_feed_bytes(
+        rss=rss,
+        atom=atom,
+        json_feed=jf,
+        min_items=2,
+        public_base_url="https://example.com/feeds",
+    )
+    assert report.ok is True
+
+    wrong = verify_feed_bytes(
+        rss=rss,
+        atom=atom,
+        json_feed=jf,
+        min_items=2,
+        public_base_url="https://example.com/feeds/rss.xml",
+    )
+    assert wrong.ok is False
+    assert SELF_LINK_MISMATCH in _codes(wrong)
+
+
+def test_verify_feed_dir_catalog_order_all_six_files(tmp_path: Path) -> None:
+    essays = _sample()
+    _write_both_variants(tmp_path, essays)
+    (tmp_path / "catalog.json").write_text(
+        json.dumps(
+            {
+                "entry_order": [
+                    "https://paulgraham.com/b.html",
+                    "https://paulgraham.com/a.html",
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = verify_feed_dir(tmp_path, min_items=2)
+    assert report.ok is False
+    assert ID_ORDER_MISMATCH in _codes(report)
+    paths = {v.path for v in report.violations if v.code == ID_ORDER_MISMATCH}
+    assert "feeds/rss.xml" in paths
+    assert "feeds/atom.xml" in paths
+    assert "feeds/feed.json" in paths
+    assert "feeds/rss.simple.xml" in paths
+    assert "feeds/atom.simple.xml" in paths
+    assert "feeds/feed.simple.json" in paths

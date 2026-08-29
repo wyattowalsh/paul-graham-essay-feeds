@@ -54,6 +54,8 @@ def test_notebook_static_contract() -> None:
     assert "from paul_graham_essay_feeds" not in source
     assert "import paul_graham_essay_feeds" not in source
     assert "uvx" in source
+    assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v0.2.0"' in source
+    assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main"' not in source
     for name in FEED_NAMES:
         assert name in source
     assert "catalog.json" in source

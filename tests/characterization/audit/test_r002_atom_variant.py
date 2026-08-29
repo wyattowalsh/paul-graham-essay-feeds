@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from typing import Literal
 
-from paul_graham_essay_feeds.feeds import render_atom
+from paul_graham_essay_feeds.feeds import render_atom, render_json, render_rss
 from paul_graham_essay_feeds.models import (
     ATOM_NS,
     FEED_ID,
@@ -14,6 +14,7 @@ from paul_graham_essay_feeds.models import (
     FeedEntrySnapshot,
     FeedSnapshot,
 )
+from paul_graham_essay_feeds.verify import VARIANT_IDENTITY, verify_feed_bytes
 
 T0 = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
 Variant = Literal["enriched", "simple"]
@@ -69,3 +70,13 @@ def test_committed_simple_atom_uses_feed_id_simple() -> None:
 
     blob = Path(__file__).resolve().parents[3] / "feeds" / "atom.simple.xml"
     assert _atom_id(blob.read_bytes()) == FEED_ID_SIMPLE
+
+
+def test_verify_rejects_simple_atom_id_on_enriched_kind() -> None:
+    """VARIANT_IDENTITY: FEED_ID_SIMPLE is not accepted as an enriched feed id."""
+    rss = render_rss(_snap(variant="enriched"))
+    atom = render_atom(_snap(variant="simple"))
+    jf = render_json(_snap(variant="enriched"))
+    report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=1, kind="enriched")
+    assert report.ok is False
+    assert VARIANT_IDENTITY in {v.code for v in report.violations}

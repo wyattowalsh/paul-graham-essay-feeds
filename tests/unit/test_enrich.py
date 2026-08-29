@@ -13,7 +13,9 @@ from paul_graham_essay_feeds.enrich import (
     PageEnrichEvidence,
     enrich_essays,
     parse_page_metadata,
+    validate_essays_live,
 )
+from paul_graham_essay_feeds.http import HostCooldown
 from paul_graham_essay_feeds.models import Essay, content_sha256
 
 SAMPLE_HTML = """
@@ -507,3 +509,71 @@ def test_enrich_worker_exception_keeps_essay() -> None:
 
     assert out == [base]
     boom_fut.result.assert_called()
+
+
+@respx.mock
+def test_enrich_unconditional_304_soft_fails() -> None:
+    """AUD-016: page 304 without validators is not treated as not_modified."""
+    route = respx.get("https://paulgraham.com/earn.html")
+    route.side_effect = [httpx.Response(304), httpx.Response(304)]
+    base = _essay()
+    evidence: dict[str, PageEnrichEvidence] = {}
+    out = enrich_essays(
+        [base],
+        workers=1,
+        retries=0,
+        quiet=True,
+        page_evidence_out=evidence,
+    )
+    assert out == [base]
+    ev = evidence[base.stable_id]
+    assert ev.not_modified is False
+    assert ev.ok is False
+    assert ev.error_message is not None
+    assert "304" in ev.error_message
+    assert route.call_count == 2
+
+
+@respx.mock
+def test_enrich_uses_injected_host_cooldown() -> None:
+    waits: list[str] = []
+
+    class Injected(HostCooldown):
+        def wait(self, host: str) -> None:
+            waits.append(host)
+
+    respx.get("https://paulgraham.com/earn.html").mock(
+        return_value=httpx.Response(200, text=SAMPLE_HTML)
+    )
+    injected = Injected(99.0)
+    out = enrich_essays(
+        [_essay()],
+        workers=1,
+        retries=0,
+        quiet=True,
+        host_cooldown_seconds=99.0,
+        host_cooldown=injected,
+    )
+    assert out[0].summary
+    assert waits == ["paulgraham.com"]
+
+
+@respx.mock
+def test_validate_live_uses_injected_host_cooldown() -> None:
+    waits: list[str] = []
+
+    class Injected(HostCooldown):
+        def wait(self, host: str) -> None:
+            waits.append(host)
+
+    respx.head("https://paulgraham.com/earn.html").mock(return_value=httpx.Response(200))
+    report = validate_essays_live(
+        [_essay()],
+        timeout=2.0,
+        workers=1,
+        retries=0,
+        host_cooldown_seconds=99.0,
+        host_cooldown=Injected(99.0),
+    )
+    assert report.ok == 1
+    assert waits == ["paulgraham.com"]

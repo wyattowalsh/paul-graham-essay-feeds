@@ -10,8 +10,8 @@ from paul_graham_essay_feeds import pipeline
 
 
 def test_publish_does_not_recover_before_lock() -> None:
-    """AST: no recover_materialize call before acquire_write_lock in _publish."""
-    source = inspect.getsource(pipeline._publish_catalog_and_feeds)
+    """AST: no recover_materialize call before acquire_write_lock in finalize."""
+    source = inspect.getsource(pipeline._finalize_under_lock)
     tree = ast.parse(source)
     fn = tree.body[0]
     assert isinstance(fn, ast.FunctionDef)
@@ -36,17 +36,21 @@ def test_publish_does_not_recover_before_lock() -> None:
 
 
 def test_publish_source_mentions_under_lock_recover() -> None:
-    """Under-lock recover remains present in source."""
+    """Under-lock recover remains present in source (single critical section)."""
     path = Path(pipeline.__file__)
     text = path.read_text(encoding="utf-8")
-    # Locked publish + locked catalog-only write; no pre-lock recover.
-    assert text.count("recover_materialize(root)") == 2
+    # One recover call in _finalize_under_lock; wrappers do not recover again.
+    assert text.count("recover_materialize(root)") == 1
 
 
 def test_catalog_only_save_lock_order() -> None:
-    """Catalog-only write: acquire lock, then recover, then save_catalog."""
-    source = inspect.getsource(pipeline._save_catalog_under_lock)
+    """Writer critical section: acquire lock, then recover, then save/materialize."""
+    source = inspect.getsource(pipeline._finalize_under_lock)
     lock_at = source.index("acquire_write_lock(")
     recover_at = source.index("recover_materialize(")
     save_at = source.index("save_catalog(")
+    stage_at = source.index("_stage_and_materialize(")
+    release_at = source.index("release_write_lock(")
     assert lock_at < recover_at < save_at
+    assert recover_at < stage_at < release_at
+    assert save_at < release_at

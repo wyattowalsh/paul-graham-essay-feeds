@@ -9,8 +9,15 @@ from paul_graham_essay_feeds import __version__
 from paul_graham_essay_feeds.models import (
     FEED_SUMMARY_CHARS,
     GENERATOR,
+    MATERIALIZE_POINTER_SCHEMA_VERSION,
+    STAGING_ARTIFACT_RELS,
+    STAGING_MANIFEST_SCHEMA_VERSION,
     Essay,
     FeedError,
+    MaterializePhase,
+    MaterializePointer,
+    ResourceState,
+    StagingManifest,
     blurb,
     canonicalize_url,
     content_sha256,
@@ -24,6 +31,13 @@ from paul_graham_essay_feeds.models import (
     utc_now,
     validate_essay_link,
 )
+
+_GEN_ID = "ab" * 16
+_DIGEST = "a" * 64
+
+
+def _staging_files() -> dict[str, str]:
+    return {rel: _DIGEST for rel in STAGING_ARTIFACT_RELS}
 
 
 def test_normalize_text_collapses_whitespace() -> None:
@@ -190,3 +204,156 @@ def test_validate_essay_link_rejects_fragment() -> None:
     )
     with pytest.raises(FeedError, match="Fragment"):
         validate_essay_link(bad)
+
+
+def test_staging_manifest_roundtrip() -> None:
+    manifest = StagingManifest(
+        schema_version=STAGING_MANIFEST_SCHEMA_VERSION,
+        gen_id=_GEN_ID,
+        files=_staging_files(),
+    )
+    restored = StagingManifest.model_validate_json(manifest.model_dump_json())
+    assert restored == manifest
+    assert set(restored.files) == set(STAGING_ARTIFACT_RELS)
+    assert all(digest == _DIGEST for digest in restored.files.values())
+
+
+def test_staging_artifact_rels_are_the_seven_public_paths() -> None:
+    assert STAGING_ARTIFACT_RELS == (
+        "catalog.json",
+        "feeds/rss.xml",
+        "feeds/atom.xml",
+        "feeds/feed.json",
+        "feeds/rss.simple.xml",
+        "feeds/atom.simple.xml",
+        "feeds/feed.simple.json",
+    )
+
+
+def test_staging_manifest_rejects_extra_file() -> None:
+    files = _staging_files()
+    files["feeds/extra.xml"] = _DIGEST
+    with pytest.raises(ValidationError, match="extra"):
+        StagingManifest(schema_version=1, gen_id=_GEN_ID, files=files)
+
+
+def test_staging_manifest_rejects_missing_file() -> None:
+    files = _staging_files()
+    files.pop("catalog.json")
+    with pytest.raises(ValidationError, match="missing"):
+        StagingManifest(schema_version=1, gen_id=_GEN_ID, files=files)
+
+
+def test_staging_manifest_rejects_absolute_path() -> None:
+    files = _staging_files()
+    files["/catalog.json"] = files.pop("catalog.json")
+    with pytest.raises(ValidationError):
+        StagingManifest(schema_version=1, gen_id=_GEN_ID, files=files)
+
+
+def test_staging_manifest_rejects_dotdot_traversal() -> None:
+    files = _staging_files()
+    files["feeds/../rss.xml"] = files.pop("feeds/rss.xml")
+    with pytest.raises(ValidationError):
+        StagingManifest(schema_version=1, gen_id=_GEN_ID, files=files)
+
+
+def test_staging_manifest_rejects_backslash() -> None:
+    files = _staging_files()
+    files["feeds\\rss.xml"] = files.pop("feeds/rss.xml")
+    with pytest.raises(ValidationError):
+        StagingManifest(schema_version=1, gen_id=_GEN_ID, files=files)
+
+
+@pytest.mark.parametrize(
+    "digest",
+    ["", "abc", "A" * 64, "g" * 64, "a" * 63, "a" * 65],
+)
+def test_staging_manifest_rejects_bad_digest(digest: str) -> None:
+    files = _staging_files()
+    files["catalog.json"] = digest
+    with pytest.raises(ValidationError):
+        StagingManifest(schema_version=1, gen_id=_GEN_ID, files=files)
+
+
+def test_materialize_pointer_roundtrip() -> None:
+    pointer = MaterializePointer(
+        schema_version=MATERIALIZE_POINTER_SCHEMA_VERSION,
+        gen_id=_GEN_ID,
+        phase=MaterializePhase.MATERIALIZING,
+    )
+    restored = MaterializePointer.model_validate_json(pointer.model_dump_json())
+    assert restored == pointer
+    complete = MaterializePointer(
+        schema_version=1,
+        gen_id=_GEN_ID,
+        phase=MaterializePhase.COMPLETE,
+    )
+    assert complete.phase is MaterializePhase.COMPLETE
+
+
+def test_materialize_pointer_rejects_unknown_phase() -> None:
+    with pytest.raises(ValidationError):
+        MaterializePointer.model_validate(
+            {"schema_version": 1, "gen_id": _GEN_ID, "phase": "abandoned"}
+        )
+
+
+def test_materialize_pointer_rejects_extra_field() -> None:
+    with pytest.raises(ValidationError):
+        MaterializePointer.model_validate(
+            {
+                "schema_version": 1,
+                "gen_id": _GEN_ID,
+                "phase": "materializing",
+                "unexpected": True,
+            }
+        )
+
+
+def test_materialize_pointer_rejects_blank_gen_id() -> None:
+    with pytest.raises(ValidationError):
+        MaterializePointer(
+            schema_version=1,
+            gen_id="",
+            phase=MaterializePhase.MATERIALIZING,
+        )
+    with pytest.raises(ValidationError):
+        MaterializePointer(
+            schema_version=1,
+            gen_id="   ",
+            phase=MaterializePhase.MATERIALIZING,
+        )
+
+
+@pytest.mark.parametrize("gen_id", ["..", "../feeds", "/tmp/x", "missinggen", "g"])
+def test_materialize_pointer_rejects_unsafe_gen_id(gen_id: str) -> None:
+    with pytest.raises(ValidationError):
+        MaterializePointer(
+            schema_version=1,
+            gen_id=gen_id,
+            phase=MaterializePhase.MATERIALIZING,
+        )
+
+
+def test_resource_state_loads_without_byte_count_fields() -> None:
+    state = ResourceState.model_validate({"etag": '"abc"'})
+    assert state.raw_bytes_received is None
+    assert state.decoded_bytes_received is None
+    assert state.raw_sha256 is None
+    empty = ResourceState()
+    assert empty.raw_bytes_received is None
+    assert empty.decoded_bytes_received is None
+
+
+def test_staging_and_pointer_fields_have_descriptions() -> None:
+    for model in (StagingManifest, MaterializePointer):
+        for name, field in model.model_fields.items():
+            assert field.description, f"{model.__name__}.{name} missing description"
+    raw = ResourceState.model_fields["raw_sha256"].description or ""
+    decoded = ResourceState.model_fields["decoded_sha256"].description or ""
+    assert "wire/raw transfer bytes" in raw
+    assert "pre-content-decode" in raw
+    assert "decoded text/entity bytes" in decoded
+    assert ResourceState.model_fields["raw_bytes_received"].description
+    assert ResourceState.model_fields["decoded_bytes_received"].description
