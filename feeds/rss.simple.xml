@@ -7,7 +7,7 @@
     <language>en-US</language>
     <lastBuildDate>Tue, 25 Aug 2026 06:29:41 GMT</lastBuildDate>
     <category>Essays</category>
-    <generator>pg-essay-feeds/0.1.0</generator>
+    <generator>pg-essay-feeds/0.2.0</generator>
     <docs>https://www.rssboard.org/rss-specification</docs>
     <ttl>1440</ttl>
     <atom:link rel="self" type="application/rss+xml" href="https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.simple.xml" />
