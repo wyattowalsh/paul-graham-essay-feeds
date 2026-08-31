@@ -51,6 +51,9 @@ jobs:
       - name: Tests
         run: uv run pytest --cov-fail-under=90 --cov-report=xml:coverage.xml
 
+      - name: Fail if coverage.xml raw ratio is below 0.90
+        run: uv run python -m tests.coverage_xml coverage.xml
+
       - name: Upload coverage XML
         if: always() && matrix.python-version == '3.13'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Final, Literal, cast
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
+from paul_graham_essay_feeds.enrich import score_summary_quality, summary_passes_quality_gate
 from paul_graham_essay_feeds.models import (
     ATOM_NS,
     FEED_ID,
@@ -60,11 +61,46 @@ SELF_LINK_MISMATCH: Final = "SELF_LINK_MISMATCH"
 FEED_ID_COLLISION: Final = "FEED_ID_COLLISION"
 VARIANT_IDENTITY: Final = "VARIANT_IDENTITY"
 FEED_CLOCK: Final = "FEED_CLOCK"
+SEMANTIC_SUMMARY: Final = "SEMANTIC_SUMMARY"
 _MAX_ARTIFACT_BYTES: Final = 20 * 1024 * 1024
 
 _REPLACEMENT = "\ufffd"
 
 FeedKind = Literal["enriched", "simple"]
+
+
+def summary_passes_semantic_gate(
+    summary: str | None,
+    *,
+    score: float | None = None,
+    flags: tuple[str, ...] | None = None,
+) -> bool:
+    """True when ``summary`` is usable enriched feed text (not promo/nav chrome)."""
+    return summary_passes_quality_gate(summary, score=score, flags=flags)
+
+
+def semantic_summary_violations(
+    summary: str | None,
+    *,
+    path: str | None = None,
+    index: int | None = None,
+) -> list[VerificationViolation]:
+    """Return SEMANTIC_SUMMARY violations for promo/navigation-only candidates."""
+    scored, flags = score_summary_quality(summary)
+    if summary_passes_quality_gate(summary, score=scored, flags=flags):
+        return []
+    kinds = ", ".join(flags) if flags else "low_quality"
+    preview = (summary or "").strip()[:80]
+    return [
+        VerificationViolation(
+            code=SEMANTIC_SUMMARY,
+            message=(f"summary fails semantic gate ({kinds}; score={scored:.2f}): {preview!r}"),
+            path=path,
+            index=index,
+        )
+    ]
+
+
 _KNOWN_SELF_BASENAMES: Final[dict[str, dict[FeedKind, str]]] = {
     "rss": {"enriched": "rss.xml", "simple": "rss.simple.xml"},
     "atom": {"enriched": "atom.xml", "simple": "atom.simple.xml"},
@@ -289,6 +325,7 @@ def _check_item_fields(
     path: str,
     format_label: str,
     check_content_text: bool,
+    apply_semantic_gate: bool = False,
 ) -> list[VerificationViolation]:
     out: list[VerificationViolation] = []
     for i, item in enumerate(items):
@@ -343,6 +380,8 @@ def _check_item_fields(
                         index=i,
                     )
                 )
+            if apply_semantic_gate:
+                out.extend(semantic_summary_violations(summary, path=path, index=i))
 
         for field_name, value in (("title", item.title), ("summary", summary)):
             if _REPLACEMENT in value:
@@ -1150,7 +1189,8 @@ def verify_feed_bytes(
     Checks parseability, size caps, count parity, min-items floor, duplicate
     ids, empty id/title/url/summary, JSON ``content_text == summary``, summary
     length bounds, U+FFFD integrity, ordered id parity, and ordered
-    title/url/summary payload parity across formats. Independently checks
+    title/url/summary payload parity across formats. Enriched triples also
+    apply the semantic summary gate (promo/nav chrome). Independently checks
     feed-level RSS/Atom/JSON contracts (root, namespace, version, clocks,
     URI syntax, exact self links when known, and variant identity).
 
@@ -1244,6 +1284,7 @@ def verify_feed_bytes(
                 path=path,
                 format_label=label,
                 check_content_text=check_ct,
+                apply_semantic_gate=(kind == "enriched"),
             )
         )
 

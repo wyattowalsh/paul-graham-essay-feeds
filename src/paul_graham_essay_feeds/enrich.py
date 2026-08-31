@@ -10,7 +10,7 @@ import re
 from collections.abc import Mapping, MutableMapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from typing import Final, Literal
+from typing import Final
 from urllib.parse import urljoin, urlsplit
 
 import httpx
@@ -23,7 +23,6 @@ from paul_graham_essay_feeds.http import (
     ResultKind,
     conditional_headers,
     create_http_client,
-    decode_html,
     decode_html_document,
     get_with_evidence,
     hop_safe_get,
@@ -35,10 +34,12 @@ from paul_graham_essay_feeds.models import (
     FEED_SUMMARY_CHARS,
     MAX_BYTES,
     NULL_REPORTER,
+    SUMMARY_QUALITY_THRESHOLD,
     Essay,
     FeedError,
     OutputPolicy,
     ProgressReporter,
+    SummarySource,
     content_sha256,
     normalize_text,
     truncate_text,
@@ -66,6 +67,7 @@ _MONTH_YEAR = re.compile(
 
 _SKIP_TAGS: Final = frozenset({"script", "style", "noscript", "svg", "template"})
 _CHROME_TAGS: Final = frozenset({"nav", "footer", "header", "aside", "form", "menu"})
+_CHROME_CONTAINER_TAGS: Final = frozenset({"table", "tr", "td", "font", "div", "center"})
 _CHROME_ATTR = re.compile(
     r"(?:\bnav\b|footer|header|promo|subscribe|sidebar|cookie|banner|menu|"
     r"newsletter|site-nav|topbar|yc-promo)",
@@ -77,22 +79,49 @@ _PROMO_LINE = re.compile(
     r"follow us|share this)",
     re.I,
 )
-_NAV_LIKE = re.compile(
-    r"(want to start a startup|get funded by y combinator|"
-    r"\bhome\b\s*[|/]\s*\babout\b|\bmenu\b|\bnavigation\b)",
+_YC_BANNER = re.compile(
+    r"(?:want to start a startup\??\s*)?get funded by y combinator\.?",
     re.I,
 )
+_NAV_LIKE = re.compile(
+    r"(\bhome\b\s*[|/]\s*\babout\b|\bmenu\b)",
+    re.I,
+)
+_TRANSLATION_ITEM = re.compile(
+    r"\b(?:traditional\s+chinese|simplified\s+chinese|arabic|chinese|japanese|"
+    r"russian|korean|spanish|french|german|italian|portuguese|romanian|"
+    r"turkish|hebrew|vietnamese|indonesian|polish|dutch|czech|swedish|"
+    r"norwegian|danish|finnish|hungarian|thai|hindi|ukrainian|persian|"
+    r"farsi|bulgarian|croatian|serbian|greek|catalan|esperanto)\s+translation\b",
+    re.I,
+)
+_DOMAIN_SEARCH = re.compile(r"\bdomain\s+name\s+search\b", re.I)
+_BOOK_PROMO = re.compile(
+    r"you(?:'|[\u2019])ll find this essay and \d+ others in hackers\s*&\s*painters",
+    re.I,
+)
+_NAV_TOKENS: Final = frozenset({"home", "about", "essays", "rss", "index"})
 
 _MIN_PARAGRAPH_CHARS: Final = 40
 _MIN_GOOD_SUMMARY_CHARS: Final = 40
+_PROSE_MIN_CHARS: Final = 120
 _MAX_SCAN_CHARS: Final = 2_000
+_CHROME_LINK_DENSITY: Final = 0.55
+_CHROME_MIN_LINKS: Final = 2
+_CHROME_LEFTOVER_CHARS: Final = 40
 
-SummarySource = Literal[
-    "meta_description",
-    "og_description",
-    "twitter_description",
-    "content_paragraph",
-]
+SEMANTIC_FAIL_FLAGS: Final = frozenset(
+    {
+        "empty",
+        "translation_menu",
+        "promo",
+        "nav_like",
+        "domain_search",
+        "book_promo",
+        "related_links",
+        "high_link_density",
+    }
+)
 
 
 # --- Page metadata (former metadata.py) --------------------------------------
@@ -145,7 +174,7 @@ class PageMetadata(BaseModel):
         default=None,
         description=(
             "Provenance of summary: meta_description, og_description, "
-            "twitter_description, or content_paragraph."
+            "twitter_description, content_paragraph, or title."
         ),
     )
     quality_score: float = Field(
@@ -158,7 +187,8 @@ class PageMetadata(BaseModel):
         default=(),
         description=(
             "Stable quality flag tokens (empty, too_short, subscribe, click_here, "
-            "nav_like, replacement_char)."
+            "promo, nav_like, translation_menu, domain_search, book_promo, "
+            "related_links, high_link_density, replacement_char)."
         ),
     )
 
@@ -195,12 +225,86 @@ def _resolve_canonical(href: str | None, *, page_url: str) -> str | None:
     return absolute
 
 
-def _is_promo_or_chrome(text: str) -> bool:
-    if not text:
+def _strip_chrome_tokens(text: str) -> str:
+    """Remove known chrome phrases; leftover is candidate prose."""
+    stripped = _TRANSLATION_ITEM.sub(" ", text)
+    stripped = _DOMAIN_SEARCH.sub(" ", stripped)
+    stripped = _BOOK_PROMO.sub(" ", stripped)
+    stripped = _YC_BANNER.sub(" ", stripped)
+    return normalize_text(stripped)
+
+
+def _is_translation_menu(text: str) -> bool:
+    items = _TRANSLATION_ITEM.findall(text)
+    if not items:
+        return False
+    leftover = _strip_chrome_tokens(text)
+    if len(leftover) < _CHROME_LEFTOVER_CHARS:
         return True
-    if _PROMO_LINE.search(text):
+    joined_len = sum(len(item) for item in items)
+    return joined_len / max(len(text), 1) >= 0.4
+
+
+def _looks_like_link_list(text: str) -> bool:
+    if not text or len(text) > 160:
+        return False
+    if re.search(r"[.!?]", text):
+        return False
+    words = text.split()
+    if len(words) < 2:
+        return False
+    capped = sum(1 for word in words if word[:1].isupper())
+    return capped / len(words) >= 0.7
+
+
+def _is_mostly_chrome(text: str) -> bool:
+    leftover = _strip_chrome_tokens(text)
+    return len(leftover) < max(_CHROME_LEFTOVER_CHARS, int(0.25 * len(text)))
+
+
+def _is_chrome_block(text: str) -> bool:
+    """True when *text itself* is chrome, not essay prose that mentions chrome phrases."""
+    if not text or not text.strip():
         return True
-    return len(text) < 12 and text.lower() in {"home", "about", "essays", "rss", "index"}
+    raw = text.strip()
+    if len(raw) < 12 and raw.lower() in _NAV_TOKENS:
+        return True
+    if _is_translation_menu(raw):
+        return True
+    leftover = _strip_chrome_tokens(raw)
+    if _looks_like_link_list(leftover or raw) and len(leftover) < 80:
+        return True
+    if len(raw) >= _PROSE_MIN_CHARS and not _is_mostly_chrome(raw):
+        return False
+    if _DOMAIN_SEARCH.search(raw) or _BOOK_PROMO.search(raw) or _YC_BANNER.search(raw):
+        return True
+    if _PROMO_LINE.search(raw) or _NAV_LIKE.search(raw):
+        return True
+    return leftover != raw and len(leftover) < _CHROME_LEFTOVER_CHARS
+
+
+def _chrome_quality_flags(text: str) -> tuple[str, ...]:
+    """Flags for chrome-like candidates; long essay prose is not flagged as promo."""
+    flags: list[str] = []
+    mostly = _is_mostly_chrome(text)
+    short = len(text) < _PROSE_MIN_CHARS
+    apply_chrome = short or mostly
+    if _is_translation_menu(text):
+        flags.append("translation_menu")
+    if apply_chrome and _DOMAIN_SEARCH.search(text):
+        flags.append("domain_search")
+    if apply_chrome and _BOOK_PROMO.search(text):
+        flags.append("book_promo")
+    if apply_chrome and (_YC_BANNER.search(text) or _PROMO_LINE.search(text)):
+        flags.append("promo")
+    if apply_chrome and _NAV_LIKE.search(text):
+        flags.append("nav_like")
+    leftover = _strip_chrome_tokens(text)
+    if apply_chrome and _looks_like_link_list(leftover or text):
+        flags.append("related_links")
+    if apply_chrome and leftover != text and _looks_like_link_list(leftover or text):
+        flags.append("high_link_density")
+    return tuple(dict.fromkeys(flags))
 
 
 def _first_content_paragraph(
@@ -209,11 +313,11 @@ def _first_content_paragraph(
     *,
     page_title: str | None,
 ) -> str | None:
-    """Pick the first non-promo content paragraph (or cleaned loose body)."""
+    """Pick the first non-chrome content paragraph (or cleaned loose body)."""
     for para in paragraphs:
         if len(para) < _MIN_PARAGRAPH_CHARS:
             continue
-        if _is_promo_or_chrome(para):
+        if _is_chrome_block(para):
             continue
         return para
 
@@ -229,17 +333,17 @@ def _first_content_paragraph(
         part = part.strip()
         if not part:
             continue
-        if _is_promo_or_chrome(part) and not kept:
+        if _is_chrome_block(part) and not kept:
             continue
         kept.append(part)
         joined = " ".join(kept)
-        if len(joined) >= _MIN_PARAGRAPH_CHARS:
+        if len(joined) >= _MIN_PARAGRAPH_CHARS and not _is_chrome_block(joined):
             if len(joined) > _MAX_SCAN_CHARS:
                 return joined[:_MAX_SCAN_CHARS]
             return joined
 
     joined = " ".join(kept) if kept else body
-    if not joined or _is_promo_or_chrome(joined):
+    if not joined or _is_chrome_block(joined):
         cleaned = body
         for promo in _PROMO_LINE.finditer(body):
             if promo.start() < 40:
@@ -248,7 +352,9 @@ def _first_content_paragraph(
         joined = cleaned or body
     if len(joined) > _MAX_SCAN_CHARS:
         joined = joined[:_MAX_SCAN_CHARS]
-    return joined or None
+    if not joined or _is_chrome_block(joined):
+        return None
+    return joined
 
 
 def _published_hint_from_text(*chunks: str | None) -> str | None:
@@ -282,15 +388,38 @@ def score_summary_quality(summary: str | None) -> tuple[float, tuple[str, ...]]:
     if "click here" in lower:
         score -= 0.30
         flags.append("click_here")
-    if _NAV_LIKE.search(text):
-        score -= 0.40
-        flags.append("nav_like")
     if "\ufffd" in text:
         score -= 0.50
         flags.append("replacement_char")
 
+    chrome_flags = _chrome_quality_flags(text)
+    for flag in chrome_flags:
+        flags.append(flag)
+        if flag == "translation_menu":
+            score -= 0.55
+        elif flag in {"promo", "nav_like", "high_link_density"}:
+            score -= 0.50
+        else:
+            score -= 0.45
+
     score = max(0.0, min(1.0, score))
-    return score, tuple(flags)
+    return score, tuple(dict.fromkeys(flags))
+
+
+def summary_passes_quality_gate(
+    summary: str | None,
+    *,
+    score: float | None = None,
+    flags: tuple[str, ...] | None = None,
+) -> bool:
+    """True when a candidate is usable as an enriched feed summary."""
+    if summary is None or not summary.strip():
+        return False
+    if score is None or flags is None:
+        score, flags = score_summary_quality(summary)
+    if score < SUMMARY_QUALITY_THRESHOLD:
+        return False
+    return not SEMANTIC_FAIL_FLAGS.intersection(flags)
 
 
 def _collect_meta_map(tree: HTMLParser) -> dict[str, str]:
@@ -352,6 +481,31 @@ def _paragraph_text(node: Node) -> str:
     return normalize_text(" ".join(parts))
 
 
+def _node_is_chrome_container(node: Node) -> bool:
+    """True for translation/promo/nav tables that do not hold essay ``<p>`` prose."""
+    tag = node.tag
+    if not tag or tag.lower() not in _CHROME_CONTAINER_TAGS:
+        return False
+    for para in node.css("p"):
+        text = _paragraph_text(para)
+        if len(text) >= _PROSE_MIN_CHARS:
+            return False
+        if len(text) >= _MIN_PARAGRAPH_CHARS and not _is_chrome_block(text):
+            return False
+    text = normalize_text(node.text(separator=" ") or "")
+    if not text:
+        return False
+    links = node.css("a")
+    n_links = len(links)
+    link_chars = 0
+    for anchor in links:
+        link_chars += len(normalize_text(anchor.text(separator=" ") or ""))
+    density = link_chars / max(len(text), 1)
+    if n_links >= _CHROME_MIN_LINKS and density >= _CHROME_LINK_DENSITY:
+        return True
+    return _is_chrome_block(text)
+
+
 def _collect_content_texts(tree: HTMLParser) -> tuple[list[str], str]:
     """Chrome-filtered content paragraphs + loose body text."""
     paragraphs: list[str] = []
@@ -371,6 +525,8 @@ def _collect_content_texts(tree: HTMLParser) -> tuple[list[str], str]:
         attrs = node.attributes or {}
         if tag_l in _CHROME_TAGS or _attrs_look_like_chrome(attrs):
             # Skip entire chrome subtree (void chrome tags have no children).
+            return
+        if _node_is_chrome_container(node):
             return
         if tag_l == "p":
             text = _paragraph_text(node)
@@ -511,6 +667,7 @@ class PageEnrichEvidence:
     decoded_sha256: str | None = None
     raw_bytes_received: int | None = None
     decoded_bytes_received: int | None = None
+    selected_encoding: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -526,18 +683,21 @@ class _PageGet:
     decoded_sha256: str | None = None
     raw_bytes_received: int | None = None
     decoded_bytes_received: int | None = None
+    selected_encoding: str | None = None
 
 
 def parse_page_metadata(html: str, *, page_url: str) -> dict[str, str | None]:
     """Extract short summary fields plus allowlisted image/keywords.
 
     Kept as a dict adapter for enrich callers and characterization tests.
+    Quality score/flags live on ``PageMetadata`` / ``Essay`` (``_parse_page``).
     """
     parsed = _parse_page(html, page_url=page_url)
     page = parsed.metadata
     return {
         "page_title": page.page_title,
         "summary": page.summary,
+        "summary_source": page.summary_source,
         "content_text": None,
         "image_url": parsed.image_url,
         "keywords": parsed.keywords,
@@ -584,6 +744,7 @@ def _fetch_page(
             decoded_sha256=ev.decoded_sha256,
             raw_bytes_received=ev.bytes_received,
             decoded_bytes_received=ev.decoded_bytes_received,
+            selected_encoding=None,
         )
     if ev.result_kind is ResultKind.FAILED:
         if result.response is None:
@@ -595,9 +756,9 @@ def _fetch_page(
     if result.response is None:
         raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
     result.response.raise_for_status()
-    html = decode_html(result.body, transport_charset=ev.charset)
+    document = decode_html_document(result.body, transport_charset=ev.charset)
     return _PageGet(
-        html=html,
+        html=document.text,
         not_modified=False,
         etag=ev.etag,
         last_modified=ev.last_modified,
@@ -606,6 +767,7 @@ def _fetch_page(
         decoded_sha256=ev.decoded_sha256,
         raw_bytes_received=ev.bytes_received,
         decoded_bytes_received=ev.decoded_bytes_received,
+        selected_encoding=document.encoding,
     )
 
 
@@ -659,12 +821,13 @@ def _enrich_one(
             decoded_sha256=fetched.decoded_sha256,
             raw_bytes_received=fetched.raw_bytes_received,
             decoded_bytes_received=fetched.decoded_bytes_received,
+            selected_encoding=fetched.selected_encoding,
         )
 
     assert fetched.html is not None
     try:
         page_hash = content_sha256(fetched.html)
-        meta = parse_page_metadata(fetched.html, page_url=essay.url)
+        parsed = _parse_page(fetched.html, page_url=essay.url)
     except Exception as exc:
         logger.warning("Enrichment parse failed for {}: {}", essay.url, exc)
         logger.warning("{} {} | parse | {}", ENRICH_DEGRADED_TOKEN, essay.url, exc)
@@ -679,17 +842,22 @@ def _enrich_one(
             decoded_sha256=fetched.decoded_sha256,
             raw_bytes_received=fetched.raw_bytes_received,
             decoded_bytes_received=fetched.decoded_bytes_received,
+            selected_encoding=fetched.selected_encoding,
         )
 
+    page = parsed.metadata
     updated = essay.model_copy(
         update={
-            "page_title": meta.get("page_title"),
-            "summary": meta.get("summary"),
+            "page_title": page.page_title,
+            "summary": page.summary,
+            "summary_source": page.summary_source,
+            "quality_score": page.quality_score,
+            "quality_flags": page.quality_flags,
             "content_text": None,
-            "image_url": meta.get("image_url"),
-            "keywords": meta.get("keywords"),
-            "canonical_url": meta.get("canonical_url") or essay.url,
-            "published_hint": meta.get("published_hint"),
+            "image_url": parsed.image_url,
+            "keywords": parsed.keywords,
+            "canonical_url": page.canonical_url or essay.url,
+            "published_hint": page.published_hint,
             "published_at": None,
             "content_hash": page_hash,
         }
@@ -704,6 +872,7 @@ def _enrich_one(
         decoded_sha256=fetched.decoded_sha256 or page_hash,
         raw_bytes_received=fetched.raw_bytes_received,
         decoded_bytes_received=fetched.decoded_bytes_received,
+        selected_encoding=fetched.selected_encoding,
     )
 
 

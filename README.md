@@ -15,51 +15,36 @@ correct `https` links, short descriptions, guids, and clean Turbify chapter URLs
 
 <!-- BADGES:END -->
 
-<br />
-
-### Try without installing
-
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)
-
-**Open in Colab → Runtime → Run all → download `feeds.zip`.**
-
-Beautiful public notebook: HTML intro, Enrich / auto-download dials, then
-`uvx … update` + `check` → zip all six feeds (reachability issues in a
-report-only status panel). No local clone required.
-
 </div>
 
 ---
 
-## Paths
+## Subscribe
 
-| Path | When |
+No Python required. Point a feed reader at these hosted files.
+
+**Simple (recommended)** — title and link only:
+
+| Format | Subscribe |
 | :--- | :--- |
-| **[Open in Colab](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)** | Try now — Run all → `feeds.zip` |
-| Local `uvx` below | Keep feeds on disk / automate |
-| [DOCS.md](./DOCS.md) | Architecture, tests, CI |
+| RSS 2.0 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.simple.xml) |
+| Atom 1.0 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/atom.simple.xml) |
+| JSON Feed 1.1 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/feed.simple.json) |
 
----
+**Enriched** — short source-derived summaries (semantic gating rejects promo/chrome):
 
-## Local quick start
-
-```bash
-mkdir pg-feeds && cd pg-feeds
-uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v0.2.0 \
-  pg-essay-feeds update
-```
-
-Writes `feeds/` into the current directory. Point a feed reader at the local files.
+| Format | Subscribe |
+| :--- | :--- |
+| RSS 2.0 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.xml) |
+| Atom 1.0 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/atom.xml) |
+| JSON Feed 1.1 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/feed.json) |
 
 > [!NOTE]
-> User docs pin the immutable `@v0.2.0` tag. `@main` tracks latest (mutable).
-> The `v0.2.0` git tag is not cut in this change; until it is published, run
-> `uv run pg-essay-feeds update` from a local checkout.
-
-> [!TIP]
-> Default `update` enriches each essay (~1 HTTP GET per page) with **4** enrich
-> workers (polite to paulgraham.com). Use `--no-enrich` (or
-> `PG_ESSAY_FEEDS_ENRICH=false`) for a fast index-only run.
+> **Accepted risk (PGF-2026-015):** GitHub raw serves these files as
+> `text/plain` (the body is still RSS / Atom / JSON Feed). Strict readers
+> that require `application/rss+xml` (or similar) should point at local
+> `feeds/` from the CLI below. This project does not add GitHub Pages or
+> `site/`.
 
 ---
 
@@ -67,31 +52,18 @@ Writes `feeds/` into the current directory. Point a feed reader at the local fil
 
 | Path | Format | Contents |
 | :--- | :--- | :--- |
-| `feeds/rss.xml` | RSS 2.0 | **enriched** — title, link, guid, short description |
-| `feeds/atom.xml` | Atom 1.0 | enriched, Atom shape |
-| `feeds/feed.json` | JSON Feed 1.1 | enriched + short `summary` / `content_text` |
 | `feeds/rss.simple.xml` | RSS 2.0 | **simple** — title/link blurbs only |
 | `feeds/atom.simple.xml` | Atom 1.0 | simple |
 | `feeds/feed.simple.json` | JSON Feed 1.1 | simple |
+| `feeds/rss.xml` | RSS 2.0 | **enriched** — title, link, guid, short description |
+| `feeds/atom.xml` | Atom 1.0 | enriched, Atom shape |
+| `feeds/feed.json` | JSON Feed 1.1 | enriched + short `summary` / `content_text` |
 | `catalog.json` | JSON | durable catalog SSOT (current index mirror) |
 
 > [!IMPORTANT]
 > **Not included:** full essay bodies or OPML. Durable catalog SSOT is
 > `catalog.json` (repo root). Public projections live flat in `feeds/` — the GitHub
 > repo *is* the published product (no separate `site/` or publish command).
-
-Raw URLs (point a reader at these):
-
-| Kind | RSS | Atom | JSON |
-| :--- | :--- | :--- | :--- |
-| Enriched | [`rss.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.xml) | [`atom.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/atom.xml) | [`feed.json`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/feed.json) |
-| Simple | [`rss.simple.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.simple.xml) | [`atom.simple.xml`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/atom.simple.xml) | [`feed.simple.json`](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/feed.simple.json) |
-
-> [!NOTE]
-> **Accepted risk (PGF-AUD-018):** GitHub raw serves these files as `text/plain`
-> (the body is still RSS / Atom / JSON). Strict readers that require
-> `application/rss+xml` (or similar) should point at local `feeds/` files from
-> the CLI or Colab. This project does not add GitHub Pages or `site/`.
 
 ---
 
@@ -108,18 +80,23 @@ Raw URLs (point a reader at these):
 
 ---
 
-## Notebook (Colab / Jupyter)
+## Local CLI
 
-[`notebook.ipynb`](./notebook.ipynb) — public-facing Colab for feed-reader users.
-**Run all** → HTML intro + one form cell (`uvx` update/check → `feeds.zip`).
+```bash
+mkdir pg-feeds && cd pg-feeds
+uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main \
+  pg-essay-feeds update
+```
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)
+Writes `feeds/` into the current directory. Point a feed reader at the local files.
 
-Dials: **Enrich** (default on; ~1 GET/essay for short summaries),
-**Auto-download** (browser download after zip). Zips all six
-`feeds/{rss,atom,feed}{,.simple}.*` files. Reachability issues show in a
-report-only status panel without blocking the zip. Output path is under
-Advanced (`/content/pg-feeds`).
+> Intended release is **1.0.0**; until the `v1.0.0` tag exists, install from `main`.
+
+> [!TIP]
+> Default `update` enriches due essays (~1 HTTP GET per due page, capped at 40
+> per run; `--all-pages` for a full-corpus refresh) with **4** enrich
+> workers (polite to paulgraham.com). Use `--no-enrich` (or
+> `PG_ESSAY_FEEDS_ENRICH=false`) for a fast index-only run.
 
 ---
 
@@ -231,6 +208,31 @@ See also: [DOCS.md → Configuration](./DOCS.md#configuration).
 
 ---
 
+## Maintainer / custom generation
+
+Generate a private `feeds/` tree (or a zip) instead of subscribing to the
+hosted files.
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)
+
+[`notebook.ipynb`](./notebook.ipynb) — **Run all** → HTML intro + one form
+cell (`uvx` update/check → `feeds.zip`). Dials: **Enrich** (default on;
+~1 GET/essay for short summaries), **Auto-download** (browser download
+after zip). Zips all six `feeds/{rss,atom,feed}{,.simple}.*` files.
+Reachability issues show in a report-only status panel without blocking
+the zip. Output path is under Advanced (`/content/pg-feeds`).
+
+Intended release is **1.0.0**; until the `v1.0.0` tag exists, install from `main`.
+
+Local clone:
+
+```bash
+uv sync --all-groups
+uv run pg-essay-feeds update
+```
+
+---
+
 ## Develop
 
 Contributor docs (architecture, tests, CI): **[DOCS.md](./DOCS.md)**
@@ -242,10 +244,13 @@ just all    # lint + types + tests (≥90% cov) + check
 
 | Doc | Audience |
 | :--- | :--- |
-| [README.md](./README.md) | Users |
+| [README.md](./README.md) | Users — hosted subscribe + local CLI |
 | [DOCS.md](./DOCS.md) | Developers |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors |
+| [SECURITY.md](./SECURITY.md) | Vulnerability reports |
+| [NOTICE](./NOTICE) | Software MIT; essay text remains Paul Graham's |
 | [AGENTS.md](./AGENTS.md) | Coding agents |
-| [notebook.ipynb](./notebook.ipynb) | Public Colab — Run all → `feeds.zip` |
+| [notebook.ipynb](./notebook.ipynb) | Maintainer / custom generation — Run all → `feeds.zip` |
 
 ---
 
@@ -256,7 +261,7 @@ just all    # lint + types + tests (≥90% cov) + check
 
 - No full essay bodies in feeds; short `description` / `summary` / JSON
   `content_text` only (same short `feed_summary()`, not the essay body).
-  Copyright on essay text remains with the author.
+  Copyright on essay text remains with the author. See [NOTICE](./NOTICE).
 - Month+year on a page is a hint only — it does **not** become `pubDate` /
   `published` / `date_published`.
 - Stable ids from URLs; Turbify chapters use a UUID derived from the path.
@@ -267,4 +272,8 @@ just all    # lint + types + tests (≥90% cov) + check
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+Software is **MIT** — see [LICENSE](./LICENSE).
+
+Essay titles, URLs, and short source-derived summaries remain Paul Graham's
+(or the original rights holder's). The MIT license does **not** relicense
+third-party essay text. See [NOTICE](./NOTICE).

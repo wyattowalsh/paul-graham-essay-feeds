@@ -3,9 +3,10 @@
 ## Mission
 
 Unofficial metadata-only RSS / Atom / JSON Feed for
-https://paulgraham.com/articles.html. Local CLI (+ Colab notebook), with a
-schema-versioned durable catalog. The GitHub repo (`feeds/` + `catalog.json`)
-is the published product — no separate publish/site surface.
+https://paulgraham.com/articles.html. Hosted raw GitHub feeds + local CLI
+(+ Colab for custom generation), with a schema-versioned durable catalog.
+The GitHub repo (`feeds/` + `catalog.json`) is the published product — no
+separate publish/site surface.
 
 ---
 
@@ -13,9 +14,12 @@ is the published product — no separate publish/site surface.
 
 | Doc | Audience |
 | :--- | :--- |
-| [README.md](./README.md) | Users (Colab + local CLI + hosted feeds) |
+| [README.md](./README.md) | Users — hosted subscribe (simple first) + local CLI |
 | [DOCS.md](./DOCS.md) | Developers — **single SSOT** (architecture, CLI, CI, decisions) |
-| [notebook.ipynb](./notebook.ipynb) | Public Colab — Run all → `feeds.zip` |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors (points at DOCS.md) |
+| [SECURITY.md](./SECURITY.md) | Vulnerability reports |
+| [NOTICE](./NOTICE) | Software MIT; essay text remains Paul Graham's |
+| [notebook.ipynb](./notebook.ipynb) | Maintainer / custom generation — Run all → `feeds.zip` |
 
 There is **no** `docs/` tree. Normative architecture decisions live in
 [DOCS.md § Architecture decisions](./DOCS.md#architecture-decisions-normative).

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import gzip
 import hashlib
+import zlib
 
 import httpx
 import pytest
@@ -10,6 +12,7 @@ import respx
 
 from paul_graham_essay_feeds.http import (
     ResultKind,
+    _decode_content_encoding,
     get_with_evidence,
     head_with_evidence,
     media_type_is_soft_html,
@@ -630,6 +633,123 @@ def test_https_non_443_port_rejected() -> None:
             allowed_hosts=frozenset({"paulgraham.com"}),
             max_bytes=1024,
         )
+
+
+@respx.mock
+def test_redirect_304_not_modified_requires_final_hop_conditionals() -> None:
+    """PGF-2026-011: original If-None-Match is not reused after extras are dropped."""
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(302, headers={"Location": "https://paulgraham.com/b.html"})
+    )
+    final = respx.get("https://paulgraham.com/b.html")
+    final.side_effect = [
+        httpx.Response(304, headers={"ETag": '"v1"'}),
+        httpx.Response(200, content=b"<html>after-redirect</html>"),
+    ]
+    with httpx.Client(trust_env=False, follow_redirects=False) as client:
+        result = request_with_evidence(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+            headers={"If-None-Match": '"v1"'},
+            prior_etag='"v1"',
+        )
+    assert result.evidence.result_kind is ResultKind.FETCHED
+    assert result.body == b"<html>after-redirect</html>"
+    assert "if-none-match" not in {k.lower() for k in final.calls[0].request.headers}
+
+
+@respx.mock
+def test_client_conditionals_on_final_hop_count_as_sent() -> None:
+    """PGF-2026-011: 304 inspects headers actually sent, including client defaults."""
+    respx.get("https://paulgraham.com/a.html").mock(
+        return_value=httpx.Response(302, headers={"Location": "https://paulgraham.com/b.html"})
+    )
+    respx.get("https://paulgraham.com/b.html").mock(
+        return_value=httpx.Response(304, headers={"ETag": '"v1"'})
+    )
+    with httpx.Client(
+        trust_env=False,
+        follow_redirects=False,
+        headers={"If-None-Match": '"v1"'},
+    ) as client:
+        result = request_with_evidence(
+            client,
+            "GET",
+            "https://paulgraham.com/a.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+            prior_etag='"v1"',
+        )
+    assert result.evidence.result_kind is ResultKind.NOT_MODIFIED
+
+
+def test_decode_content_encoding_gzip_deflate_br_order(monkeypatch: pytest.MonkeyPatch) -> None:
+    """PGF-2026-017: reverse-decode gzip / deflate / br in listed application order."""
+    plain = b"<html>pgf-encoding-order</html>"
+    marker = b"|br"
+
+    def fake_br_decompress(data: bytes) -> bytes:
+        assert data.endswith(marker)
+        return data[: -len(marker)]
+
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.http._brotli_decompress",
+        fake_br_decompress,
+    )
+    after_br = plain + marker
+    after_deflate = zlib.compress(after_br)
+    wire = gzip.compress(after_deflate)
+    assert _decode_content_encoding(wire, "br, deflate, gzip") == plain
+    assert _decode_content_encoding(gzip.compress(zlib.compress(plain)), "deflate, gzip") == plain
+    x_gzip_wire = gzip.compress(plain)
+    assert _decode_content_encoding(x_gzip_wire, "x-gzip") == plain
+
+
+def test_decode_content_encoding_identity_and_missing() -> None:
+    raw = b"<html>identity</html>"
+    assert _decode_content_encoding(raw, None) == raw
+    assert _decode_content_encoding(raw, "") == raw
+    assert _decode_content_encoding(raw, "identity") == raw
+    assert _decode_content_encoding(gzip.compress(raw), "identity, gzip") == raw
+
+
+def test_decode_content_encoding_empty_body_known_tokens() -> None:
+    """Empty entity skips decompression after tokens are validated as supported."""
+    assert _decode_content_encoding(b"", "gzip") == b""
+    assert _decode_content_encoding(b"", "br, deflate, gzip") == b""
+    assert _decode_content_encoding(b"", "identity") == b""
+
+
+def test_decode_content_encoding_unknown_token_fails_closed() -> None:
+    raw = b"<html>not zstd</html>"
+    with pytest.raises(FeedError, match=r"Unsupported Content-Encoding: zstd"):
+        _decode_content_encoding(raw, "zstd")
+    with pytest.raises(FeedError, match=r"Unsupported Content-Encoding: compress"):
+        _decode_content_encoding(raw, "compress")
+    with pytest.raises(FeedError, match=r"Unsupported Content-Encoding: zstd"):
+        _decode_content_encoding(gzip.compress(raw), "gzip, zstd")
+    with pytest.raises(FeedError, match=r"Unsupported Content-Encoding: zstd"):
+        _decode_content_encoding(b"", "zstd")
+
+
+def test_decode_content_encoding_missing_brotli_error_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _no_module(name: str, *args: object, **kwargs: object) -> object:
+        raise ImportError(name)
+
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.http.importlib.import_module",
+        _no_module,
+    )
+    with pytest.raises(
+        FeedError,
+        match=r"Unsupported Content-Encoding: br \(brotli package not installed\)",
+    ):
+        _decode_content_encoding(b"not-br-bytes", "br")
 
 
 @respx.mock

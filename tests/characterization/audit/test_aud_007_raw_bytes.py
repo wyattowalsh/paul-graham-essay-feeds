@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import gzip
 import hashlib
+import zlib
 from pathlib import Path
 
 import httpx
@@ -120,4 +122,109 @@ def test_gzip_oversize_uses_wire_budget() -> None:
             "https://paulgraham.com/gz.html",
             allowed_hosts=ALLOWED_HOSTS,
             max_bytes=len(wire) - 1,
+        )
+
+
+@pytest.mark.characterization
+@respx.mock
+def test_gzip_deflate_application_order() -> None:
+    """PGF-2026-017: Content-Encoding lists application order; decode is reversed."""
+    plain = b"<html>pgf gzip then deflate order</html>\n"
+    deflated = zlib.compress(plain)
+    wire = gzip.compress(deflated)
+    respx.get("https://paulgraham.com/layered.html").mock(
+        return_value=httpx.Response(
+            200,
+            content=wire,
+            headers={
+                "Content-Encoding": "deflate, gzip",
+                "Content-Type": "text/html",
+                "Content-Length": str(len(wire)),
+            },
+        )
+    )
+    with httpx.Client(trust_env=False, follow_redirects=False) as client:
+        result = get_with_evidence(
+            client,
+            "https://paulgraham.com/layered.html",
+            allowed_hosts=ALLOWED_HOSTS,
+            max_bytes=4096,
+        )
+    ev = result.evidence
+    assert ev.result_kind is ResultKind.FETCHED
+    assert result.body == plain
+    assert result.raw_body == wire
+    assert ev.raw_sha256 == hashlib.sha256(wire).hexdigest()
+    assert ev.decoded_sha256 == hashlib.sha256(plain).hexdigest()
+
+
+@pytest.mark.characterization
+@respx.mock
+def test_unknown_content_encoding_fails_closed() -> None:
+    """PGF-2026-017: unknown tokens are not treated as identity."""
+    body = b"<html>not actually zstd</html>"
+    respx.get("https://paulgraham.com/zstd.html").mock(
+        return_value=httpx.Response(
+            200,
+            content=body,
+            headers={"Content-Encoding": "zstd", "Content-Type": "text/html"},
+        )
+    )
+    with (
+        httpx.Client(trust_env=False, follow_redirects=False) as client,
+        pytest.raises(FeedError, match=r"Unsupported Content-Encoding: zstd"),
+    ):
+        get_with_evidence(
+            client,
+            "https://paulgraham.com/zstd.html",
+            allowed_hosts=ALLOWED_HOSTS,
+            max_bytes=1024,
+        )
+
+
+@pytest.mark.characterization
+@respx.mock
+def test_unknown_token_after_gzip_fails_closed() -> None:
+    """PGF-2026-017: gzip + unknown must not return the gzip-decoded entity."""
+    plain = b"<html>still compressed if zstd is ignored</html>"
+    wire = gzip.compress(plain)
+    respx.get("https://paulgraham.com/gz-unknown.html").mock(
+        return_value=httpx.Response(
+            200,
+            content=wire,
+            headers={"Content-Encoding": "gzip, zstd", "Content-Type": "text/html"},
+        )
+    )
+    with (
+        httpx.Client(trust_env=False, follow_redirects=False) as client,
+        pytest.raises(FeedError, match=r"Unsupported Content-Encoding: zstd"),
+    ):
+        get_with_evidence(
+            client,
+            "https://paulgraham.com/gz-unknown.html",
+            allowed_hosts=ALLOWED_HOSTS,
+            max_bytes=1024,
+        )
+
+
+@pytest.mark.characterization
+@respx.mock
+def test_hop_safe_unknown_content_encoding_fails_closed() -> None:
+    respx.get("https://paulgraham.com/zstd.html").mock(
+        return_value=httpx.Response(
+            200,
+            content=b"<html>nope</html>",
+            headers={"Content-Encoding": "zstd"},
+        )
+    )
+    with (
+        httpx.Client(trust_env=False, follow_redirects=False) as client,
+        pytest.raises(FeedError, match=r"Unsupported Content-Encoding: zstd"),
+    ):
+        hop_safe_request(
+            client,
+            "GET",
+            "https://paulgraham.com/zstd.html",
+            allowed_hosts=ALLOWED_HOSTS,
+            max_bytes=1024,
         )

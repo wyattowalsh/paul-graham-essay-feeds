@@ -360,8 +360,25 @@ def test_score_summary_quality_stacks_all_penalties() -> None:
     assert score == 0.0
     assert "subscribe" in flags
     assert "click_here" in flags
-    assert "nav_like" in flags
+    assert "promo" in flags
     assert "replacement_char" in flags
+
+
+def test_translation_menu_and_domain_search_fail_quality() -> None:
+    score, flags = score_summary_quality(
+        "Domain Name Search Turkish Translation Hebrew Translation Russian Translation"
+    )
+    assert score < 0.6
+    assert "translation_menu" in flags
+    assert "domain_search" in flags
+
+
+def test_book_promo_flag() -> None:
+    score, flags = score_summary_quality(
+        "You'll find this essay and 14 others in Hackers & Painters ."
+    )
+    assert score < 0.6
+    assert "book_promo" in flags
 
 
 def test_score_summary_quality_too_short_flag() -> None:

@@ -514,6 +514,7 @@ class _HopExchange:
     final_url: str
     status_code: int
     redirect_urls: tuple[str, ...]
+    request_headers: dict[str, str]
 
 
 def parse_content_type(header: str | None) -> tuple[str | None, str | None]:
@@ -607,7 +608,12 @@ def _304_is_acceptable(
     prior_body_hash: str | None,
     response_etag: str | None,
 ) -> bool:
-    """AUD-016: 304 is success only with sent conditionals and prior material."""
+    """AUD-016: 304 is success only with conditionals actually sent and prior material.
+
+    Inspect the headers on the hop that received the 304 (PGF-2026-011), not the
+    headers the caller originally intended. An unconditional 304 is never
+    acceptable, even when an earlier hop carried validators.
+    """
     inm = _header_ci(request_headers, "If-None-Match")
     ims = _header_ci(request_headers, "If-Modified-Since")
     if inm is None and ims is None:
@@ -707,14 +713,31 @@ def _brotli_decompress(data: bytes) -> bytes:
     return bytes(decompress(data))
 
 
+def _content_encoding_tokens(content_encoding: str | None) -> list[str]:
+    """Split a Content-Encoding header into lowercase coding tokens."""
+    if not content_encoding or not content_encoding.strip():
+        return []
+    return [t.strip().lower() for t in content_encoding.split(",") if t.strip()]
+
+
 def _decode_content_encoding(raw: bytes, content_encoding: str | None) -> bytes:
-    """Undo Content-Encoding (gzip / deflate / br). Identity when missing/unknown."""
-    if not raw or not content_encoding or not content_encoding.strip():
+    """Undo Content-Encoding (gzip / deflate / br) in reverse application order.
+
+    Missing or ``identity`` is a no-op. Every declared non-identity token must
+    be supported; unknown encodings fail closed and are never treated as
+    identity (PGF-2026-017). Empty bodies skip decompression after that check
+    so HEAD/304 cannot be misread as a successful identity decode.
+    """
+    tokens = _content_encoding_tokens(content_encoding)
+    if not tokens:
         return raw
     body = raw
-    tokens = [t.strip().lower() for t in content_encoding.split(",") if t.strip()]
     for token in reversed(tokens):
-        if token in {"identity"}:
+        if token == "identity":
+            continue
+        if token not in {"gzip", "x-gzip", "deflate", "br", "brotli"}:
+            raise FeedError(f"Unsupported Content-Encoding: {token}")
+        if not body:
             continue
         if token in {"gzip", "x-gzip"}:
             body = gzip.decompress(body)
@@ -723,10 +746,8 @@ def _decode_content_encoding(raw: bytes, content_encoding: str | None) -> bytes:
                 body = zlib.decompress(body)
             except zlib.error:
                 body = zlib.decompress(body, -zlib.MAX_WBITS)
-        elif token in {"br", "brotli"}:
-            body = _brotli_decompress(body)
         else:
-            continue
+            body = _brotli_decompress(body)
     return body
 
 
@@ -924,6 +945,7 @@ def _hop_exchange(
     response: httpx.Response | None = None
     extra_headers = dict(headers) if headers else None
     header_snap: dict[str, str | None] = {}
+    sent_headers: dict[str, str] = dict(extra_headers) if extra_headers else {}
     final_url = url
     status_code = 0
     raw = b""
@@ -933,6 +955,7 @@ def _hop_exchange(
         _assert_hop_allowed(current, allowed_hosts, allow_loopback=allow_loopback)
         logger.debug("{} {}", method_u, current)
         req = client.build_request(method_u, current, headers=extra_headers)
+        sent_headers = {str(k): str(v) for k, v in req.headers.items()}
         response = client.send(req, stream=True, follow_redirects=False)
         try:
             if response.status_code in _REDIRECT_STATUS:
@@ -996,6 +1019,7 @@ def _hop_exchange(
         final_url=final_url,
         status_code=status_code,
         redirect_urls=tuple(redirect_chain),
+        request_headers=sent_headers,
     )
 
 
@@ -1029,11 +1053,14 @@ def request_with_evidence(
       via ``Content-Length`` (when present) and a streaming hard-stop on **wire**
       bytes, then content-decode into a second buffer.
 
-    HTTP 304 (**AUD-016**) is ``NOT_MODIFIED`` only when the request sent
-    ``If-None-Match`` and/or ``If-Modified-Since`` **and** the caller supplied
-    prior material (``prior_etag`` / ``prior_last_modified`` / ``prior_body_hash``).
-    Otherwise a GET retries once without conditionals; a second empty/304 outcome
-    is ``FAILED``.
+    HTTP 304 (**AUD-016** / **PGF-2026-011**) is ``NOT_MODIFIED`` only when the
+    **final hop** actually sent ``If-None-Match`` and/or ``If-Modified-Since``
+    **and** the caller supplied prior material (``prior_etag`` /
+    ``prior_last_modified`` / ``prior_body_hash``). Redirect hops drop
+    per-request extras, so a 304 after redirect is classified from the headers
+    sent on that hop — never from the original request. An unconditional
+    final-hop 304 is never ``NOT_MODIFIED``. Otherwise a GET retries once
+    without conditionals; a second empty/304 outcome is ``FAILED``.
 
     Raises :class:`FeedError` for policy violations (disallowed host, too many
     redirects, oversize GET body). Transport-level exceptions become
@@ -1083,7 +1110,7 @@ def request_with_evidence(
             not_modified_ok = False
             if exchange.status_code == 304:
                 not_modified_ok = _304_is_acceptable(
-                    request_headers=active_headers,
+                    request_headers=exchange.request_headers,
                     prior_etag=prior_etag,
                     prior_last_modified=prior_last_modified,
                     prior_body_hash=prior_body_hash,
@@ -1486,6 +1513,7 @@ class IndexFetchResult:
     decoded_sha256: str | None = None
     raw_bytes_received: int | None = None
     decoded_bytes_received: int | None = None
+    selected_encoding: str | None = None
 
 
 def fetch_index(
@@ -1536,6 +1564,7 @@ def fetch_index(
                     decoded_sha256=None,
                     raw_bytes_received=ev.bytes_received,
                     decoded_bytes_received=ev.decoded_bytes_received,
+                    selected_encoding=None,
                 )
             if ev.result_kind is ResultKind.FAILED:
                 if result.response is None:
@@ -1547,9 +1576,9 @@ def fetch_index(
             if result.response is None:
                 raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
             result.response.raise_for_status()
-            html = decode_html(result.body, transport_charset=ev.charset)
+            document = decode_html_document(result.body, transport_charset=ev.charset)
             return IndexFetchResult(
-                html=html,
+                html=document.text,
                 not_modified=False,
                 etag=ev.etag,
                 last_modified=ev.last_modified,
@@ -1558,6 +1587,7 @@ def fetch_index(
                 decoded_sha256=ev.decoded_sha256,
                 raw_bytes_received=ev.bytes_received,
                 decoded_bytes_received=ev.decoded_bytes_received,
+                selected_encoding=document.encoding,
             )
 
     return run_with_retry(_call, attempts=attempts, what=f"fetch index {url}")

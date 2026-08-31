@@ -243,6 +243,9 @@ def test_enrich_essays_fetches_and_merges() -> None:
     assert len(out) == 1
     e = out[0]
     assert e.summary and "billionaires" in e.summary
+    assert e.summary_source == "meta_description"
+    assert e.quality_score is not None and e.quality_score >= 0.6
+    assert "promo" not in e.quality_flags
     assert e.content_text is None
     assert e.published_hint == "June 2026"
     assert e.published_at is None
@@ -385,6 +388,9 @@ def test_apply_enrichment_304_retains_prior_good() -> None:
             last_modified="Tue, 01 Jul 2024 00:00:00 GMT",
             raw_sha256="a" * 64,
             decoded_sha256="a" * 64,
+            raw_bytes_received=12,
+            decoded_bytes_received=12,
+            selected_encoding="windows-1252",
             status_code=200,
         ),
     )
@@ -411,6 +417,10 @@ def test_apply_enrichment_304_retains_prior_good() -> None:
     assert updated.page.status_code == 304
     assert updated.page.etag == '"page-v1"'
     assert updated.page.raw_sha256 == "a" * 64
+    assert updated.page.decoded_sha256 == "a" * 64
+    assert updated.page.raw_bytes_received == 12
+    assert updated.page.decoded_bytes_received == 12
+    assert updated.page.selected_encoding == "windows-1252"
     assert updated.page.last_checked_at == now
     assert updated.page.last_attempted_at == now
     assert updated.page.last_response_at == now
@@ -462,6 +472,9 @@ def test_apply_enrichment_200_persists_validators() -> None:
             status_code=200,
             raw_sha256=raw_digest,
             decoded_sha256=decoded_digest,
+            raw_bytes_received=80,
+            decoded_bytes_received=64,
+            selected_encoding="utf-8",
         )
     }
     next_catalog = _apply_enrichment(catalog, [essay], now=now, page_evidence=evidence)
@@ -473,6 +486,9 @@ def test_apply_enrichment_200_persists_validators() -> None:
     assert updated.page.raw_sha256 == raw_digest
     assert updated.page.decoded_sha256 == decoded_digest
     assert updated.page.raw_sha256 != updated.page.decoded_sha256
+    assert updated.page.raw_bytes_received == 80
+    assert updated.page.decoded_bytes_received == 64
+    assert updated.page.selected_encoding == "utf-8"
     assert updated.page.last_checked_at == now
     assert updated.page.last_attempted_at == now
     assert updated.page.last_success_at == now

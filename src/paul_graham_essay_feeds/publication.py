@@ -101,22 +101,12 @@ def _write_lock_fd(fd: int, token: str) -> None:
     os.fsync(fd)
 
 
-def _lockfile_token(path: Path) -> str | None:
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return None
-    token = raw.get("token") if isinstance(raw, dict) else None
-    if isinstance(token, str) and token:
-        return token
-    return None
-
-
 def acquire_write_lock(root: Path, *, timeout: float = _LOCK_TIMEOUT_S) -> WriteLock:
-    """Acquire an exclusive interprocess flock on ``.cache/write.lock``.
+    """Acquire an exclusive POSIX ``fcntl.flock`` on ``.cache/write.lock``.
 
     The fd stays open for the hold. Contenders retry ``LOCK_EX | LOCK_NB`` until
     ``timeout`` on the monotonic clock. Live locks are never stolen by mtime.
+    The lock file inode is stable across release; this owner rewrites the token.
     """
     lock_path = Path(root) / _LOCK_REL
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -153,13 +143,10 @@ def acquire_write_lock(root: Path, *, timeout: float = _LOCK_TIMEOUT_S) -> Write
 def release_write_lock(lock: WriteLock) -> None:
     """Release a lock acquired by :func:`acquire_write_lock`.
 
-    Unlinks the lock file only when the on-disk owner token matches ``lock.token``.
+    Unlocks and closes the fd only. The ``.cache/write.lock`` inode is kept so a
+    waiter that already opened the path cannot lock a stale inode while a new
+    file is created at the same name. The next owner rewrites the token in place.
     """
-    path = Path(lock.path)
-    file_token = _lockfile_token(path)
-    if file_token is not None and file_token == lock.token:
-        with suppress(OSError):
-            path.unlink()
     fd = lock.fd
     if fd >= 0:
         with suppress(OSError):
@@ -235,12 +222,17 @@ def write_staging_generation(
     simple_atom: bytes,
     simple_json_feed: bytes,
 ) -> str:
-    """Write a complete staged generation; return generation id."""
+    """Write a complete staged generation; return generation id.
+
+    Allocates ``gen_id`` first, stamps ``catalog.last_generation_id``, then
+    serializes the catalog and writes artifacts + MANIFEST so the staged
+    catalog, MANIFEST, pointer, and public catalog share that id.
+    """
     gen_id = uuid.uuid4().hex
+    stamped = catalog.model_copy(update={"last_generation_id": gen_id})
+    catalog_blob = catalog_to_json(stamped).encode("utf-8")
     gen_dir = Path(root) / _GEN_ROOT_REL / gen_id
     gen_dir.mkdir(parents=True, exist_ok=True)
-
-    catalog_blob = catalog_to_json(catalog).encode("utf-8")
     payloads = _staging_payloads(
         catalog_blob=catalog_blob,
         rss=rss,

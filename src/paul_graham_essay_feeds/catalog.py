@@ -11,6 +11,7 @@ import contextlib
 import json
 import os
 import tempfile
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -20,6 +21,8 @@ from typing import Any, Final, Literal
 from pydantic import ValidationError
 
 from paul_graham_essay_feeds.models import (
+    ABSENCE_CONFIRMATIONS_TO_DELETE,
+    ABSENCE_HYSTERESIS_MAX_REMOVED,
     Catalog,
     CatalogEntry,
     ConfigurationError,
@@ -34,6 +37,9 @@ DEFAULT_CATALOG_REL: Path = Path("catalog.json")
 
 CATALOG_SCHEMA_VERSION: Final[Literal[3]] = 3
 """Current durable catalog schema version written by this module."""
+
+PAGE_FETCH_CURSOR_KEY: Final[str] = "page_fetch_cursor"
+"""Durable fair-rotation cursor key in ``catalog.versions`` (PGF-2026-008)."""
 
 _FILE_MODE: int = 0o644
 _DEFAULT_FINGERPRINT = "default"
@@ -201,6 +207,8 @@ def _omit_redundant_entry_fields(catalog: Catalog, payload: dict[str, Any]) -> N
         if not isinstance(raw, dict):
             continue
         raw.pop("position", None)
+        if entry.consecutive_absences == 0:
+            raw.pop("consecutive_absences", None)
         if shared is not None and entry.last_seen_at == shared:
             raw.pop("last_seen_at", None)
 
@@ -366,11 +374,12 @@ def _entry_material_changed(prior: CatalogEntry, current: CatalogEntry) -> bool:
         or prior.summary != current.summary
         or prior.summary_source != current.summary_source
         or prior.summary_quality != current.summary_quality
+        or prior.quality_flags != current.quality_flags
         or prior.prior_good_summary != current.prior_good_summary
         or prior.published_at != current.published_at
         or prior.published_hint != current.published_hint
         or prior.observed_updated_at != current.observed_updated_at
-        or prior.page.raw_sha256 != current.page.raw_sha256
+        or prior.page.decoded_sha256 != current.page.decoded_sha256
     )
 
 
@@ -387,6 +396,30 @@ class ChangeSet:
     removed: list[str] = field(default_factory=list)
     updated: list[str] = field(default_factory=list)
     unchanged: list[str] = field(default_factory=list)
+    held: list[str] = field(default_factory=list)
+
+
+def _insert_held_absences(
+    discovered_order: list[str],
+    held_ids: Sequence[str],
+    prior_order: Sequence[str],
+) -> list[str]:
+    """Keep held ids at their prior relative positions among remaining neighbors."""
+    held_set = set(held_ids)
+    result = list(discovered_order)
+    present = set(result)
+    for hid in prior_order:
+        if hid not in held_set:
+            continue
+        insert_at = 0
+        for pred in prior_order:
+            if pred == hid:
+                break
+            if pred in present:
+                insert_at = result.index(pred) + 1
+        result.insert(insert_at, hid)
+        present.add(hid)
+    return result
 
 
 def reconcile_discovery(
@@ -397,9 +430,15 @@ def reconcile_discovery(
 ) -> tuple[Catalog, ChangeSet]:
     """Reconcile discovered index items against a prior durable catalog.
 
-    Catalog membership mirrors the current index only: essays absent from
-    ``items`` are hard-deleted (not soft-retained). Prior enrichment is reused
-    when a rediscovered id still exists in ``prior.entries``.
+    Membership aims to mirror the current index. A one-run omission of 1-4
+    **new** absences is held via private ``consecutive_absences`` and is not
+    published as a deletion. A second consecutive observation hard-deletes.
+    Five or more *new* absences hard-delete immediately (already-held ids still
+    follow the streak machine; large-ratio cases are quarantined before
+    reconcile). No public tombstone / soft-retain feed states.
+
+    Prior enrichment is reused when a rediscovered id still exists in
+    ``prior.entries``.
 
     Parameters
     ----------
@@ -407,7 +446,7 @@ def reconcile_discovery(
         Previous catalog, or ``None`` for a cold bootstrap.
     items:
         Ordered discovery list (newest first). Catalog positions are assigned
-        as ``0..n-1`` in this order.
+        as ``0..n-1`` in this order (held absences keep prior relative order).
     now:
         Aware UTC observation instant for first/last/observed timestamps.
 
@@ -418,7 +457,7 @@ def reconcile_discovery(
     """
     observed_at = require_aware_utc(now)
     prior_entries = dict(prior.entries) if prior is not None else {}
-    prior_order = set(prior.entry_order) if prior is not None else set()
+    prior_order_list = list(prior.entry_order) if prior is not None else []
     discovered_ids = {item.stable_id for item in items}
 
     added: list[str] = []
@@ -457,6 +496,7 @@ def reconcile_discovery(
                 "observed_updated_at": (
                     observed_at if material_changed else existing.observed_updated_at
                 ),
+                "consecutive_absences": 0,
             }
         )
         if material_changed:
@@ -464,7 +504,33 @@ def reconcile_discovery(
         else:
             unchanged.append(stable_id)
 
-    removed = sorted(prior_order - discovered_ids)
+    absent_ids = [sid for sid in prior_order_list if sid not in discovered_ids]
+    held: list[str] = []
+    new_absence_count = 0
+    for sid in absent_ids:
+        existing = prior_entries.get(sid)
+        if existing is not None and existing.consecutive_absences == 0:
+            new_absence_count += 1
+    mass_new = new_absence_count > ABSENCE_HYSTERESIS_MAX_REMOVED
+    removed_ids: list[str] = []
+    for sid in absent_ids:
+        existing = prior_entries.get(sid)
+        if existing is None:
+            continue
+        streak = existing.consecutive_absences + 1
+        is_new = existing.consecutive_absences == 0
+        if (is_new and mass_new) or streak >= ABSENCE_CONFIRMATIONS_TO_DELETE:
+            removed_ids.append(sid)
+        else:
+            next_entries[sid] = existing.model_copy(update={"consecutive_absences": streak})
+            held.append(sid)
+    removed = sorted(removed_ids)
+    if held:
+        entry_order = _insert_held_absences(entry_order, held, prior_order_list)
+        next_entries = {
+            sid: next_entries[sid].model_copy(update={"position": position})
+            for position, sid in enumerate(entry_order)
+        }
 
     if prior is None:
         catalog = Catalog(
@@ -491,6 +557,7 @@ def reconcile_discovery(
         removed=removed,
         updated=updated,
         unchanged=unchanged,
+        held=held,
     )
     return catalog, changeset
 
@@ -589,14 +656,11 @@ def plan_refresh(
             )
         )
 
-    cursor = 0
-    if page_fetch_cursor is not None:
-        cursor = max(0, page_fetch_cursor)
-    else:
-        raw_cursor = catalog.versions.get("page_fetch_cursor")
-        if raw_cursor is not None:
-            with contextlib.suppress(TypeError, ValueError):
-                cursor = max(0, int(raw_cursor))
+    cursor = (
+        max(0, page_fetch_cursor)
+        if page_fetch_cursor is not None
+        else parse_page_fetch_cursor(catalog.versions)
+    )
     decisions = _apply_page_fetch_budget(
         provisional, max_page_fetches=max_page_fetches, cursor=cursor
     )
@@ -619,10 +683,15 @@ def _entry_reasons(
     # Index-only runs must not plan per-page work solely because page state is
     # unchecked — that reintroduced full rewrites every pass (F-001 adjacent).
     reasons: list[RefreshReason] = []
-    if enrich and _is_stale(
-        _success_clock(entry.page),
-        now=now,
-        stale_after_days=stale_after_days,
+    in_backoff = _in_failure_backoff(entry.page, now=now)
+    if (
+        enrich
+        and not in_backoff
+        and _is_stale(
+            _success_clock(entry.page),
+            now=now,
+            stale_after_days=stale_after_days,
+        )
     ):
         reasons.append(RefreshReason.STALE)
     if enrich and _missing_summary(entry.summary) and _missing_summary_due(entry.page, now=now):
@@ -643,12 +712,15 @@ def _success_clock(page: object) -> datetime | None:
     return getattr(page, "last_success_at", None)  # type: ignore[no-any-return]
 
 
+def _in_failure_backoff(page: object, *, now: datetime) -> bool:
+    """True when ``next_retry_at`` is set and still in the future."""
+    next_retry = getattr(page, "next_retry_at", None)
+    return next_retry is not None and now < next_retry  # type: ignore[no-any-return]
+
+
 def _missing_summary_due(page: object, *, now: datetime) -> bool:
     """Whether a missing summary should re-queue (respect failure backoff)."""
-    next_retry = getattr(page, "next_retry_at", None)
-    if next_retry is not None:
-        return now >= next_retry  # type: ignore[no-any-return]
-    return True
+    return not _in_failure_backoff(page, now=now)
 
 
 def _is_stale(
@@ -725,3 +797,96 @@ def _apply_page_fetch_budget(
         else:
             out.append(decision)
     return out
+
+
+def parse_page_fetch_cursor(
+    versions: Mapping[str, str],
+    *,
+    key: str = PAGE_FETCH_CURSOR_KEY,
+) -> int:
+    """Parse a non-negative integer page-fetch cursor from ``catalog.versions``."""
+    raw = versions.get(key)
+    if raw is None:
+        return 0
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return 0
+
+
+def last_selected_page_fetch_index(
+    decisions: Sequence[RefreshDecision],
+    *,
+    cursor: int,
+) -> int | None:
+    """Catalog index of the last attempted page fetch in rotation order.
+
+    ``decisions`` must already have ``fetch_page`` set for this run's attempts.
+    Failures keep ``fetch_page`` True so they still count as selected. Items in
+    backoff are ``fetch_page`` False and are not selected.
+    """
+    n = len(decisions)
+    if n == 0:
+        return None
+    start = cursor % n
+    last: int | None = None
+    for offset in range(n):
+        idx = (start + offset) % n
+        if decisions[idx].fetch_page:
+            last = idx
+    return last
+
+
+def next_page_fetch_cursor(
+    *,
+    catalog_size: int,
+    last_selected_index: int | None,
+    current_cursor: int = 0,
+) -> int:
+    """Persist ``(last_selected_index + 1) % catalog_size``.
+
+    When nothing was selected, ``current_cursor`` is unchanged (mod size).
+    """
+    if catalog_size <= 0:
+        return 0
+    if last_selected_index is None:
+        return current_cursor % catalog_size
+    return (last_selected_index + 1) % catalog_size
+
+
+def page_fetch_cursor_after_attempts(
+    decisions: Sequence[RefreshDecision],
+    *,
+    cursor: int,
+) -> int:
+    """Next persisted page-fetch cursor after this run's attempts.
+
+    Advances by last selected catalog index + 1, not by served work count over
+    the due subset. Failed attempts remain ``fetch_page`` True so the cursor
+    still advances. Backoff is unchanged (planner already cleared fetch_page
+    for not-due pages).
+    """
+    last = last_selected_page_fetch_index(decisions, cursor=cursor)
+    return next_page_fetch_cursor(
+        catalog_size=len(decisions),
+        last_selected_index=last,
+        current_cursor=cursor,
+    )
+
+
+def catalog_with_page_fetch_cursor(
+    catalog: Catalog,
+    decisions: Sequence[RefreshDecision],
+    *,
+    cursor: int | None = None,
+) -> Catalog:
+    """Stamp ``versions[page_fetch_cursor]`` after this run's page-fetch attempts.
+
+    Pipeline calls this after planning (including failed attempts). Does not
+    mutate backoff clocks.
+    """
+    start = parse_page_fetch_cursor(catalog.versions) if cursor is None else max(0, cursor)
+    next_cursor = page_fetch_cursor_after_attempts(decisions, cursor=start)
+    versions = dict(catalog.versions)
+    versions[PAGE_FETCH_CURSOR_KEY] = str(next_cursor)
+    return catalog.model_copy(update={"versions": versions})

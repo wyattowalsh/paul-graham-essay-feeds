@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from selectolax.parser import HTMLParser, Node
 
 from paul_graham_essay_feeds.models import (
+    ABSENCE_QUARANTINE_MIN_REMOVED,
     MIN_ITEMS,
     PROTECTED_PATHS,
     SOURCE_URL,
@@ -449,6 +450,9 @@ def evaluate_discovery_anomaly(
     Floor-satisfying but partial extractions that would hard-delete a large
     share of the prior catalog are quarantined (H-03). Overlap is true set
     intersection over stable ids (RV-R-007) — same-size total swaps quarantine.
+
+    Removals below ``ABSENCE_QUARANTINE_MIN_REMOVED`` (1-4) are not quarantined
+    here; catalog reconcile applies absence hysteresis (PGF-2026-013).
     """
     prior_count = len(prior_ids)
     if prior_count <= 0:
@@ -460,7 +464,7 @@ def evaluate_discovery_anomaly(
     removal_ratio = removed / prior_count
     addition_ratio = added / prior_count
     overlap = len(prior_ids & discovered_ids) / prior_count
-    if removal_ratio > max_removal_ratio and removed >= 5:
+    if removal_ratio > max_removal_ratio and removed >= ABSENCE_QUARANTINE_MIN_REMOVED:
         return (
             f"discovery removal ratio {removal_ratio:.2%} "
             f"({removed} of {prior_count}) exceeds {max_removal_ratio:.0%}"

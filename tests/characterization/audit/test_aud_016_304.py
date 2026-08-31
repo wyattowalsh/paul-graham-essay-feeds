@@ -156,6 +156,64 @@ def test_fetch_index_valid_304() -> None:
 
 @pytest.mark.characterization
 @respx.mock
+def test_redirect_304_uses_final_hop_headers_not_original() -> None:
+    """PGF-2026-011: 304 after redirect is not NOT_MODIFIED when extras were dropped."""
+    start = "https://paulgraham.com/a.html"
+    final = "https://paulgraham.com/b.html"
+    respx.get(start).mock(return_value=httpx.Response(302, headers={"Location": final}))
+    final_route = respx.get(final)
+    final_route.side_effect = [
+        httpx.Response(304, headers={"ETag": '"v1"'}),
+        httpx.Response(200, content=b"<html>fresh</html>"),
+    ]
+    with httpx.Client(trust_env=False, follow_redirects=False) as client:
+        result = get_with_evidence(
+            client,
+            start,
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+            headers={"If-None-Match": '"v1"'},
+            prior_etag='"v1"',
+        )
+    assert result.evidence.result_kind is ResultKind.FETCHED
+    assert result.evidence.result_kind is not ResultKind.NOT_MODIFIED
+    assert result.body == b"<html>fresh</html>"
+    assert final_route.call_count == 2
+    first_final = {k.lower() for k in final_route.calls[0].request.headers}
+    assert "if-none-match" not in first_final
+    second_final = {k.lower() for k in final_route.calls[1].request.headers}
+    assert "if-none-match" not in second_final
+
+
+@pytest.mark.characterization
+@respx.mock
+def test_redirect_unconditional_304_never_not_modified() -> None:
+    """PGF-2026-011: unconditional final-hop 304 stays FAILED after the AUD-016 retry."""
+    start = "https://paulgraham.com/a.html"
+    final = "https://paulgraham.com/b.html"
+    respx.get(start).mock(return_value=httpx.Response(302, headers={"Location": final}))
+    final_route = respx.get(final)
+    final_route.side_effect = [
+        httpx.Response(304, headers={"ETag": '"v1"'}),
+        httpx.Response(304, headers={"ETag": '"v1"'}),
+    ]
+    with httpx.Client(trust_env=False, follow_redirects=False) as client:
+        result = get_with_evidence(
+            client,
+            start,
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+            headers={"If-None-Match": '"v1"'},
+            prior_etag='"v1"',
+        )
+    assert result.evidence.result_kind is ResultKind.FAILED
+    assert result.evidence.result_kind is not ResultKind.NOT_MODIFIED
+    assert result.evidence.status_code == 304
+    assert final_route.call_count == 2
+
+
+@pytest.mark.characterization
+@respx.mock
 def test_enrich_unconditional_304_is_failure_evidence() -> None:
     route = respx.get("https://paulgraham.com/earn.html")
     route.side_effect = [httpx.Response(304), httpx.Response(304)]

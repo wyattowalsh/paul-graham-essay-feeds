@@ -18,6 +18,9 @@ Sanitized HTML and encoding samples for discovery, decoding, and summary quality
 | `index-duplicate-anchors.html` | Duplicate title/url rows (first-wins) | Synthetic |
 | `page-promo-chrome.html` | Nav/footer/promo contamination | Synthetic essay shell |
 | `page-meta-description.html` | Clean og/meta description preferred | Synthetic essay shell |
+
+PGF-2026-022 seven-essay chrome cases live as minimized HTML in
+`tests/characterization/test_pgf_2026_022_extraction.py` (not live captures).
 | `encoding-windows-1252.bin` | Legacy bytes (smart quotes) for decode policy | Synthetic windows-1252 |
 | `encoding-utf8-bom.html` | UTF-8 BOM detection | Synthetic UTF-8 with BOM |
 

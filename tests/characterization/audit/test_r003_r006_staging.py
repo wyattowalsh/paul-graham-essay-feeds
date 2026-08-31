@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from paul_graham_essay_feeds.catalog import load_catalog
 from paul_graham_essay_feeds.models import (
     MATERIALIZE_POINTER_SCHEMA_VERSION,
     STAGING_MANIFEST_SCHEMA_VERSION,
@@ -73,9 +74,16 @@ def test_happy_materialize_writes_public(tmp_path: Path) -> None:
     manifest = StagingManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
     assert manifest.schema_version == STAGING_MANIFEST_SCHEMA_VERSION
     assert manifest.gen_id == gen
+    staged = json.loads(
+        (tmp_path / ".cache" / "generations" / gen / "catalog.json").read_text(encoding="utf-8")
+    )
+    assert staged["last_generation_id"] == gen
     materialize_generation(tmp_path, gen_id=gen)
     assert (tmp_path / "catalog.json").is_file()
     assert (tmp_path / "feeds" / "rss.xml").is_file()
+    public = load_catalog(tmp_path / "catalog.json")
+    assert public is not None
+    assert public.last_generation_id == gen
 
 
 def test_pointer_uses_atomic_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

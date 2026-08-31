@@ -1,0 +1,16 @@
+NOTICE
+
+This repository contains two kinds of material.
+
+1. Software (the CLI, tests, workflows, and feed-generation code) is licensed
+   under the MIT License. See LICENSE.
+
+2. Essay titles, URLs, and short source-derived summaries in catalog.json and
+   feeds/* are derived from Paul Graham's essays at
+   https://paulgraham.com/articles.html. Those texts remain Paul Graham's (or
+   the original rights holder's). The MIT License does not relicense
+   third-party essay text, titles, or summaries, and does not grant any right
+   to reproduce full essay bodies.
+
+This project is unofficial and is not affiliated with or endorsed by
+Paul Graham.

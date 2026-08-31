@@ -34,7 +34,12 @@ from paul_graham_essay_feeds.models import (
 )
 from paul_graham_essay_feeds.pipeline import run_catalog_pipeline
 from paul_graham_essay_feeds.publication import abandon_recovery as abandon_publication_recovery
-from paul_graham_essay_feeds.settings import Settings
+from paul_graham_essay_feeds.settings import (
+    DEFAULT_MAX_LINK_VALIDATIONS,
+    DEFAULT_MAX_PAGE_FETCHES,
+    Settings,
+    budget_label,
+)
 
 console = Console(stderr=True)
 
@@ -78,20 +83,26 @@ def _assert_catalog_feed_id_parity(catalog: Catalog, root: Path) -> None:
             )
 
 
-def _emit_update_action(action: str, *, result_file: Path | None) -> None:
-    """Append ``action=unchanged|state_changed|updated`` for machine consumers.
+def _emit_update_action(
+    action: str,
+    *,
+    result_file: Path | None,
+    links_checked: int = 0,
+    links_skipped: int = 0,
+) -> None:
+    """Append machine side-channel keys for ``--result-file`` / ``$GITHUB_OUTPUT``.
 
-    Writes to ``--result-file`` and/or ``$GITHUB_OUTPUT`` when set.
+    ``action`` is last so existing consumers that ``endswith`` still match.
     """
-    line = f"action={action}\n"
+    payload = f"links_checked={links_checked}\nlinks_skipped={links_skipped}\naction={action}\n"
     if result_file is not None:
         result_file.parent.mkdir(parents=True, exist_ok=True)
         with result_file.open("a", encoding="utf-8") as handle:
-            handle.write(line)
+            handle.write(payload)
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:
         with Path(github_output).open("a", encoding="utf-8") as handle:
-            handle.write(line)
+            handle.write(payload)
 
 
 def configure_logging(*, verbose: bool = False, quiet: bool = False) -> None:
@@ -139,6 +150,7 @@ def _settings(
     enrich: bool | None = None,
     force: bool | None = None,
     public_base_url: str | None = None,
+    all_pages: bool | None = None,
 ) -> Settings:
     """Merge CLI overrides onto pydantic-settings (COMMANDLINE > env/.env > defaults)."""
     try:
@@ -164,6 +176,14 @@ def _settings(
             data["verbose"] = verbose
         if public_base_url is not None:
             data["public_base_url"] = public_base_url
+        if all_pages is True:
+            data["all_pages"] = True
+        elif all_pages is False:
+            data["all_pages"] = False
+            if data.get("max_page_fetches") is None:
+                data["max_page_fetches"] = DEFAULT_MAX_PAGE_FETCHES
+            if data.get("max_link_validations") is None:
+                data["max_link_validations"] = DEFAULT_MAX_LINK_VALIDATIONS
         # Prefer quiet when both end up true (CLI quiet wins over verbose).
         if data.get("quiet") and data.get("verbose"):
             data["verbose"] = False
@@ -219,14 +239,24 @@ def update_cmd(
         typer.Option(
             "--validate-links/--no-validate-links",
             help=(
-                "Live HEAD/GET each essay URL (default on; report-only). "
-                "Use --no-validate-links to skip probes."
+                "Live-probe essay URLs even on no-op/skip-network runs "
+                "(default on; report-only). Use --no-validate-links to skip probes."
             ),
         ),
     ] = None,
     public_base_url: Annotated[
         str | None,
         typer.Option("--public-base-url", help="Public base URL for feed self links"),
+    ] = None,
+    all_pages: Annotated[
+        bool | None,
+        typer.Option(
+            "--all-pages/--no-all-pages",
+            help=(
+                "Uncap page fetches and dedicated link probes for a full-corpus "
+                "refresh (default caps match CI at 40)"
+            ),
+        ),
     ] = None,
     from_feeds: Annotated[
         bool,
@@ -252,7 +282,10 @@ def update_cmd(
         Path | None,
         typer.Option(
             "--result-file",
-            help="Append action=unchanged|state_changed|updated for machine consumers",
+            help=(
+                "Append links_checked/links_skipped and "
+                "action=unchanged|state_changed|updated for machine consumers"
+            ),
         ),
     ] = None,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Errors only")] = False,
@@ -270,12 +303,19 @@ def update_cmd(
         enrich=enrich,
         force=force,
         public_base_url=public_base_url,
+        all_pages=all_pages,
     )
     configure_logging(verbose=settings.verbose, quiet=settings.quiet)
     try:
         reporter = ProgressReporter(
             OutputPolicy(quiet=settings.quiet, machine=not sys.stderr.isatty())
         )
+        if not settings.quiet:
+            logger.info(
+                "Request budget: {} page fetches, {} dedicated link probes",
+                budget_label(settings.max_page_fetches),
+                budget_label(settings.max_link_validations),
+            )
         if abandon_recovery:
             abandon_publication_recovery(settings.repo_root)
         result = run_catalog_pipeline(
@@ -287,7 +327,12 @@ def update_cmd(
         action = result.action
         count = result.essay_count
 
-        _emit_update_action(action, result_file=result_file)
+        _emit_update_action(
+            action,
+            result_file=result_file,
+            links_checked=result.links_checked,
+            links_skipped=result.links_skipped,
+        )
         if settings.quiet:
             return
         if action == "unchanged":

@@ -4,19 +4,22 @@ Maintainer reference for **paul-graham-essay-feeds**.
 
 | Doc | Role |
 | :--- | :--- |
-| [README.md](./README.md) | Users — Colab CTA + local CLI |
+| [README.md](./README.md) | Users — hosted subscribe (simple first) + local CLI |
 | [DOCS.md](./DOCS.md) | Developers (this file — architecture, CLI, CI, decisions) |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors (points at this file) |
+| [SECURITY.md](./SECURITY.md) | Vulnerability reports |
+| [NOTICE](./NOTICE) | Software MIT; essay text remains Paul Graham's |
 | [AGENTS.md](./AGENTS.md) | Coding agents |
-| [notebook.ipynb](./notebook.ipynb) | Public Colab — Run all → `feeds.zip` |
+| [notebook.ipynb](./notebook.ipynb) | Maintainer / custom generation — Run all → `feeds.zip` |
 
 > [!NOTE]
 > There is **no** separate `docs/` directory. Architecture decisions are in
 > [§ Architecture decisions](#architecture-decisions-normative) below.
 
 > [!TIP]
-> End users: start with **[Open in Colab](https://colab.research.google.com/github/wyattowalsh/paul-graham-essay-feeds/blob/main/notebook.ipynb)**
-> (beautiful Run-all notebook → `feeds.zip`). This file is for architecture,
-> CLI contracts, and CI.
+> End users: subscribe from **[README.md](./README.md)** (hosted raw GitHub
+> feeds; no Python). This file is for architecture, CLI contracts, and CI.
+> Colab is maintainer / custom generation, not the subscribe path.
 
 ---
 
@@ -97,7 +100,7 @@ flowchart LR
 | Structural validate | Always (inside discover) | Host / URL / count floor |
 | Catalog reconcile | Always (default pipeline) | Durable `catalog.json` SSOT (repo root) |
 | Refresh plan | Always | F-001: never skip solely on index hash |
-| Fetch pages | Default validate on; `--no-validate-links` skips dedicated probes | One user-facing phase: enrich GET = check + summary for due IDs; dedicated probes only for URLs not enriched this run. Report-only; never drop essays |
+| Fetch pages | Default validate on; `--no-validate-links` skips dedicated probes | Dedicated probes are an independent planned phase and still run on ordinary no-op/skip-network (PGF-2026-005). Enrich GET = check + summary for due IDs; dedicated probes only for URLs not enriched this run. Report-only; never drop essays |
 | Enrich | Default on; planned pages only | Prior-good summary retained; page GET is the reachability check for those URLs |
 | Publish | Verify both snapshots → write six `feeds/*` → `catalog.json` | Public product is root `catalog.json` plus six flat `feeds/*` files. Private gitignored `.cache/generations` + `.cache/materialize.json` + writer lock are implementation-only. No public generation tree / `current.json` |
 
@@ -150,7 +153,7 @@ Entry points: `cli:main` / `__main__.py`. Schema SSOT is Pydantic `models.py` (n
 | `catalog.json` | Durable catalog SSOT (repo root) — current index only |
 | `feeds/` | Six flat projections: enriched + simple (see AD-002) |
 | `.cache/` | Gitignored HTTP validator sidecar |
-| `notebook.ipynb` | Public Colab (HTML intro + generate → `feeds.zip`) |
+| `notebook.ipynb` | Maintainer / custom generation (HTML intro + generate → `feeds.zip`) |
 
 ### State publication
 
@@ -189,7 +192,7 @@ flag uses `_is_cmdline`):
 
 | Pattern | Flags | Mechanism |
 | :--- | :--- | :--- |
-| **None-sentinel dual bools** | `--enrich/--no-enrich`, `--validate-links/--no-validate-links`, `--force/--no-force` | Typer `bool \| None = None`; omitted → keep Settings/env |
+| **None-sentinel dual bools** | `--enrich/--no-enrich`, `--validate-links/--no-validate-links`, `--force/--no-force`, `--all-pages/--no-all-pages` | Typer `bool \| None = None`; omitted → keep Settings/env |
 | **Cmdline-gated defaults** | `-q` / `--quiet`, `-v` / `--verbose` | Typer `bool = False`; `_cmdline_or_none` applies only when `ParameterSource.COMMANDLINE` |
 
 Optional scalars (`--repo-root`, `--min-items`, `--timeout`, …) use `T | None = None`
@@ -198,8 +201,9 @@ the same way as dual bools. If both quiet and verbose end up true, quiet wins.
 > [!NOTE]
 > Env-only knobs (no CLI flags): `STALE_AFTER_DAYS`, `LINK_WORKERS`,
 > `ENRICH_WORKERS`, `MAX_BYTES`, `ALLOW_DISCOVERY_FALLBACK`,
-> `HOST_COOLDOWN_SECONDS` (all under `PG_ESSAY_FEEDS_*`). See
-> [§ Configuration](#configuration).
+> `HOST_COOLDOWN_SECONDS`, `MAX_PAGE_FETCHES`, `MAX_LINK_VALIDATIONS`
+> (all under `PG_ESSAY_FEEDS_*`). `--all-pages` / `PG_ESSAY_FEEDS_ALL_PAGES`
+> uncaps both fetch budgets. See [§ Configuration](#configuration).
 
 ### `update`
 
@@ -212,11 +216,12 @@ the same way as dual bools. If both quiet and verbose end up true, quiet wins.
 | `--retries INT` | `3` | Extra attempts after first |
 | `--enrich` / `--no-enrich` | enrich on (env) | Per-page short summary scrape |
 | `--force` / `--no-force` | off (env) | Bypass refresh-planner no-op (marks work due; not an index-hash skip) |
-| `--validate-links` / `--no-validate-links` | on (env) | Live HEAD/GET; report-only; never drop essays |
+| `--validate-links` / `--no-validate-links` | on (env) | Live probes even on no-op/skip-network; report-only; never drop essays |
 | `--public-base-url URL` | env / unset | Public base for self links |
+| `--all-pages` / `--no-all-pages` | off (env) | Uncap page fetches and dedicated link probes (full due corpus). Default caps are 40 / 40 (matching CI). |
 | `--from-feeds` | off | Seed the in-memory catalog candidate from existing feeds; persist only after successful verification/publication |
 | `--abandon-recovery` / `--no-abandon-recovery` | off | Explicit repair for irrecoverable `.cache/materialize.json` (quarantines pointer + generation). Not a third command. |
-| `--result-file PATH` | — | Append `action=unchanged\|state_changed\|updated`; also writes `$GITHUB_OUTPUT` when set (quiet success side-channel) |
+| `--result-file PATH` | — | Append `links_checked`, `links_skipped`, then `action=unchanged\|state_changed\|updated`; also writes `$GITHUB_OUTPUT` when set (quiet success side-channel) |
 | `-q` / `--quiet` | off (env) | Quiet success → zero stdout **and** stderr; errors only; result-file / `$GITHUB_OUTPUT` still write |
 | `-v` / `--verbose` | off (env) | Debug logs |
 
@@ -241,7 +246,7 @@ loads it and asserts `entry_order` ids match ordered ids in both `feed.json` and
 
 `Settings` loads env vars with prefix **`PG_ESSAY_FEEDS_`** (optional `.env`).
 
-Env-only (no CLI flag): `MAX_BYTES`, `LINK_WORKERS`, `ENRICH_WORKERS`, `STALE_AFTER_DAYS`, `ALLOW_DISCOVERY_FALLBACK`, `HOST_COOLDOWN_SECONDS` (plus `LINK_TIMEOUT` / `ENRICH_TIMEOUT`).
+Env-only (no CLI flag): `MAX_BYTES`, `LINK_WORKERS`, `ENRICH_WORKERS`, `STALE_AFTER_DAYS`, `ALLOW_DISCOVERY_FALLBACK`, `HOST_COOLDOWN_SECONDS`, `MAX_PAGE_FETCHES`, `MAX_LINK_VALIDATIONS` (plus `LINK_TIMEOUT` / `ENRICH_TIMEOUT`). `--all-pages` uncaps both fetch budgets.
 
 | Env var | Default | Notes |
 | :--- | :--- | :--- |
@@ -260,6 +265,9 @@ Env-only (no CLI flag): `MAX_BYTES`, `LINK_WORKERS`, `ENRICH_WORKERS`, `STALE_AF
 | `PG_ESSAY_FEEDS_FORCE` | `false` | Bypass refresh-planner no-op (not an index-hash skip) |
 | `PG_ESSAY_FEEDS_PUBLIC_BASE_URL` | unset | Public base for feed self links (https directory URL; no query, fragment, or userinfo) |
 | `PG_ESSAY_FEEDS_STALE_AFTER_DAYS` | `30` | Re-fetch page metadata after N days (env-only; update-feeds.yml sets `90`) |
+| `PG_ESSAY_FEEDS_MAX_PAGE_FETCHES` | `40` | Cap due page enrich GETs per run (`none`/`unlimited` = uncapped; empty keeps 40) |
+| `PG_ESSAY_FEEDS_MAX_LINK_VALIDATIONS` | `40` | Cap dedicated link probes per run (`none`/`unlimited` = uncapped; empty keeps 40) |
+| `PG_ESSAY_FEEDS_ALL_PAGES` | `false` | Uncap both fetch budgets (same as `--all-pages`) |
 | `PG_ESSAY_FEEDS_ALLOW_DISCOVERY_FALLBACK` | `true` | Sparse-marker discovery fallback (env-only) |
 | `PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS` | `0.05` | Min seconds between requests to the same host (shared `HostCooldown`; env-only) |
 | `PG_ESSAY_FEEDS_QUIET` / `PG_ESSAY_FEEDS_VERBOSE` | false | Log levels |
@@ -273,10 +281,11 @@ export PG_ESSAY_FEEDS_ENRICH=false   # optional: skip per-page scrapes
 
 | Mode | Network | Notes |
 | :--- | :--- | :--- |
-| Default (`ENRICH=true`, checks on) | Index + ~1 GET/essay; dedicated probes only for URLs not enriched this run | Richest short descriptions; reachability failures warn only |
-| `--no-enrich` / `PG_ESSAY_FEEDS_ENRICH=false` | Index (+ probes unless disabled) | Fast; generic blurbs when no summary |
+| Default (`ENRICH=true`, checks on) | Index + up to 40 due page GETs; dedicated probes capped at 40 for URLs not enriched this run | Conservative bound matching CI; `--all-pages` for the full due corpus |
+| `--no-enrich` / `PG_ESSAY_FEEDS_ENRICH=false` | Index (+ probes unless disabled, still capped at 40) | Fast; generic blurbs when no summary |
+| `--all-pages` / `PG_ESSAY_FEEDS_ALL_PAGES=true` | Uncapped due page GETs and dedicated probes | Explicit full-corpus opt-in |
 | Not due (catalog planner) | Index GET (or local read) only | No page fetches planned → skip rewrite, but still take the writer lock, recover, and verify the existing seven-file bundle |
-| `--force` / `PG_ESSAY_FEEDS_FORCE=true` | Full pipeline | Bypass refresh-planner no-op (not index-hash skip) |
+| `--force` / `PG_ESSAY_FEEDS_FORCE=true` | Planner marks work due; per-run caps still apply unless `--all-pages` | Bypass refresh-planner no-op (not index-hash skip) |
 | `--no-validate-links` | Skip dedicated HEAD/GET probes | Default checks are report-only and never drop essays |
 
 CI and offline smoke use `--no-enrich --no-validate-links`. Reachability
@@ -382,10 +391,11 @@ byte cap.
 Turbify query strings are stripped for stable identity.
 
 > [!NOTE]
-> **PGF-AUD-018 (accepted-risk):** GitHub raw serves committed `feeds/*` as
+> **PGF-2026-015 (accepted-risk):** GitHub raw serves committed `feeds/*` as
 > `text/plain` (the body is still RSS / Atom / JSON). This project does not add
 > GitHub Pages or `site/`. Strict readers that require `application/rss+xml`
-> should point at local `feeds/` from the CLI or Colab.
+> should point at local `feeds/` from the CLI. Typed CDN hosting is out of
+> scope.
 
 ---
 
@@ -425,20 +435,23 @@ just cov
 
 | Workflow | Role |
 | :--- | :--- |
-| `ci.yml` | matrix 3.12–3.14; lint/types (3.13); pytest + cov ≥90%; committed-feed `check` on `feeds/`; offline catalog smoke (`--no-enrich --no-validate-links`; `feeds/` + `catalog.json`); assert no `feeds/validated/`; dist job |
-| `release.yml` | on tag `v*`: version match, quality gates, `uv build --no-sources`, wheel smoke, GitHub Release |
-| `update-feeds.yml` | scheduled live refresh → validate → commit `feeds/` + `catalog.json` to `main` (publish job attests those seven files) |
-| `verify-product.yml` | `workflow_run` after “Update feeds”: check + audit slice on the product SHA (`GITHUB_TOKEN` push does not retrigger `ci.yml`) |
+| `ci.yml` | matrix 3.12–3.14; lint/types (3.13); pytest + cov ≥90% (report precision 2) then raw `coverage.xml` lines+branches `covered/valid ≥ 0.90`; committed-feed `check` on `feeds/`; offline catalog smoke (`--no-enrich --no-validate-links`; `feeds/` + `catalog.json`); assert no `feeds/validated/`; dist job |
+| `release.yml` | on tag `v*`: version match, quality gates, `uv build --no-sources`, wheel smoke, GitHub Release. Privileged `setup-uv` does not force `enable-cache: true` |
+| `update-feeds.yml` | scheduled live refresh → upload seven-file workspace → publish gates the **downloaded** candidate (not a sibling source checkout) → commit `feeds/` + `catalog.json` to `main` → `product_sha=$(git rev-parse HEAD)` → re-check that tree → attest seven subjects plus provenance context (source SHA, candidate digest, subjects, product SHA). Bot push still `--force-with-lease`. Publish `setup-uv` sets `enable-cache: false` |
+| `verify-product.yml` | `workflow_run` after “Update feeds” (or `workflow_dispatch` with an explicit SHA): check + audit slice on the **product SHA** from the `product-identity` artifact or the explicit ref — never mutable `main` HEAD. `GITHUB_TOKEN` push does not retrigger `ci.yml`. `setup-uv` does not force cache |
 | Dependabot | weekly `uv` + `github-actions` |
 
 CI policy: exit 0 on matrix; full-SHA action pins; least privilege on generation jobs;
 multi-line scripts use `set -euo pipefail`. Coverage fail-under is enforced on full
 suite entrypoints (CI / `just test` / `just ci-local`), not on partial path selection.
+`[tool.coverage.report] precision = 2` and `fail_under = 90` so 89.955% cannot round
+to 90.0; CI additionally fails if the raw Cobertura totals are below 0.90.
 
 > [!NOTE]
 > GitHub Actions auto-sets `$GITHUB_OUTPUT` for step outputs. `update --quiet` still
-> appends `action=unchanged|state_changed|updated` there (and to `--result-file`
-> when passed). The scheduled workflow publishes when `action` is `updated`
+> appends `links_checked`, `links_skipped`, and `action=unchanged|state_changed|updated`
+> there (and to `--result-file` when passed). The scheduled workflow publishes when
+> `action` is `updated`
 > **or** `state_changed` so catalog-only clock advances are not dropped.
 > Settings default `STALE_AFTER_DAYS=30`; `update-feeds.yml` overrides to `90` so
 > daily runs do not mass re-enrich on day 31 when the index is unchanged.
@@ -452,6 +465,8 @@ suite entrypoints (CI / `just test` / `just ci-local`), not on partial path sele
 | `updated` | Material feed projections rewritten (and catalog) | `catalog.json` + `feeds/*` | **yes** |
 
 `PipelineResult.changed_paths` lists relative paths written for machine consumers.
+`links_checked` / `links_skipped` count dedicated live probes this run (enrich GET
+covers due pages; those IDs are not skipped-probe counts).
 
 ### just recipes
 
@@ -482,11 +497,11 @@ uv build --no-sources
 
 ---
 
-## Notebook
+## Notebook (maintainer / custom generation)
 
-[`notebook.ipynb`](./notebook.ipynb) is the **public Colab product** (same
-filename as the README hero badge) — audience is feed-reader users, not
-maintainers:
+[`notebook.ipynb`](./notebook.ipynb) is **not** the subscribe path. Readers
+use the hosted raw GitHub feeds in README. Colab is for generating a private
+`feeds.zip`.
 
 1. HTML hero (`IPython.display.HTML`, `#@title` + `cellView: form` so code stays
    hidden) — brand, unofficial disclaimer, how-to, RSS / Atom / JSON what-you-get
@@ -507,10 +522,11 @@ maintainers:
    unreachable URL. Zip still downloads.
 5. Troubleshooting cell (`#@title` + form-hidden HTML `<details>`)
 
-No package API imports in the kernel; CLI only via `uvx` from the immutable
-`@v0.2.0` tag (`git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v0.2.0`).
-`@main` tracks latest (mutable) and is not the default user pin. The `v0.2.0`
-git tag is not cut in this change.
+No package API imports in the kernel; CLI only via `uvx` from
+`git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main`.
+Intended release is **1.0.0**; until the `v1.0.0` tag exists, install from
+`main`. After the tag is published, flip that one sentence to `@v1.0.0`.
+Do not pin a tag that does not exist.
 `notebook.ipynb` stays ruff/ty-excluded.
 
 ---
@@ -521,13 +537,15 @@ git tag is not cut in this change.
 2. Optional: refresh committed `feeds/` (see below)
 3. `pg-essay-feeds check` (parity + `content_text`)
 4. Commit when ready (user-gated) — ship **check + regenerated feeds together**
-5. Push an annotated tag `vX.Y.Z` matching `__version__` (e.g. `0.2.0` →
-   `v0.2.0`) → `.github/workflows/release.yml` asserts the tag↔version match,
+5. Push an annotated tag `vX.Y.Z` matching `__version__` (e.g. `1.0.0` →
+   `v1.0.0`) → `.github/workflows/release.yml` asserts the tag↔version match,
    runs the same quality gates as CI, then builds wheel/sdist, creates a
    GitHub Release via softprops with **auto-generated release notes** (from
    commits/PRs since the previous tag), and attaches `dist/*`. No `uv publish`
-   on tag. Consumer docs (README `uvx`, Colab notebook) pin that same tag, not
-   `@main`. **Do not cut the tag from this docs-only change.**
+   on tag. **Do not cut the tag from this change.** Intended release is
+   **1.0.0**; until the `v1.0.0` tag exists, install from `main`. After the
+   tag exists, flip that one maintained sentence in README + notebook to
+   `@v1.0.0`. Do not pin a tag that does not exist.
 
 ```bash
 just build   # local: uv build --no-sources + wheel smoke
@@ -535,9 +553,10 @@ just build   # local: uv build --no-sources + wheel smoke
 
 > [!NOTE]
 > Hatch sdist excludes `/feeds`, `/.github`, `/.venv`, and `/dist`. That does
-> **not** break `uvx --from git+…@v0.2.0`: git install still clones the full repo
-> (committed feeds available locally); installed wheels write `feeds/` at runtime.
-> `@main` is the mutable tip; default user docs use the version tag.
+> **not** break `uvx --from git+…@main` (or `@v1.0.0` after the tag exists):
+> git install still clones the full repo (committed feeds available locally);
+> installed wheels write `feeds/` at runtime. Until `v1.0.0` exists, user
+> docs install from `@main`.
 
 ### Regenerating committed feeds
 
@@ -566,23 +585,34 @@ Expectations after regen:
 CI runs `pg-essay-feeds check` on the committed `feeds/` tree. Do not land code that
 requires `content_text` without matching regenerated artifacts in the same change.
 
+### Version pin (PGF-2026-004)
+
+Package `__version__` is `1.0.0`. Historical `[0.2.0]` in CHANGELOG is the
+prior advertised-but-untagged integrity work — do not revive `@v0.2.0` as a
+user pin. Intended release is **1.0.0**; until the `v1.0.0` tag exists,
+install from `main`. After the tag is published, flip that one sentence.
+
 ### Branch protection (rulesets)
 
-Path-aware ruleset **intent** (PGF-AUD-019, maintainer-apply — this change does
-**not** execute `gh api`):
+Path-aware ruleset **intent** (PGF-2026-016, maintainer-apply — this change
+does **not** execute `gh api`; agents must not apply rulesets):
 
 | Surface | Policy |
 | :--- | :--- |
 | Source on `main` | Require a pull request + CI checks |
-| Product files | Allow `github-actions[bot]` from the **Update feeds** workflow to push **only** `feeds/` and `catalog.json` |
-| Bypass | Do **not** add the GitHub Actions app as a global bypass (that would let any workflow skip PRs on source) |
+| Product files | **Bot path bypass:** exclude `feeds/**/*` and `catalog.json` so `github-actions[bot]` from the **Update feeds** workflow can push **only** those seven files |
+| Bypass | Do **not** add the GitHub Actions app as a global `bypass_actors` Integration (that would let any workflow skip PRs on source) |
 
-`update-feeds.yml` already stages only those seven product paths. A `GITHUB_TOKEN`
-push does **not** retrigger `on: push` CI. `verify-product.yml` (`workflow_run`
-after “Update feeds”) plus the publish-job `actions/attest-build-provenance`
-step bind a check and an **Actions artifact attestation** to the product SHA.
-Signing is that attestation, not a repo GPG key. Ruleset apply is still a
-maintainer action (partial until applied).
+`update-feeds.yml` already stages only those seven product paths. Publish copies
+the downloaded candidate workspace onto the product paths, checks it, then
+force-with-lease pushes. After the push it records `product_sha=$(git rev-parse
+HEAD)`, re-checks that tree, and attests the seven files plus a provenance
+document naming source SHA, candidate digest, subjects, and product SHA. A
+`GITHUB_TOKEN` push does **not** retrigger `on: push` CI. `verify-product.yml`
+(`workflow_run` after “Update feeds”, or `workflow_dispatch` with an explicit
+SHA) checks out that product SHA from the `product-identity` artifact — not
+mutable `main` HEAD. Signing is the Actions artifact attestation, not a repo
+GPG key. Ruleset apply is still a maintainer action (partial until applied).
 
 If REST rejects `conditions.file_path`, set the same exclude in the UI
 (Settings → Rules → Rulesets → targeting / target files) using `fnmatch`
@@ -706,15 +736,25 @@ invented dates; no 1970 entry `updated`.
 ### AD-002 — Catalog SSOT
 
 Schema-versioned **`catalog.json`** is durable SSOT (Pydantic in
-`models.py`). Membership mirrors the **current** articles index only: essays
-absent from the latest discovery pass are **hard-deleted** from the catalog (no
-lifecycle / soft-retain / tombstones). Prior enrichment is reused when an id is
-still on the index. Preserve prior-good summary on recoverable enrich failures.
-Index-only skip is **invalid**; refresh planning uses catalog + page state (F-001).
-Dedicated live probes rotate via `catalog.versions["link_validation_cursor"]`
-(AUD-010); page enrich fetches rotate via `page_fetch_cursor`. On-disk
-`catalog.json` remains `schema_version: 2` until a successful update writes a
-newer schema (schema 3 is pending if that catalog lane lands).
+`models.py`). Membership aims to mirror the **current** articles index: a
+one-run omission of 1-4 essays is **held** (private `consecutive_absences`,
+default 0 so existing catalogs load) and is not published as a deletion; a
+second consecutive observation **hard-deletes**. Five or more removals at
+ratio >15% **quarantine** before reconcile (H-03 / PGF-2026-013). No
+lifecycle / soft-retain / tombstone feed states. Prior enrichment is reused
+when an id is still on the index. Preserve prior-good summary on recoverable
+enrich failures. Index-only skip is **invalid**; refresh planning uses catalog
++ page state (F-001). Dedicated live probes rotate via
+`catalog.versions["link_validation_cursor"]` (AUD-010). Fair page-fetch
+rotation persists `(last_selected_index + 1) % catalog_size` in
+`page_fetch_cursor` (PGF-2026-008), advancing after attempts including
+failures via `catalog_with_page_fetch_cursor`; backoff (`next_retry_at`) is
+independent. Catalog material digest excludes wire/`raw_sha256` (provenance
+only); feed-visible fields plus decoded page hash decide skip vs publish
+(PGF-2026-009). On-disk `catalog.json`
+is `schema_version: 3` (compact diffs: omit per-entry `position` and shared
+`last_seen_at`). Schema 2 files still load via `migrate_catalog`. Published
+bundles stamp a non-null `last_generation_id`.
 
 Feed projections (both deep-verified before write):
 
@@ -746,11 +786,18 @@ UUID URN (protected Turbify ACL chapters). Normalize `www` → apex; strip fragm
 - GET hard-caps transferred bytes; shared decoder (BOM → transport charset → meta →
   UTF-8 → Windows-1252 fallback); quarantine unexpected U+FFFD.
 - Retry idempotent transients only; honor bounded `Retry-After`; full jitter otherwise.
-- Persist ETag/Last-Modified/hashes; conditional GET / 304 as check evidence only
-  (AUD-016: 304 is `NOT_MODIFIED` only with conditionals and prior material).
+- Persist ETag/Last-Modified/hashes/byte counts/`selected_encoding` on accepted
+  200; 304 preserves prior hashes/counts/encoding while advancing clocks
+  (PGF-2026-010). Conditional GET / 304 as check evidence only
+  (AUD-016 / PGF-2026-011: 304 is `NOT_MODIFIED` only with conditionals
+  **actually sent on the final hop** and prior material. Redirect hops drop
+  per-request extras; an unconditional final-hop 304 is never `NOT_MODIFIED`).
 - `raw_sha256` / `bytes_received` are **wire** bytes (pre content-decode).
   `decoded_sha256` / `decoded_bytes_received` are the entity after Content-Encoding
-  is removed (AUD-007). They match for identity encoding.
+  is removed (AUD-007). They match for identity encoding. Declared non-identity
+  Content-Encoding tokens fail closed when unsupported — unknown encodings are
+  never treated as identity (PGF-2026-017). Supported codings: gzip / x-gzip,
+  deflate, br (optional brotli package; missing-brotli error is unchanged).
 - Shared `HostCooldown` (default `host_cooldown_seconds=0.05`) spaces enrich GETs
   and dedicated probes to the same host (AUD-017).
 
@@ -761,29 +808,39 @@ verify enriched + simple in memory → write six feeds/* → write catalog.json
 ```
 
 Feeds-then-catalog: projections land before the durable catalog stamp. This is
-**not** a multi-file atomic transaction — a crash between feed replaces and
-`catalog.json` can leave feeds ahead of the catalog (`check` catches
-`entry_order` id parity vs both JSON feeds). Failure before any durable replace
-leaves prior catalog + feeds intact. Public product stays flat: no second feed
-tree, no public generation tree / `current.json`, no `site/`, no `feeds/validated/`.
+**not** a multi-file atomic transaction — **local seven-file visibility**
+(PGF-2026-018): public replace is one file at a time (six `feeds/*` then
+`catalog.json`). A crash can leave a torn seven-file set; `check` is the
+detector (`entry_order` id parity vs both JSON feeds). Failure before any
+durable replace leaves prior catalog + feeds intact. Do not add a second
+public tree or a directory rename-swap. Public product stays flat: no public
+generation tree / `current.json`, no `site/`, no `feeds/validated/`.
 Private gitignored `.cache/generations` + `.cache/materialize.json` + writer lock
 remain the recovery implementation.
 
 Every durable decision (including the planner **skip** / no-op path) runs
 **under the writer lock**: `acquire_write_lock` → `recover_materialize` → verify
 the existing seven-file bundle (skip path) or stage/publish (AUD-001). Network
-stays outside the lock. The lock is OS `flock` / `WriteLock` on
-`.cache/write.lock`; live locks are never stolen by mtime (AUD-002). Recover
-is fail-closed: malformed or unverifiable pointers raise after a best-effort
-quarantine; they are never silently deleted (AUD-005). `--abandon-recovery` is
-the explicit repair for that irrecoverable pointer.
+stays outside the lock. The lock is POSIX `fcntl.flock` / `WriteLock` on
+`.cache/write.lock` (macOS/Linux; not Windows — no Win32 lock). Release
+unlocks and closes the fd; the lock-file inode is never unlinked
+(PGF-2026-001). Live locks are never stolen by mtime (AUD-002). Staging
+allocates `gen_id`, stamps `catalog.last_generation_id`, then writes
+artifacts + MANIFEST so manifest, pointer, and public catalog agree
+(PGF-2026-003). Recover is fail-closed: malformed or unverifiable pointers
+raise after a best-effort quarantine; they are never silently deleted
+(AUD-005). `--abandon-recovery` is the explicit repair for that
+irrecoverable pointer.
 
 Material-noop after enrich may still persist catalog clocks when feed bytes are
 unchanged. The decisive comparison and chosen write happen **after** acquiring
 the writer lock and after `recover_materialize`, including when recovery is a
 no-op (PGF-P0-001 / RV-R-001). Matching post-lock disk overlays this run's
-non-material clocks onto the **reloaded** catalog. Differing material publishes
-this run's feeds and catalog together in the same lock (RV-C-001). Never
+non-material clocks onto the **reloaded** catalog. If the durable catalog
+material digest differs from the digest the candidate was based on, finalize
+aborts with `FeedError` rather than publishing a slower older candidate over
+a newer accepted state (PGF-2026-002). Same-base new material still publishes
+feeds and catalog together in the same lock (RV-C-001). Never
 catalog-only-save the pre-lock object. The path returns `action=state_changed`
 (not `unchanged`) when only the catalog is written, so scheduled automation
 commits the catalog.
@@ -791,12 +848,14 @@ commits the catalog.
 ### AD-006 — CLI and Python
 
 - Python **3.12–3.14** (`requires-python >=3.12`); ship `py.typed`.
+- POSIX only (macOS/Linux classifiers): writer lock is `fcntl.flock`.
 - Commands: `update` + `check` only (no `site` / legacy pipeline escape hatches).
   `update --abandon-recovery` is a flag on `update`, not a third command.
 - Flags override Settings only when explicitly passed (None-sentinel dual bools
   **or** `_cmdline_or_none` for quiet/verbose — see [§ Precedence](#precedence)).
 - Quiet success → **zero bytes** on stdout **and** stderr. Carve-out:
-  `--result-file` and `$GITHUB_OUTPUT` still append `action=…` under `--quiet`.
+  `--result-file` and `$GITHUB_OUTPUT` still append `links_checked` /
+  `links_skipped` and `action=…` under `--quiet`.
 
 | Exit | Meaning |
 | :--- | :--- |
@@ -808,20 +867,70 @@ commits the catalog.
 
 ### AD-007 — Governance
 
-- MIT covers **code**, not Paul Graham essays.
+- MIT covers **code**, not Paul Graham essays. [NOTICE](./NOTICE) is the
+  LICENSE-adjacent split: software MIT; titles, URLs, and derived summaries
+  remain Paul Graham's (or the original rights holder's). Do not relicense
+  third-party text.
 - Short source-derived summaries only; no full-body storage.
 - Release tags must match package version; user-facing CHANGELOG only.
+  Package version is `1.0.0`; do not pin a git tag that does not exist
+  (PGF-2026-004).
 - Scheduled automation commits deterministic `catalog.json` + `feeds/` to `main`.
 - Signing of published product files uses **GitHub Actions artifact attestations**
   (`actions/attest-build-provenance` on the Update feeds publish job), not a
-  repo GPG key.
+  repo GPG key. Candidate→product SHA chain (PGF-2026-012): one candidate
+  workspace binds to one `product_sha`; the attestation subjects include
+  provenance context naming source SHA, candidate digest, the seven product
+  paths, and product SHA. `verify-product.yml` checks that SHA, not mutable
+  `main` HEAD.
 
 ### AD-008 — CI clean
 
 Matrix 3.12/3.13/3.14; full-SHA pins; least privilege; offline suite default;
-coverage ≥90% on full suite; `pg-essay-feeds check` on committed feeds; offline smoke
+coverage ≥90% on full suite with report **precision 2** (89.955% must fail;
+90.000% must pass) plus a CI gate on raw `coverage.xml` `(lines+branches)
+covered/valid`; `pg-essay-feeds check` on committed feeds; offline smoke
 uses `--no-enrich --no-validate-links` and asserts catalog pipeline + feed
-projections under `feeds/`.
+projections under `feeds/`. Privileged publish / verify-product / release
+jobs do not force `setup-uv` `enable-cache: true`.
+
+### AD-009 — Summary extraction quality (PGF-2026-022)
+
+Enriched summaries are short source-derived prose, never translation menus,
+YC/book banners, domain-search chrome, or high-link-density related-link
+blocks. A phrase such as “want to start a startup” inside a long essay
+`<p>` does **not** make that paragraph chrome.
+
+`PageMetadata` / `Essay` carry `summary_source`, `quality_score`, and
+`quality_flags` from extract. Pipeline storage writes those onto
+`CatalogEntry` (`summary_source`, `summary_quality`, `quality_flags`) —
+never the hardcoded source `page` or quality `0.9`.
+
+A candidate below `SUMMARY_QUALITY_THRESHOLD` (0.6) or with a semantic-fail
+flag is rejected. Fallback is prior-good **only** when prior-good itself
+passes `verify.summary_passes_semantic_gate`; otherwise the deterministic
+title blurb (`Read “{title}” by Paul Graham.`, source `title`).
+Promo/navigation-only strings fail that gate. On-disk `check` of the
+committed seven-file product applies the gate to **enriched** summaries
+(simple stays title-only). Seven chrome rows that failed the gate were
+rewritten to the title blurb offline (no live crawl); `ideas.html` is the
+chrome case, not the passing `startupideas.html`. Other rows still carry
+legacy `summary_source=page` / `summary_quality=0.9` until a later enrich;
+their paragraph text already passes the gate.
+
+### Accepted risks (document only)
+
+- **PGF-2026-015 (raw GitHub MIME):** hosted subscribe URLs are raw
+  `githubusercontent.com` blobs. GitHub serves them as `text/plain`, so some
+  readers will not autodetect RSS/Atom/JSON Feed. Typed CDN hosting is out of
+  scope; do not add a MIME-forcing proxy in this repo.
+- **PGF-2026-016 (GitHub ruleset):** operator steps are in
+  [§ Branch protection (rulesets)](#branch-protection-rulesets). Agents must
+  not `gh api` apply rulesets.
+- **PGF-2026-018 (per-file materialize):** local seven-file visibility —
+  public replace is still one file at a time under the writer lock (catalog
+  + six feeds). A crash can leave a torn seven-file set; `check` is the
+  detector. Do not add a second public tree or rename-swap of a directory.
 
 ---
 
@@ -829,8 +938,12 @@ projections under `feeds/`.
 
 | Path | Role |
 | :--- | :--- |
-| [README.md](./README.md) | Users — Colab hero + local CLI |
+| [README.md](./README.md) | Users — hosted subscribe (simple first) + local CLI |
 | [DOCS.md](./DOCS.md) | Developers (this file; single SSOT including architecture decisions) |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors (points at this file; no `docs/` tree) |
+| [SECURITY.md](./SECURITY.md) | Vulnerability reports (private advisories) |
+| [NOTICE](./NOTICE) | Software MIT; essay text remains Paul Graham's |
 | [AGENTS.md](./AGENTS.md) | Coding agents |
-| [notebook.ipynb](./notebook.ipynb) | Public Colab — Run all → `feeds.zip` |
-| [LICENSE](./LICENSE) | MIT |
+| [notebook.ipynb](./notebook.ipynb) | Maintainer / custom generation — Run all → `feeds.zip` |
+| [LICENSE](./LICENSE) | MIT (software only) |
+| [CHANGELOG.md](./CHANGELOG.md) | User-facing history; `[0.2.0]` is advertised-but-untagged |

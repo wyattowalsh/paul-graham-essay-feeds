@@ -17,6 +17,7 @@ from typer.testing import CliRunner
 from paul_graham_essay_feeds.cli import _settings, app
 from paul_graham_essay_feeds.feeds import render_snapshot_feeds, write_feeds
 from paul_graham_essay_feeds.models import FeedEntrySnapshot, FeedSnapshot, utc_now
+from paul_graham_essay_feeds.settings import DEFAULT_MAX_LINK_VALIDATIONS, DEFAULT_MAX_PAGE_FETCHES
 
 runner = CliRunner()
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
@@ -27,6 +28,10 @@ _FROM_FEEDS_HELP = (
 _ABANDON_RECOVERY_HELP = (
     "Explicit repair for irrecoverable `.cache/materialize.json` "
     "(quarantines pointer + generation)."
+)
+_ALL_PAGES_HELP = (
+    "Uncap page fetches and dedicated link probes for a full-corpus "
+    "refresh (default caps match CI at 40)"
 )
 
 
@@ -103,6 +108,25 @@ def test_update_exposes_abandon_recovery_option() -> None:
     assert "abandon-recovery" in plain
     assert ".cache/materialize" in collapsed
     assert "quarantines pointer" in collapsed
+
+
+def test_update_exposes_all_pages_option() -> None:
+    """`--all-pages` is a real update flag (param + help; ANSI-safe)."""
+    click_app = get_command(app)
+    assert isinstance(click_app, TyperGroup)
+    update = click_app.commands["update"]
+    flag = cast(Any, next(p for p in update.params if p.name == "all_pages"))
+    assert "--all-pages" in flag.opts
+    assert "--no-all-pages" in flag.secondary_opts
+    assert flag.default is None
+    assert flag.help == _ALL_PAGES_HELP
+
+    result = runner.invoke(app, ["update", "--help"])
+    assert result.exit_code == 0
+    collapsed = _plain_help(result.output)
+    assert "all-pages" in collapsed
+    assert "full-corpus" in collapsed
+    assert "40" in collapsed
 
 
 def test_check_missing_feeds(repo_root: Path) -> None:
@@ -474,6 +498,9 @@ def test_update_result_file_and_github_output(
     assert not (second.stderr or "").strip()
     assert result_path.read_text(encoding="utf-8").endswith("action=unchanged\n")
     assert github_path.read_text(encoding="utf-8").endswith("action=unchanged\n")
+    first_block = result_path.read_text(encoding="utf-8")
+    assert "links_checked=" in first_block
+    assert "links_skipped=" in first_block
 
 
 def test_update_skips_when_refresh_not_due(repo_root: Path, sample_html_path: Path) -> None:
@@ -714,6 +741,128 @@ def test_no_validate_links_flag_skips_probes(
     )
     assert result.exit_code == 0, result.output
     validate.assert_not_called()
+
+
+def _mock_update_pipeline(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    pipeline = MagicMock()
+    pipeline.return_value.action = "unchanged"
+    pipeline.return_value.essay_count = 0
+    pipeline.return_value.links_checked = 0
+    pipeline.return_value.links_skipped = 0
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.run_catalog_pipeline", pipeline)
+    return pipeline
+
+
+def test_update_default_fetch_budgets_match_ci(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PGF-2026-014: omitted --all-pages keeps the conservative CI caps."""
+    monkeypatch.delenv("PG_ESSAY_FEEDS_MAX_PAGE_FETCHES", raising=False)
+    monkeypatch.delenv("PG_ESSAY_FEEDS_MAX_LINK_VALIDATIONS", raising=False)
+    monkeypatch.delenv("PG_ESSAY_FEEDS_ALL_PAGES", raising=False)
+    pipeline = _mock_update_pipeline(monkeypatch)
+    result = runner.invoke(
+        app,
+        ["update", "--repo-root", str(tmp_path), "--quiet"],
+    )
+    assert result.exit_code == 0, result.output
+    settings = pipeline.call_args.args[0]
+    assert settings.max_page_fetches == DEFAULT_MAX_PAGE_FETCHES
+    assert settings.max_link_validations == DEFAULT_MAX_LINK_VALIDATIONS
+    assert settings.all_pages is False
+
+
+def test_update_all_pages_uncaps_fetch_budgets(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PG_ESSAY_FEEDS_MAX_PAGE_FETCHES", "40")
+    monkeypatch.setenv("PG_ESSAY_FEEDS_MAX_LINK_VALIDATIONS", "40")
+    pipeline = _mock_update_pipeline(monkeypatch)
+    result = runner.invoke(
+        app,
+        ["update", "--repo-root", str(tmp_path), "--quiet", "--all-pages"],
+    )
+    assert result.exit_code == 0, result.output
+    settings = pipeline.call_args.args[0]
+    assert settings.all_pages is True
+    assert settings.max_page_fetches is None
+    assert settings.max_link_validations is None
+
+
+def test_env_all_pages_without_flag_uncaps(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PG_ESSAY_FEEDS_ALL_PAGES", "true")
+    pipeline = _mock_update_pipeline(monkeypatch)
+    result = runner.invoke(
+        app,
+        ["update", "--repo-root", str(tmp_path), "--quiet"],
+    )
+    assert result.exit_code == 0, result.output
+    settings = pipeline.call_args.args[0]
+    assert settings.all_pages is True
+    assert settings.max_page_fetches is None
+    assert settings.max_link_validations is None
+
+
+def test_no_all_pages_restores_conservative_caps(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PG_ESSAY_FEEDS_ALL_PAGES", "true")
+    pipeline = _mock_update_pipeline(monkeypatch)
+    result = runner.invoke(
+        app,
+        ["update", "--repo-root", str(tmp_path), "--quiet", "--no-all-pages"],
+    )
+    assert result.exit_code == 0, result.output
+    settings = pipeline.call_args.args[0]
+    assert settings.all_pages is False
+    assert settings.max_page_fetches == DEFAULT_MAX_PAGE_FETCHES
+    assert settings.max_link_validations == DEFAULT_MAX_LINK_VALIDATIONS
+
+
+def test_update_prints_planned_request_counts_when_not_quiet(
+    repo_root: Path,
+    sample_html_path: Path,
+) -> None:
+    """PGF-2026-014: non-quiet update prints caps and planned counts before work."""
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(repo_root),
+            "--no-enrich",
+            "--source-file",
+            str(sample_html_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    combined = f"{result.output}\n{result.stderr}"
+    assert "Request budget:" in combined
+    assert "40 page fetches" in combined
+    assert "40 dedicated link probes" in combined
+    assert "Planned requests:" in combined
+
+
+def test_quiet_update_hides_planned_request_counts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_update_pipeline(monkeypatch)
+    result = runner.invoke(
+        app,
+        ["update", "--repo-root", str(tmp_path), "--quiet"],
+    )
+    assert result.exit_code == 0, result.output
+    assert result.stdout == ""
+    assert result.stderr == ""
+    assert "Request budget:" not in (result.output or "")
+    assert "Planned requests:" not in (result.output or "")
 
 
 def test_quiet_preferred_when_both_set() -> None:

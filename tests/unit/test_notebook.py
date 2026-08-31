@@ -51,11 +51,18 @@ def test_notebook_static_contract() -> None:
     assert "update_argv.append('--no-validate-links')" not in source
     assert '", "--no-validate-links"' not in source
     assert "', '--no-validate-links'" not in source
+    assert 'update_argv.append("--all-pages")' not in source
+    assert "update_argv.append('--all-pages')" not in source
+    assert "PG_ESSAY_FEEDS_MAX_PAGE_FETCHES" in source
+    assert "PG_ESSAY_FEEDS_MAX_LINK_VALIDATIONS" in source
+    assert 'setdefault("PG_ESSAY_FEEDS_MAX_PAGE_FETCHES", "40")' in source
+    assert 'setdefault("PG_ESSAY_FEEDS_MAX_LINK_VALIDATIONS", "40")' in source
     assert "from paul_graham_essay_feeds" not in source
     assert "import paul_graham_essay_feeds" not in source
     assert "uvx" in source
-    assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v0.2.0"' in source
-    assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main"' not in source
+    assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main"' in source
+    assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v0.2.0"' not in source
+    assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.0"' not in source
     for name in FEED_NAMES:
         assert name in source
     assert "catalog.json" in source

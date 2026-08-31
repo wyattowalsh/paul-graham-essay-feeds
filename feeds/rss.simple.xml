@@ -5,9 +5,9 @@
     <link>https://paulgraham.com/articles.html</link>
     <description>Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.</description>
     <language>en-US</language>
-    <lastBuildDate>Tue, 25 Aug 2026 06:29:41 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 31 Aug 2026 17:52:38 GMT</lastBuildDate>
     <category>Essays</category>
-    <generator>pg-essay-feeds/0.1.0</generator>
+    <generator>pg-essay-feeds/1.0.0</generator>
     <docs>https://www.rssboard.org/rss-specification</docs>
     <ttl>1440</ttl>
     <atom:link rel="self" type="application/rss+xml" href="https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.simple.xml" />

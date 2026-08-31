@@ -2,14 +2,14 @@
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
   <title>Paul Graham: Essays</title>
   <id>tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds:simple</id>
-  <updated>2026-08-25T06:29:41Z</updated>
+  <updated>2026-08-31T17:52:38Z</updated>
   <subtitle>Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.</subtitle>
   <author>
     <name>Paul Graham</name>
     <uri>https://paulgraham.com/</uri>
   </author>
   <link rel="alternate" type="text/html" href="https://paulgraham.com/articles.html" />
-  <generator>pg-essay-feeds/0.1.0</generator>
+  <generator>pg-essay-feeds/1.0.0</generator>
   <link rel="self" type="application/atom+xml" href="https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/atom.simple.xml" />
   <entry>
     <title>How Universities Should Prepare Founders</title>
@@ -553,7 +553,7 @@
   <entry>
     <title>Before the Startup</title>
     <id>https://paulgraham.com/before.html</id>
-    <updated>2026-07-29T23:10:04Z</updated>
+    <updated>2026-08-31T17:52:38Z</updated>
     <summary type="text">Read “Before the Startup” by Paul Graham.</summary>
     <link rel="alternate" href="https://paulgraham.com/before.html" />
   </entry>
@@ -777,7 +777,7 @@
   <entry>
     <title>Organic Startup Ideas</title>
     <id>https://paulgraham.com/organic.html</id>
-    <updated>2026-07-29T23:10:04Z</updated>
+    <updated>2026-08-31T17:52:38Z</updated>
     <summary type="text">Read “Organic Startup Ideas” by Paul Graham.</summary>
     <link rel="alternate" href="https://paulgraham.com/organic.html" />
   </entry>
@@ -1141,7 +1141,7 @@
   <entry>
     <title>Why to Not Not Start a Startup</title>
     <id>https://paulgraham.com/notnot.html</id>
-    <updated>2026-07-29T23:10:04Z</updated>
+    <updated>2026-08-31T17:52:38Z</updated>
     <summary type="text">Read “Why to Not Not Start a Startup” by Paul Graham.</summary>
     <link rel="alternate" href="https://paulgraham.com/notnot.html" />
   </entry>
@@ -1169,7 +1169,7 @@
   <entry>
     <title>The 18 Mistakes That Kill Startups</title>
     <id>https://paulgraham.com/startupmistakes.html</id>
-    <updated>2026-07-29T23:10:04Z</updated>
+    <updated>2026-08-31T17:52:38Z</updated>
     <summary type="text">Read “The 18 Mistakes That Kill Startups” by Paul Graham.</summary>
     <link rel="alternate" href="https://paulgraham.com/startupmistakes.html" />
   </entry>
@@ -1295,7 +1295,7 @@
   <entry>
     <title>Ideas for Startups</title>
     <id>https://paulgraham.com/ideas.html</id>
-    <updated>2026-07-29T23:10:04Z</updated>
+    <updated>2026-08-31T17:52:38Z</updated>
     <summary type="text">Read “Ideas for Startups” by Paul Graham.</summary>
     <link rel="alternate" href="https://paulgraham.com/ideas.html" />
   </entry>
@@ -1379,7 +1379,7 @@
   <entry>
     <title>How to Start a Startup</title>
     <id>https://paulgraham.com/start.html</id>
-    <updated>2026-07-29T23:10:04Z</updated>
+    <updated>2026-08-31T17:52:38Z</updated>
     <summary type="text">Read “How to Start a Startup” by Paul Graham.</summary>
     <link rel="alternate" href="https://paulgraham.com/start.html" />
   </entry>
@@ -1456,7 +1456,7 @@
   <entry>
     <title>How to Make Wealth</title>
     <id>https://paulgraham.com/wealth.html</id>
-    <updated>2026-07-29T23:10:04Z</updated>
+    <updated>2026-08-31T17:52:38Z</updated>
     <summary type="text">Read “How to Make Wealth” by Paul Graham.</summary>
     <link rel="alternate" href="https://paulgraham.com/wealth.html" />
   </entry>

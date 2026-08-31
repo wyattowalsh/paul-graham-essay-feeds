@@ -5,9 +5,9 @@
     <link>https://paulgraham.com/articles.html</link>
     <description>Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.</description>
     <language>en-US</language>
-    <lastBuildDate>Tue, 25 Aug 2026 06:29:41 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 31 Aug 2026 17:52:38 GMT</lastBuildDate>
     <category>Essays</category>
-    <generator>pg-essay-feeds/0.1.0</generator>
+    <generator>pg-essay-feeds/1.0.0</generator>
     <docs>https://www.rssboard.org/rss-specification</docs>
     <ttl>1440</ttl>
     <atom:link rel="self" type="application/rss+xml" href="https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.xml" />
@@ -630,7 +630,7 @@
     <item>
       <title>Before the Startup</title>
       <link>https://paulgraham.com/before.html</link>
-      <description>Arabic Translation</description>
+      <description>Read “Before the Startup” by Paul Graham.</description>
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/before.html</guid>
@@ -886,7 +886,7 @@
     <item>
       <title>Organic Startup Ideas</title>
       <link>https://paulgraham.com/organic.html</link>
-      <description>? Get funded by Y Combinator .</description>
+      <description>Read “Organic Startup Ideas” by Paul Graham.</description>
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/organic.html</guid>
@@ -1302,7 +1302,7 @@
     <item>
       <title>Why to Not Not Start a Startup</title>
       <link>https://paulgraham.com/notnot.html</link>
-      <description>Russian Translation Japanese Translation Korean Translation</description>
+      <description>Read “Why to Not Not Start a Startup” by Paul Graham.</description>
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/notnot.html</guid>
@@ -1334,7 +1334,7 @@
     <item>
       <title>The 18 Mistakes That Kill Startups</title>
       <link>https://paulgraham.com/startupmistakes.html</link>
-      <description>Japanese Translation Spanish Translation Romanian Translation Chinese Translation Arabic Translation</description>
+      <description>Read “The 18 Mistakes That Kill Startups” by Paul Graham.</description>
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/startupmistakes.html</guid>
@@ -1478,7 +1478,7 @@
     <item>
       <title>Ideas for Startups</title>
       <link>https://paulgraham.com/ideas.html</link>
-      <description>One Specific Idea Romanian Translation Japanese Translation Traditional Chinese Translation Russian Translation Arabic Translation</description>
+      <description>Read “Ideas for Startups” by Paul Graham.</description>
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/ideas.html</guid>
@@ -1574,7 +1574,7 @@
     <item>
       <title>How to Start a Startup</title>
       <link>https://paulgraham.com/start.html</link>
-      <description>Domain Name Search Turkish Translation Hebrew Translation Russian Translation Chinese Translation French Translation Japanese Translation Arabic Translation</description>
+      <description>Read “How to Start a Startup” by Paul Graham.</description>
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/start.html</guid>
@@ -1662,7 +1662,7 @@
     <item>
       <title>How to Make Wealth</title>
       <link>https://paulgraham.com/wealth.html</link>
-      <description>Russian Translation Arabic Translation Spanish Translation You'll find this essay and 14 others in Hackers &amp; Painters .</description>
+      <description>Read “How to Make Wealth” by Paul Graham.</description>
       <dc:creator>Paul Graham</dc:creator>
       <category>Essays</category>
       <guid isPermaLink="true">https://paulgraham.com/wealth.html</guid>

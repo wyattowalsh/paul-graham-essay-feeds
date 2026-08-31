@@ -7,11 +7,17 @@ from pathlib import Path
 import pytest
 
 from paul_graham_essay_feeds.discover import (
+    ExtractionReport,
     ExtractionStrategy,
     build_discovery_snapshot,
     discover_essays,
+    evaluate_discovery_anomaly,
 )
-from paul_graham_essay_feeds.models import MIN_ITEMS, FeedError
+from paul_graham_essay_feeds.models import (
+    ABSENCE_QUARANTINE_MIN_REMOVED,
+    MIN_ITEMS,
+    FeedError,
+)
 from tests.html_samples import MARKER, synthetic_index_html
 
 UPSTREAM = Path(__file__).resolve().parents[1] / "fixtures" / "upstream"
@@ -242,3 +248,25 @@ def test_fixture_index_duplicate_anchors() -> None:
     assert len(dups) == 1
     assert dups[0].title == "First Title"
     assert any(d.endswith("/dup.html") for d in report.duplicates)
+
+
+def _anomaly_report() -> ExtractionReport:
+    return ExtractionReport(
+        strategy=ExtractionStrategy.MARKER,
+        fallback_used=False,
+        marked_count=20,
+        drift_score=0.0,
+    )
+
+
+def test_four_removals_do_not_quarantine_five_ratio_does() -> None:
+    """PGF-2026-013: 1-4 omissions are hysteresis; >=5 + ratio still quarantines."""
+    prior = {f"https://paulgraham.com/e{i}.html" for i in range(10)}
+    omit_four = set(list(prior)[4:])
+    assert evaluate_discovery_anomaly(prior, omit_four, report=_anomaly_report()) is None
+
+    omit_five = set(list(prior)[5:])
+    reason = evaluate_discovery_anomaly(prior, omit_five, report=_anomaly_report())
+    assert reason is not None
+    assert "removal" in reason
+    assert ABSENCE_QUARANTINE_MIN_REMOVED == 5

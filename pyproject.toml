@@ -5,15 +5,16 @@ description = "Unofficial multi-format metadata feeds for Paul Graham's essays"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Wyatt" }]
 keywords = ["paul-graham", "essays", "rss", "atom", "json-feed", "syndication"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Intended Audience :: End Users/Desktop",
-    "Operating System :: OS Independent",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.12",
@@ -81,9 +82,10 @@ exclude = [
 
 [tool.pytest.ini_options]
 # Default: offline unit + integration + e2e + smoke. Opt in: pytest -m live
-# Coverage is always reported. Fail-under (≥90%) is enforced only on full-suite
-# entrypoints (CI, `just test`, `just ci-local`, `just cov`) so partial path
-# selection (e.g. modified-file stop hooks) does not false-fail package total.
+# Coverage is always reported. [tool.coverage.report] fail_under/precision apply
+# to `coverage report`. Pytest default is --cov-fail-under=0 so partial path
+# selection does not false-fail package total; full-suite entrypoints pass
+# --cov-fail-under=90 (precision 2) and CI also gates raw coverage.xml.
 addopts = [
   "-ra",
   "--strict-markers",
@@ -91,6 +93,7 @@ addopts = [
   "not live",
   "--cov=paul_graham_essay_feeds",
   "--cov-report=term-missing",
+  "--cov-fail-under=0",
 ]
 testpaths = ["tests"]
 markers = [
@@ -107,7 +110,8 @@ branch = true
 source = ["paul_graham_essay_feeds"]
 
 [tool.coverage.report]
-precision = 1
+precision = 2
+fail_under = 90
 show_missing = true
 skip_empty = true
 

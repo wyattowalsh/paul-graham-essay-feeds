@@ -11,6 +11,26 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from paul_graham_essay_feeds.models import MAX_BYTES, MIN_ITEMS, SOURCE_URL, ConfigurationError
 
 _LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+# Conservative per-run bound; matches scheduled CI (update-feeds.yml).
+DEFAULT_MAX_PAGE_FETCHES = 40
+DEFAULT_MAX_LINK_VALIDATIONS = 40
+_UNLIMITED_BUDGET_TOKENS = frozenset({"none", "null", "unlimited"})
+
+
+def _parse_optional_fetch_budget(value: object) -> object:
+    """Map env tokens to None (unlimited); blank keeps the conservative default."""
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if not text:
+            return DEFAULT_MAX_PAGE_FETCHES
+        if text in _UNLIMITED_BUDGET_TOKENS:
+            return None
+    return value
+
+
+def budget_label(value: int | None) -> str:
+    """Human label for a fetch/probe cap (None = unlimited)."""
+    return "unlimited" if value is None else str(value)
 
 
 def _require_absolute_http_url(field_name: str, raw: str) -> SplitResult:
@@ -125,9 +145,12 @@ class Settings(BaseSettings):
     validate_links: bool = Field(
         default=True,
         description=(
-            "Live HEAD/GET each essay URL during update (default on). "
-            "Failures are reported only — essays are never dropped. "
-            "Opt out with --no-validate-links or PG_ESSAY_FEEDS_VALIDATE_LINKS=false."
+            "Live-probe essay URLs during update (default on), including ordinary "
+            "no-op/skip-network runs when enrich/page fetches are skipped. "
+            "Dedicated HEAD/GET for URLs not enriched this run; enrich GET is the "
+            "check for due pages. Failures are reported only — essays are never "
+            "dropped. Opt out with --no-validate-links or "
+            "PG_ESSAY_FEEDS_VALIDATE_LINKS=false."
         ),
     )
     link_timeout: float = Field(
@@ -185,19 +208,28 @@ class Settings(BaseSettings):
         description="Allow discovery fallback extraction when markers are sparse.",
     )
     max_page_fetches: int | None = Field(
-        default=None,
+        default=DEFAULT_MAX_PAGE_FETCHES,
         ge=0,
         description=(
-            "Cap page enrich fetches per run (None = all due). Fair cursor persists "
-            "across runs via catalog.versions page_fetch_cursor."
+            "Cap page enrich fetches per run (default 40, matching CI; None = unlimited). "
+            "Fair cursor persists across runs via catalog.versions page_fetch_cursor. "
+            "Uncap with --all-pages or PG_ESSAY_FEEDS_ALL_PAGES."
         ),
     )
     max_link_validations: int | None = Field(
-        default=None,
+        default=DEFAULT_MAX_LINK_VALIDATIONS,
         ge=0,
         description=(
-            "Cap dedicated live link probes per run (None = all non-enrich probes). "
-            "Independent of max_page_fetches."
+            "Cap dedicated live link probes per run (default 40, matching CI; "
+            "None = unlimited). Independent of max_page_fetches. Uncap with "
+            "--all-pages or PG_ESSAY_FEEDS_ALL_PAGES."
+        ),
+    )
+    all_pages: bool = Field(
+        default=False,
+        description=(
+            "When true, uncap max_page_fetches and max_link_validations "
+            "(full due corpus). Opt-in via --all-pages or PG_ESSAY_FEEDS_ALL_PAGES."
         ),
     )
     host_cooldown_seconds: float = Field(
@@ -210,6 +242,19 @@ class Settings(BaseSettings):
     @classmethod
     def _resolve_root(cls, value: Path | str) -> Path:
         return Path(value).expanduser().resolve()
+
+    @field_validator("max_page_fetches", "max_link_validations", mode="before")
+    @classmethod
+    def _parse_fetch_budget(cls, value: object) -> object:
+        return _parse_optional_fetch_budget(value)
+
+    @model_validator(mode="after")
+    def _apply_all_pages_budget(self) -> Settings:
+        """--all-pages / ALL_PAGES uncaps both per-run fetch budgets."""
+        if self.all_pages:
+            object.__setattr__(self, "max_page_fetches", None)
+            object.__setattr__(self, "max_link_validations", None)
+        return self
 
     @model_validator(mode="after")
     def _validate_public_urls(self) -> Settings:

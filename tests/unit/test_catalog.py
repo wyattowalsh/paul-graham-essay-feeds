@@ -15,17 +15,24 @@ from pydantic import ValidationError
 from paul_graham_essay_feeds.catalog import (
     CATALOG_SCHEMA_VERSION,
     DEFAULT_CATALOG_REL,
+    PAGE_FETCH_CURSOR_KEY,
     ChangeSet,
+    RefreshDecision,
     RefreshReason,
     atomic_write_bytes,
     atomic_write_text,
     bootstrap_catalog_from_feeds,
     catalog_material_summary,
     catalog_to_json,
+    catalog_with_page_fetch_cursor,
     default_catalog_path,
     empty_catalog,
+    last_selected_page_fetch_index,
     load_catalog,
     migrate_catalog,
+    next_page_fetch_cursor,
+    page_fetch_cursor_after_attempts,
+    parse_page_fetch_cursor,
     plan_refresh,
     reconcile_discovery,
     save_catalog,
@@ -330,7 +337,9 @@ def test_catalog_to_json_omits_position() -> None:
     )
     payload = json.loads(catalog_to_json(cat))
     assert "position" not in payload["entries"][sid]
+    assert "consecutive_absences" not in payload["entries"][sid]
     assert cat.entries[sid].position == 0
+    assert cat.entries[sid].consecutive_absences == 0
 
 
 def test_catalog_to_json_omits_last_seen_when_shared_with_index() -> None:
@@ -410,6 +419,7 @@ def test_migrate_v3_fills_last_seen_from_index() -> None:
     )
     assert cat.entries[sid].last_seen_at == cat.index.last_success_at
     assert cat.entries[sid].position == 0
+    assert cat.entries[sid].consecutive_absences == 0
     assert cat.migration_history == []
 
 
@@ -850,7 +860,7 @@ def test_new_id_is_added() -> None:
     assert catalog.entry_order == [c.stable_id, a.stable_id]
 
 
-def test_missing_index_essay_hard_deleted() -> None:
+def test_missing_index_essay_held_then_hard_deleted() -> None:
     a = _item(slug="a", position=1)
     b = _item(slug="b", position=2)
     prior = Catalog(
@@ -863,9 +873,20 @@ def test_missing_index_essay_hard_deleted() -> None:
         },
     )
 
-    catalog, changes = reconcile_discovery(prior, [a], now=T1)
+    held_catalog, held_changes = reconcile_discovery(prior, [a], now=T1)
+
+    assert held_changes.removed == []
+    assert held_changes.held == [b.stable_id]
+    assert b.stable_id in held_catalog.entries
+    assert held_catalog.entries[b.stable_id].consecutive_absences == 1
+    assert held_catalog.entries[b.stable_id].summary == "keep me"
+    assert held_catalog.entries[b.stable_id].last_seen_at == T0
+    assert held_catalog.entry_order == [a.stable_id, b.stable_id]
+
+    catalog, changes = reconcile_discovery(held_catalog, [a], now=T2)
 
     assert changes.removed == [b.stable_id]
+    assert changes.held == []
     assert b.stable_id not in catalog.entries
     assert catalog.entry_order == [a.stable_id]
     assert a.stable_id in catalog.entries
@@ -927,7 +948,9 @@ def test_rediscovery_after_hard_delete_is_added() -> None:
             b.stable_id: _entry(b, position=1, summary="old"),
         },
     )
-    after_delete, deleted = reconcile_discovery(prior, [a], now=T1)
+    after_hold, held = reconcile_discovery(prior, [a], now=T1)
+    assert b.stable_id in held.held
+    after_delete, deleted = reconcile_discovery(after_hold, [a], now=T1)
     assert b.stable_id in deleted.removed
     assert b.stable_id not in after_delete.entries
 
@@ -936,6 +959,7 @@ def test_rediscovery_after_hard_delete_is_added() -> None:
     assert changes.removed == []
     assert catalog.entries[b.stable_id].first_seen_at == T2
     assert catalog.entries[b.stable_id].summary is None
+    assert catalog.entries[b.stable_id].consecutive_absences == 0
 
 
 def test_reconcile_naive_now_rejected() -> None:
@@ -1443,3 +1467,190 @@ def test_planner_recent_success_not_due_despite_older_attempt_gap() -> None:
     plan = plan_refresh(catalog, enrich=True, stale_after_days=STALE_AFTER, now=NOW)
     assert plan.decisions[0].fetch_page is False
     assert plan.decisions[0].reasons == (RefreshReason.NOT_DUE,)
+
+
+def test_existing_catalog_without_consecutive_absences_loads() -> None:
+    sid = "https://paulgraham.com/a.html"
+    raw = {
+        "schema_version": 3,
+        "material_config_fingerprint": "fp",
+        "entry_order": [sid],
+        "entries": {sid: {"stable_id": sid, "url": sid, "title": "A"}},
+    }
+    cat = migrate_catalog(raw)
+    assert cat.entries[sid].consecutive_absences == 0
+    dumped = json.loads(catalog_to_json(cat))
+    assert "consecutive_absences" not in dumped["entries"][sid]
+    with pytest.raises(ValidationError):
+        Catalog.model_validate({**raw, "unexpected": True})
+
+
+def test_one_to_four_omissions_held_five_hard_deleted() -> None:
+    items = [_item(slug=f"e{i}") for i in range(8)]
+    prior, _ = reconcile_discovery(None, items, now=T0)
+
+    four_gone, four_cs = reconcile_discovery(prior, items[:4], now=T1)
+    assert four_cs.removed == []
+    assert len(four_cs.held) == 4
+    assert [four_gone.entries[sid].consecutive_absences for sid in four_cs.held] == [1, 1, 1, 1]
+    assert four_gone.entry_order == [it.stable_id for it in items]
+    assert "lifecycle" not in four_gone.entries[four_cs.held[0]].model_dump()
+
+    payload = json.loads(catalog_to_json(four_gone))
+    for sid in four_cs.held:
+        assert payload["entries"][sid]["consecutive_absences"] == 1
+
+    five_gone, five_cs = reconcile_discovery(prior, items[:3], now=T1)
+    assert len(five_cs.removed) == 5
+    assert five_cs.held == []
+    for sid in five_cs.removed:
+        assert sid not in five_gone.entries
+
+
+def test_held_ids_do_not_inflate_five_absence_mass_delete() -> None:
+    """Already-held ids must not make a fifth *new* miss mass-delete everyone."""
+    items = [_item(slug=f"e{i}") for i in range(8)]
+    prior, _ = reconcile_discovery(None, items, now=T0)
+    held_cat, held_cs = reconcile_discovery(prior, items[:4], now=T1)
+    assert len(held_cs.held) == 4
+    assert held_cs.removed == []
+
+    mixed, mixed_cs = reconcile_discovery(held_cat, items[:3], now=T2)
+    new_miss = items[3].stable_id
+    assert new_miss in mixed_cs.held
+    assert mixed_cs.held == [new_miss]
+    assert set(mixed_cs.removed) == {it.stable_id for it in items[4:]}
+    assert new_miss in mixed.entries
+    assert mixed.entries[new_miss].consecutive_absences == 1
+    for sid in mixed_cs.removed:
+        assert sid not in mixed.entries
+
+
+def test_held_front_item_and_mixed_second_pass() -> None:
+    a, b, c = _item(slug="a"), _item(slug="b"), _item(slug="c")
+    prior, _ = reconcile_discovery(None, [a, b, c], now=T0)
+    front, front_cs = reconcile_discovery(prior, [b, c], now=T1)
+    assert front_cs.held == [a.stable_id]
+    assert front.entry_order == [a.stable_id, b.stable_id, c.stable_id]
+
+    mixed, mixed_cs = reconcile_discovery(front, [c], now=T2)
+    assert a.stable_id in mixed_cs.removed
+    assert mixed_cs.held == [b.stable_id]
+    assert a.stable_id not in mixed.entries
+    assert mixed.entry_order == [b.stable_id, c.stable_id]
+
+
+def test_held_absence_returns_without_being_added() -> None:
+    a = _item(slug="a")
+    b = _item(slug="b")
+    prior, _ = reconcile_discovery(None, [a, b], now=T0)
+    held_cat, held_cs = reconcile_discovery(prior, [a], now=T1)
+    assert held_cs.held == [b.stable_id]
+    back, back_cs = reconcile_discovery(held_cat, [a, b], now=T2)
+    assert back_cs.added == []
+    assert back_cs.removed == []
+    assert back.entries[b.stable_id].consecutive_absences == 0
+    assert back.entries[b.stable_id].first_seen_at == T0
+
+
+def test_page_fetch_cursor_advances_last_selected_plus_one_not_served_count() -> None:
+    """PGF-2026-008: next cursor is last selected index + 1, not served count."""
+    fresh = NOW - timedelta(days=1)
+    catalog = _refresh_catalog(
+        [
+            _refresh_entry("https://paulgraham.com/a.html", position=0, last_checked_at=fresh),
+            _refresh_entry(
+                "https://paulgraham.com/b.html",
+                position=1,
+                last_checked_at=None,
+            ),
+            _refresh_entry(
+                "https://paulgraham.com/c.html",
+                position=2,
+                last_checked_at=None,
+            ),
+            _refresh_entry(
+                "https://paulgraham.com/d.html",
+                position=3,
+                last_checked_at=None,
+            ),
+        ],
+        index_last_checked_at=fresh,
+    )
+    plan = plan_refresh(
+        catalog,
+        now=NOW,
+        stale_after_days=STALE_AFTER,
+        max_page_fetches=2,
+        page_fetch_cursor=0,
+    )
+    # Due window is indices 1,2,3; budget 2 selects 1 then 2. last_selected=2 → next=3.
+    # Served-count advance would wrongly persist (0+2)%4 = 2 and re-select index 2.
+    assert [d.fetch_page for d in plan.decisions] == [False, True, True, False]
+    assert last_selected_page_fetch_index(plan.decisions, cursor=0) == 2
+    assert page_fetch_cursor_after_attempts(plan.decisions, cursor=0) == 3
+    assert next_page_fetch_cursor(catalog_size=4, last_selected_index=2, current_cursor=0) == 3
+    stamped = catalog_with_page_fetch_cursor(catalog, plan.decisions, cursor=0)
+    assert stamped.versions[PAGE_FETCH_CURSOR_KEY] == "3"
+    assert parse_page_fetch_cursor(stamped.versions) == 3
+
+
+def test_page_fetch_cursor_advances_after_failed_attempts_and_wraps() -> None:
+    decisions = [
+        RefreshDecision("a", True, (RefreshReason.STALE,)),
+        RefreshDecision("b", True, (RefreshReason.STALE,)),
+        RefreshDecision("c", False, (RefreshReason.NOT_DUE,)),
+    ]
+    # Start at 2: walk c (skip), a (select), b (select). last_selected=1 → next=2.
+    assert page_fetch_cursor_after_attempts(decisions, cursor=2) == 2
+    empty = [
+        RefreshDecision("a", False, (RefreshReason.NOT_DUE,)),
+        RefreshDecision("b", False, (RefreshReason.NOT_DUE,)),
+    ]
+    assert page_fetch_cursor_after_attempts(empty, cursor=1) == 1
+    assert last_selected_page_fetch_index([], cursor=0) is None
+    assert page_fetch_cursor_after_attempts([], cursor=3) == 0
+    assert next_page_fetch_cursor(catalog_size=0, last_selected_index=0) == 0
+    assert parse_page_fetch_cursor({"page_fetch_cursor": "nope"}) == 0
+    catalog = _refresh_catalog(
+        [
+            _refresh_entry("https://paulgraham.com/a.html", position=0, last_checked_at=None),
+            _refresh_entry("https://paulgraham.com/b.html", position=1, last_checked_at=None),
+        ],
+        index_last_checked_at=None,
+    )
+    plan = plan_refresh(catalog, now=NOW, max_page_fetches=1)
+    stamped = catalog_with_page_fetch_cursor(catalog, plan.decisions)
+    assert stamped.versions[PAGE_FETCH_CURSOR_KEY] == "1"
+
+
+def test_stale_page_in_backoff_is_not_fetched() -> None:
+    old = NOW - timedelta(days=STALE_AFTER + 1)
+    catalog = _refresh_catalog(
+        [
+            CatalogEntry(
+                stable_id="https://paulgraham.com/a.html",
+                url="https://paulgraham.com/a.html",
+                title="A",
+                position=0,
+                summary="Has text.",
+                page=ResourceState(
+                    last_success_at=old,
+                    failure_count=2,
+                    next_retry_at=NOW + timedelta(hours=3),
+                ),
+            )
+        ],
+        index_last_checked_at=NOW - timedelta(days=1),
+    )
+    plan = plan_refresh(catalog, enrich=True, stale_after_days=STALE_AFTER, now=NOW)
+    assert plan.decisions[0].fetch_page is False
+    assert plan.decisions[0].reasons == (RefreshReason.NOT_DUE,)
+    later = plan_refresh(
+        catalog,
+        enrich=True,
+        stale_after_days=STALE_AFTER,
+        now=NOW + timedelta(hours=4),
+    )
+    assert later.decisions[0].fetch_page is True
+    assert RefreshReason.STALE in later.decisions[0].reasons

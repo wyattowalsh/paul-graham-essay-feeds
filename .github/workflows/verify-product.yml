@@ -4,6 +4,12 @@ on:
   workflow_run:
     workflows: ["Update feeds"]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      product_sha:
+        description: Explicit product SHA to verify (not mutable main)
+        required: true
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}
@@ -11,26 +17,63 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   verify-product:
-    if: github.event.workflow_run.conclusion == 'success'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
+      actions: read
     steps:
+      - name: Download product identity
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: product-identity
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/product-identity
+
+      - name: Resolve product SHA
+        id: identity
+        env:
+          EXPLICIT_SHA: ${{ github.event.inputs.product_sha }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${EXPLICIT_SHA:-}" ]]; then
+            product_sha="${EXPLICIT_SHA}"
+          else
+            product_sha="$(python3 -c 'import json, os; from pathlib import Path; p = Path(os.environ["RUNNER_TEMP"]) / "product-identity" / "product-identity.json"; print(json.loads(p.read_text(encoding="utf-8"))["product_sha"])')"
+          fi
+          case "${product_sha}" in
+            main|HEAD|refs/heads/main|refs/heads/master)
+              echo "::error::product_sha must not be a mutable branch name: ${product_sha}"
+              exit 1
+              ;;
+          esac
+          if [[ ! "${product_sha}" =~ ^[0-9a-f]{40,64}$ ]]; then
+            echo "::error::product_sha is not a git object id: ${product_sha}"
+            exit 1
+          fi
+          echo "product_sha=${product_sha}" >> "$GITHUB_OUTPUT"
+          echo "Verifying product SHA ${product_sha}"
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          ref: ${{ steps.identity.outputs.product_sha }}
           persist-credentials: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.12.0"
-          enable-cache: true
+          enable-cache: false
 
       - name: Sync
         run: uv sync --locked --all-groups

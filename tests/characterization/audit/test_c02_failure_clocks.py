@@ -112,17 +112,20 @@ def test_c02_migrate_v1_idempotent_preserves_success_mapping() -> None:
     assert page.last_attempted_at is not None
 
 
-def test_c02_committed_catalog_is_schema_version_2() -> None:
+def test_c02_committed_catalog_is_schema_version_3() -> None:
     import json
     from pathlib import Path
 
-    from paul_graham_essay_feeds.catalog import load_catalog
+    from paul_graham_essay_feeds.catalog import CATALOG_SCHEMA_VERSION, load_catalog
 
     root = Path(__file__).resolve().parents[3]
     path = root / "catalog.json"
     on_disk = json.loads(path.read_text(encoding="utf-8"))
-    assert on_disk["schema_version"] == 2
+    assert on_disk["schema_version"] == CATALOG_SCHEMA_VERSION == 3
+    assert on_disk["last_generation_id"]
+    assert "position" not in next(iter(on_disk["entries"].values()))
 
     catalog = load_catalog(path)
     assert catalog is not None
     assert catalog.schema_version == 3
+    assert catalog.last_generation_id == on_disk["last_generation_id"]

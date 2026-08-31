@@ -63,11 +63,73 @@ jobs:
             catalog.json
           if-no-files-found: error
 
-  # AUD-001: always check the triggering commit's product, including scheduled no-ops.
-  # This runner does not see update's in-job writes; publish still checks the artifact.
+      - name: Write product identity (no-op)
+        if: >-
+          steps.update.outputs.action != 'updated' &&
+          steps.update.outputs.action != 'state_changed'
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          subjects = (
+              "catalog.json",
+              "feeds/rss.xml",
+              "feeds/atom.xml",
+              "feeds/feed.json",
+              "feeds/rss.simple.xml",
+              "feeds/atom.simple.xml",
+              "feeds/feed.simple.json",
+          )
+          root = Path(".")
+          digest = hashlib.sha256()
+          for rel in subjects:
+              path = root / rel
+              if not path.is_file():
+                  raise SystemExit(f"missing product file: {rel}")
+              data = path.read_bytes()
+              digest.update(rel.encode("utf-8"))
+              digest.update(b"\0")
+              digest.update(len(data).to_bytes(8, "little"))
+              digest.update(data)
+          source_sha = os.environ["SOURCE_SHA"]
+          payload = {
+              "source_sha": source_sha,
+              "candidate_digest": "sha256:" + digest.hexdigest(),
+              "product_sha": source_sha,
+              "subjects": list(subjects),
+          }
+          Path("product-identity.json").write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload product identity (no-op)
+        if: >-
+          steps.update.outputs.action != 'updated' &&
+          steps.update.outputs.action != 'state_changed'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: product-identity
+          path: product-identity.json
+          if-no-files-found: error
+
+  # AUD-001: on no-op runs, check the triggering commit's product.
+  # When catalog/feeds changed, `publish` gates the downloaded candidate instead
+  # — do not fail a repair publish by re-checking the stale source tree.
   verify:
     needs: update
-    if: always() && needs.update.result == 'success'
+    if: >-
+      always() &&
+      needs.update.result == 'success' &&
+      needs.update.outputs.action != 'updated' &&
+      needs.update.outputs.action != 'state_changed'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -111,17 +173,69 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: feed-update-workspace
+          path: ${{ runner.temp }}/candidate
 
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.12.0"
-          enable-cache: true
+          enable-cache: false
 
       - name: Sync
         run: uv sync --locked --all-groups
 
-      - name: Validate feeds
+      - name: Gate publish on downloaded seven files
+        id: candidate
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+
+          subjects = (
+              "catalog.json",
+              "feeds/rss.xml",
+              "feeds/atom.xml",
+              "feeds/feed.json",
+              "feeds/rss.simple.xml",
+              "feeds/atom.simple.xml",
+              "feeds/feed.simple.json",
+          )
+          cand = Path(os.environ["RUNNER_TEMP"]) / "candidate"
+          workspace = Path(".")
+          digest = hashlib.sha256()
+          for rel in subjects:
+              src = cand / rel
+              if not src.is_file():
+                  raise SystemExit(f"candidate missing {rel}")
+              data = src.read_bytes()
+              digest.update(rel.encode("utf-8"))
+              digest.update(b"\0")
+              digest.update(len(data).to_bytes(8, "little"))
+              digest.update(data)
+          (workspace / "catalog.json").unlink(missing_ok=True)
+          feeds = workspace / "feeds"
+          if feeds.is_dir():
+              for child in feeds.iterdir():
+                  if child.is_file():
+                      child.unlink()
+          feeds.mkdir(parents=True, exist_ok=True)
+          for rel in subjects:
+              dest = workspace / rel
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              dest.write_bytes((cand / rel).read_bytes())
+          candidate_digest = "sha256:" + digest.hexdigest()
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          with output.open("a", encoding="utf-8") as fh:
+              fh.write(f"digest={candidate_digest}\n")
+              fh.write(f"source_sha={os.environ['SOURCE_SHA']}\n")
+          print(f"candidate_digest={candidate_digest}")
+          PY
+
+      - name: Validate downloaded feeds
         run: uv run pg-essay-feeds check
 
       - name: Commit feeds to main
@@ -130,9 +244,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          source_sha="${GITHUB_SHA}"
+          echo "source_sha=${source_sha}" >> "$GITHUB_OUTPUT"
           if git diff --quiet -- feeds catalog.json; then
             echo "No feed/catalog changes."
             echo "committed=false" >> "$GITHUB_OUTPUT"
+            echo "product_sha=${source_sha}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -143,13 +260,56 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nothing staged."
             echo "committed=false" >> "$GITHUB_OUTPUT"
+            echo "product_sha=${source_sha}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           summary="$(git diff --cached --stat)"
           git commit -m "chore: refresh Paul Graham essay feeds" -m "${summary}"
           git push origin "HEAD:refs/heads/main" \
             --force-with-lease="refs/heads/main:${expect}"
+          product_sha=$(git rev-parse HEAD)
+          echo "product_sha=${product_sha}" >> "$GITHUB_OUTPUT"
           echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Re-check product tree
+        run: |
+          set -euo pipefail
+          product_sha=$(git rev-parse HEAD)
+          echo "product_sha=${product_sha}"
+          test "${product_sha}" = "${{ steps.commit.outputs.product_sha }}"
+          uv run pg-essay-feeds check --quiet
+
+      - name: Write provenance context
+        env:
+          SOURCE_SHA: ${{ steps.candidate.outputs.source_sha }}
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+          PRODUCT_SHA: ${{ steps.commit.outputs.product_sha }}
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          subjects = [
+              "catalog.json",
+              "feeds/rss.xml",
+              "feeds/atom.xml",
+              "feeds/feed.json",
+              "feeds/rss.simple.xml",
+              "feeds/atom.simple.xml",
+              "feeds/feed.simple.json",
+          ]
+          payload = {
+              "source_sha": os.environ["SOURCE_SHA"],
+              "candidate_digest": os.environ["CANDIDATE_DIGEST"],
+              "product_sha": os.environ["PRODUCT_SHA"],
+              "subjects": subjects,
+          }
+          text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+          Path("product-provenance.json").write_text(text, encoding="utf-8")
+          Path("product-identity.json").write_text(text, encoding="utf-8")
+          PY
 
       - name: Attest published catalog and feeds
         if: steps.commit.outputs.committed == 'true'
@@ -163,3 +323,11 @@ jobs:
             feeds/rss.simple.xml
             feeds/atom.simple.xml
             feeds/feed.simple.json
+            product-provenance.json
+
+      - name: Upload product identity
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: product-identity
+          path: product-identity.json
+          if-no-files-found: error

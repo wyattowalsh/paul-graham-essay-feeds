@@ -710,3 +710,30 @@ def test_fetch_index_unconditional_304_raises() -> None:
     with pytest.raises(FeedError, match="304"):
         fetch_index("https://paulgraham.com/articles.html", timeout=5.0, retries=0)
     assert route.call_count == 2
+
+
+@respx.mock
+def test_fetch_index_redirect_304_is_not_not_modified() -> None:
+    """PGF-2026-011: index 304 after redirect must not skip on original validators."""
+    from paul_graham_essay_feeds.http import fetch_index
+
+    respx.get("https://paulgraham.com/articles.html").mock(
+        return_value=httpx.Response(
+            302, headers={"Location": "https://paulgraham.com/articles2.html"}
+        )
+    )
+    final = respx.get("https://paulgraham.com/articles2.html")
+    final.side_effect = [
+        httpx.Response(304, headers={"ETag": '"idx"'}),
+        httpx.Response(200, text="<html>index-after-redirect</html>"),
+    ]
+    result = fetch_index(
+        "https://paulgraham.com/articles.html",
+        timeout=5.0,
+        retries=0,
+        etag='"idx"',
+    )
+    assert result.not_modified is False
+    assert result.html is not None
+    assert "index-after-redirect" in result.html
+    assert final.call_count == 2

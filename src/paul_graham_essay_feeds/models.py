@@ -46,6 +46,11 @@ ATOM_NS: Final = "http://www.w3.org/2005/Atom"
 DC_NS: Final = "http://purl.org/dc/elements/1.1/"
 # Safety floor for discovery/check — not the live catalog size (that grows over time).
 MIN_ITEMS: Final = 233
+# PGF-2026-013: 1-4 one-run omissions are held; 2nd observation hard-deletes.
+# ≥ this many removals may quarantine (ratio gate in discover).
+ABSENCE_CONFIRMATIONS_TO_DELETE: Final[int] = 2
+ABSENCE_QUARANTINE_MIN_REMOVED: Final[int] = 5
+ABSENCE_HYSTERESIS_MAX_REMOVED: Final[int] = ABSENCE_QUARANTINE_MIN_REMOVED - 1
 MAX_BYTES: Final = 5 * 1024 * 1024
 ALLOWED_HOSTS: Final = frozenset({"paulgraham.com", "sep.turbifycdn.com"})
 EXCLUDED_PATHS: Final = frozenset({"/", "/index.html", "/articles.html", "/rss.html"})
@@ -62,6 +67,14 @@ AUTHOR_URL: Final = "https://paulgraham.com/"
 # Single source of truth: ``__version__`` in ``__init__.py``.
 GENERATOR: Final = f"pg-essay-feeds/{__version__}"
 FEED_SUMMARY_CHARS: Final = 400
+SUMMARY_QUALITY_THRESHOLD: Final = 0.6
+SummarySource = Literal[
+    "meta_description",
+    "og_description",
+    "twitter_description",
+    "content_paragraph",
+    "title",
+]
 _REPO_URL: Final = "https://github.com/wyattowalsh/paul-graham-essay-feeds"
 STAGING_MANIFEST_SCHEMA_VERSION: Final[Literal[1]] = 1
 MATERIALIZE_POINTER_SCHEMA_VERSION: Final[Literal[1]] = 1
@@ -423,7 +436,11 @@ class ResourceState(_StrictModel):
     )
     status_code: int | None = Field(default=None, description="Last HTTP status when known.")
     selected_encoding: str | None = Field(
-        default=None, description="Encoding chosen by the HTML decoder when applicable."
+        default=None,
+        description=(
+            "Encoding chosen by the HTML decoder on an accepted 200. "
+            "Preserved on 304 (not inferred from an empty body)."
+        ),
     )
 
     @field_validator(
@@ -472,16 +489,38 @@ class CatalogEntry(_StrictModel):
     )
     summary: str | None = Field(default=None, description="Short source-derived summary.")
     summary_source: str | None = Field(
-        default=None, description="Where the summary was derived (meta/og/paragraph)."
+        default=None,
+        description=(
+            "Where the summary was derived (meta_description, og_description, "
+            "twitter_description, content_paragraph, or title)."
+        ),
     )
     summary_quality: float | None = Field(
         default=None, ge=0.0, le=1.0, description="Quality score in [0, 1]."
+    )
+    quality_flags: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "Stable summary quality flag tokens from extraction "
+            "(translation_menu, promo, nav_like, domain_search, book_promo, "
+            "related_links, high_link_density, too_short, replacement_char, …)."
+        ),
     )
     prior_good_summary: str | None = Field(
         default=None, description="Last good summary retained across recoverable failures."
     )
     page: ResourceState = Field(
         default_factory=ResourceState, description="Per-page fetch/cache evidence."
+    )
+    consecutive_absences: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Private consecutive index-omission count. 0 when the id is present "
+            "on the latest successful index. A one-run omission of 1-4 items "
+            "increments this without deleting; a second consecutive observation "
+            "hard-deletes (current-index mirror). Omitted from catalog JSON when 0."
+        ),
     )
 
     @field_validator(
@@ -719,6 +758,27 @@ class Essay(BaseModel):
         description=(
             "Short description for feeds (≤ FEED_SUMMARY_CHARS). "
             "From meta tags or body head; never a full essay body."
+        ),
+    )
+    summary_source: SummarySource | None = Field(
+        default=None,
+        description=(
+            "Provenance of summary: meta_description, og_description, "
+            "twitter_description, content_paragraph, or title."
+        ),
+    )
+    quality_score: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Heuristic quality in [0, 1] from extraction; unset when not enriched.",
+    )
+    quality_flags: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "Stable quality flag tokens from extraction (empty, too_short, promo, "
+            "nav_like, translation_menu, domain_search, book_promo, related_links, "
+            "high_link_density, replacement_char, …)."
         ),
     )
     content_text: str | None = Field(

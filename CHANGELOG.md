@@ -7,6 +7,103 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-31
+
+Ready for `v1.0.0` (tag not cut in this change). First coherent major after
+the 2026-08-31 audit (`PGF-2026-*`). Historical `[0.2.0]` remains the prior
+advertised-but-untagged integrity work.
+
+### Added
+
+- **PGF-2026-019:** Concise [SECURITY.md](SECURITY.md) and
+  [CONTRIBUTING.md](CONTRIBUTING.md) at the repo root (point at DOCS.md;
+  no `docs/` tree).
+- **PGF-2026-020:** [NOTICE](NOTICE) plus LICENSE-adjacent README scope:
+  software is MIT; essay titles, URLs, and derived summaries remain Paul
+  Graham's. MIT does not relicense third-party text.
+- **PGF-2026-021:** README leads with one-click Subscribe links for the six
+  raw GitHub feeds (simple first, enriched second). Colab moved under
+  maintainer / custom generation. A reader can subscribe without Python.
+
+### Changed
+
+- **PGF-2026-004:** Package `__version__` is `1.0.0`. README and notebook
+  do not pin a git tag that does not exist. Intended release is **1.0.0**;
+  until the `v1.0.0` tag exists, install from `main`.
+- **PGF-2026-006:** Package classifiers are POSIX/macOS (not OS Independent).
+  Writer lock is POSIX `fcntl.flock` only; no Windows lock.
+- **PGF-2026-014:** Default `max_page_fetches` / `max_link_validations` are
+  40 (matching CI). `--all-pages` / `PG_ESSAY_FEEDS_ALL_PAGES` is the
+  explicit unlimited opt-in.
+- Privileged publish / verify-product / release jobs stop forcing
+  `setup-uv` `enable-cache: true` (safer default / explicit disable).
+
+### Fixed
+
+- **PGF-2026-001:** Writer lock release no longer unlinks `.cache/write.lock`.
+  The inode stays stable so a waiter on the old fd cannot share exclusive
+  ownership with a newly created path.
+- **PGF-2026-002:** Finalize attaches the durable catalog material digest the
+  candidate was based on. Under the writer lock, a slower older candidate
+  aborts with `FeedError` instead of publishing over a newer accepted state.
+- **PGF-2026-003:** Staging allocates `gen_id`, stamps
+  `catalog.last_generation_id`, then writes artifacts + MANIFEST so
+  manifest, pointer, and public catalog agree.
+- **PGF-2026-005:** `validate_links=true` runs as an independent planned phase
+  even on ordinary no-op/skip-network. `PipelineResult` and CLI `--result-file`
+  expose `links_checked` / `links_skipped`.
+- **PGF-2026-007:** Coverage report precision is 2 with `fail_under = 90`.
+  89.955% no longer rounds to 90.0. CI fails if Cobertura
+  `(lines-covered + branches-covered) / (lines-valid + branches-valid)` is
+  below 0.90.
+- **PGF-2026-008:** Fair page-fetch rotation persists
+  `(last_selected_index + 1) % catalog_size` after attempts (including
+  failures). The pipeline stamps via `catalog_with_page_fetch_cursor`. Cursor
+  no longer advances only by served work count over the due subset. Backoff
+  clocks are unchanged.
+- **PGF-2026-009:** Catalog material digest is decoded content plus
+  feed-visible fields (title, url, summary*, published_*, order, decoded
+  hash). Wire/`raw_sha256` is provenance-only.
+- **PGF-2026-010:** Accepted 200 persists raw/decoded hashes, byte counts, and
+  `selected_encoding`. 304 preserves those while advancing clocks. Page
+  adapter decoding provenance is carried through enrich evidence.
+- **PGF-2026-011:** HTTP 304 after a redirect is classified from headers
+  actually sent on the final hop. An unconditional final-hop 304 is never
+  `NOT_MODIFIED`.
+- **PGF-2026-012:** Publish gates the downloaded seven-file candidate
+  workspace (not a sibling source checkout), emits `product_sha` after
+  force-with-lease push, re-checks that tree, and attests subjects with
+  provenance context. `verify-product.yml` checks that SHA (artifact or
+  explicit ref), not mutable `main` HEAD.
+- **PGF-2026-013:** One-run omission of 1-4 index items is held via private
+  `consecutive_absences` (default 0; omitted from JSON when 0). A second
+  consecutive observation hard-deletes. The ≥5 removal-ratio quarantine is
+  unchanged. No public tombstones.
+- **PGF-2026-017:** Unknown non-identity `Content-Encoding` tokens fail closed
+  instead of being treated as identity. gzip / deflate / br decode in reverse
+  application order; missing-brotli error is unchanged.
+- **PGF-2026-022:** Summary extraction skips translation menus, YC/book
+  promos, domain-search chrome, and high-link-density related links; quality
+  source/score/flags flow from enrich into the catalog. Below-threshold
+  scrapes keep prior-good only when it passes the semantic gate, else the
+  title blurb. The committed seven-file product is rematerialized offline:
+  seven chrome summaries become title blurbs with source `title`;
+  `last_generation_id` is stamped; on-disk catalog is schema 3; `check`
+  applies the semantic gate to enriched feeds.
+
+### Accepted risk
+
+- **PGF-2026-015:** GitHub raw serves `feeds/*` as `text/plain` (body is still
+  RSS / Atom / JSON Feed). Typed CDN hosting is out of scope; documented in
+  README and DOCS.md.
+- **PGF-2026-016:** Path-aware GitHub ruleset (require PR + CI on source;
+  product-path exclude so Update feeds can push `feeds/` + `catalog.json`)
+  is maintainer-apply. Operator steps are in DOCS.md; this change does not
+  execute `gh api`.
+- **PGF-2026-018:** Public replace is still one file at a time (local
+  seven-file visibility). A crash can tear the bundle; `check` is the
+  detector. No second public tree or directory rename-swap.
+
 ## [0.2.0] - 2026-08-28
 
 ### Fixed
@@ -179,6 +276,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   migrated on load (resource lifecycle clocks + migration_history entry).
 - New module `publication.py` for writer lock + staged materialize.
 
-[Unreleased]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/releases/tag/v0.1.0

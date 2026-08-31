@@ -25,7 +25,9 @@ from paul_graham_essay_feeds.models import (
     Catalog,
     CatalogEntry,
     Essay,
+    FeedError,
     ResourceState,
+    blurb,
 )
 from paul_graham_essay_feeds.pipeline import (
     _apply_enrichment,
@@ -164,6 +166,9 @@ def _settings(tmp_path: Path, **kwargs: object) -> Settings:
         "force": False,
         "quiet": True,
         "validate_links": False,
+        # Production defaults cap at 40 (PGF-2026-014); tests opt into unlimited.
+        "max_page_fetches": None,
+        "max_link_validations": None,
     }
     data.update(kwargs)
     return Settings.model_validate(data)
@@ -466,6 +471,19 @@ def test_hard_delete_then_rediscover_republishes(tmp_path: Path) -> None:
     assert first.action == "updated"
     assert target_sid in first.catalog.entry_order
 
+    held = run_catalog_pipeline(settings, html=reduced_html, now=T0)
+    assert held.action == "updated"
+    assert target_sid in held.catalog.entries
+    assert target_sid in held.changeset.held
+    assert target_sid not in held.changeset.removed
+    held_ids = {
+        item["id"]
+        for item in json.loads((tmp_path / "feeds" / "feed.json").read_text(encoding="utf-8"))[
+            "items"
+        ]
+    }
+    assert target_sid in held_ids
+
     second = run_catalog_pipeline(settings, html=reduced_html, now=T0)
     assert second.action == "updated"
     assert target_sid not in second.catalog.entries
@@ -725,6 +743,12 @@ def test_pipeline_removed_prevents_skip(tmp_path: Path) -> None:
             }
         ),
     )
+
+    held = run_catalog_pipeline(settings, html=html3, now=T0)
+    assert ghost_id in held.changeset.held
+    assert ghost_id in held.catalog.entries
+    assert held.action == "updated"
+    assert held.skipped is False
 
     second = run_catalog_pipeline(settings, html=html3, now=T0)
     assert ghost_id in second.changeset.removed
@@ -1004,14 +1028,15 @@ def test_save_catalog_under_lock_recover_true_overlays_reloaded_catalog(
         original_save(path, catalog)
 
     monkeypatch.setattr("paul_graham_essay_feeds.pipeline.save_catalog", _capture_save)
-    _write_pending_generation(tmp_path, g1, **_LOCK_FEED_BYTES)
+    staged_gen_id = _write_pending_generation(tmp_path, g1, **_LOCK_FEED_BYTES)
     committed = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
 
     saved = committed.catalog
     assert committed.action == "state_changed"
     assert saved is not pre
     assert saved_catalogs == [saved]
-    assert saved.last_generation_id == "gen-g1"
+    assert saved.last_generation_id == staged_gen_id
+    assert saved.last_generation_id != "gen-g1"
     assert saved.index.last_success_at == T_LATER
     assert saved.versions["page_fetch_cursor"] == "3"
     entry = next(iter(saved.entries.values()))
@@ -1019,7 +1044,7 @@ def test_save_catalog_under_lock_recover_true_overlays_reloaded_catalog(
     assert entry.page.last_success_at == T_LATER
     on_disk = load_catalog(default_catalog_path(tmp_path))
     assert on_disk is not None
-    assert on_disk.last_generation_id == "gen-g1"
+    assert on_disk.last_generation_id == staged_gen_id
     assert on_disk.index.last_success_at == T_LATER
 
 
@@ -1053,17 +1078,19 @@ def test_save_catalog_under_lock_recover_true_divergent_material_does_not_save_p
     committed = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
 
     assert committed.action == "updated"
-    assert committed.catalog is pre
+    assert committed.catalog is not pre
     on_disk = load_catalog(default_catalog_path(tmp_path))
     assert on_disk is not None
     assert on_disk.index.last_success_at == T_LATER
     assert on_disk.last_generation_id != "gen-g1"
+    assert committed.catalog.last_generation_id == on_disk.last_generation_id
+    assert committed.catalog.last_generation_id is not None
     assert (tmp_path / "feeds" / "rss.xml").read_bytes() == _LOCK_FEED_BYTES["rss"]
     assert (tmp_path / "feeds" / "atom.xml").read_bytes() == _LOCK_FEED_BYTES["atom"]
 
 
-def test_save_catalog_under_lock_no_recovery_concurrent_title_change(tmp_path: Path) -> None:
-    """PGF-P0-001: clean concurrent publisher, same IDs, different title/summary."""
+def test_save_catalog_under_lock_stale_candidate_aborts(tmp_path: Path) -> None:
+    """PGF-2026-002: slower older candidate must not publish over newer material."""
     candidate = _clock_catalog(
         last_success=T_LATER,
         last_seen=T_LATER,
@@ -1097,14 +1124,18 @@ def test_save_catalog_under_lock_no_recovery_concurrent_title_change(tmp_path: P
     assert not (tmp_path / ".cache" / "materialize.json").exists()
     assert not _material_unchanged_vs_disk(tmp_path, catalog=candidate, **_LOCK_FEED_BYTES)
 
-    committed = _save_catalog_under_lock(tmp_path, candidate, **_LOCK_FEED_BYTES)
-    assert committed.action == "updated"
+    with pytest.raises(FeedError, match="Stale finalize"):
+        _save_catalog_under_lock(
+            tmp_path,
+            candidate,
+            **_LOCK_FEED_BYTES,
+            base_material_digest=material_catalog_digest(candidate),
+        )
     on_disk = load_catalog(default_catalog_path(tmp_path))
     assert on_disk is not None
     entry = next(iter(on_disk.entries.values()))
-    assert entry.title == "A"
-    assert entry.summary == "Short summary content for tests."
-    assert material_catalog_digest(on_disk) == material_catalog_digest(candidate)
+    assert entry.title == "B-changed"
+    assert material_catalog_digest(on_disk) == material_catalog_digest(g1)
     assert (tmp_path / "feeds" / "rss.xml").read_bytes() == _LOCK_FEED_BYTES["rss"]
 
 
@@ -1148,6 +1179,22 @@ def test_complete_index_state_200_and_304_advance_success_and_clear_failure() ->
     assert state_200.raw_bytes_received is None
     assert state_200.decoded_bytes_received is None
 
+    state_200_enc = _complete_index_state(
+        prior=prior,
+        observed=T_LATER,
+        etag='"new"',
+        last_modified="Wed, 02 Jul 2024 00:00:00 GMT",
+        raw_sha256="c" * 64,
+        decoded_sha256="d" * 64,
+        status_code=200,
+        raw_bytes_received=42,
+        decoded_bytes_received=40,
+        selected_encoding="utf-8",
+    )
+    assert state_200_enc.selected_encoding == "utf-8"
+    assert state_200_enc.raw_bytes_received == 42
+    assert state_200_enc.decoded_bytes_received == 40
+
     state_304 = _complete_index_state(
         prior=prior,
         observed=T_LATER,
@@ -1162,6 +1209,7 @@ def test_complete_index_state_200_and_304_advance_success_and_clear_failure() ->
     assert state_304.last_attempted_at == T_LATER
     assert state_304.raw_sha256 == prior.raw_sha256
     assert state_304.decoded_sha256 == prior.decoded_sha256
+    assert state_304.selected_encoding == "windows-1252"
     assert state_304.failure_count == 0
     assert state_304.status_code == 304
 
@@ -1240,6 +1288,128 @@ def test_apply_enrichment_failure_advances_attempt_not_success() -> None:
     assert page.next_retry_at is not None
     assert next_catalog.entries[sid].observed_updated_at == T0
     assert next_catalog.entries[sid].summary == "prior good"
+
+
+def test_apply_enrichment_persists_source_score_flags() -> None:
+    from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
+    sid = "https://paulgraham.com/a.html"
+    entry = CatalogEntry(
+        stable_id=sid,
+        url=sid,
+        title="A",
+        position=0,
+        page=ResourceState(),
+    )
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        entry_order=[sid],
+        entries={sid: entry},
+    )
+    essay = Essay(
+        position=1,
+        title="A",
+        url=sid,
+        stable_id=sid,
+        is_permalink=True,
+        summary="A long enough source-derived summary about founders writing software.",
+        summary_source="content_paragraph",
+        quality_score=0.95,
+        quality_flags=(),
+    )
+    evidence = {sid: PageEnrichEvidence(ok=True, status_code=200, raw_sha256="a" * 64)}
+    next_catalog = _apply_enrichment(catalog, [essay], now=T_LATER, page_evidence=evidence)
+    updated = next_catalog.entries[sid]
+    assert updated.summary == essay.summary
+    assert updated.summary_source == "content_paragraph"
+    assert updated.summary_quality == 0.95
+    assert updated.quality_flags == ()
+    assert updated.prior_good_summary == essay.summary
+
+
+def test_apply_enrichment_chrome_falls_back_to_prior_good() -> None:
+    from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
+    sid = "https://paulgraham.com/a.html"
+    prior = "A retained essay paragraph about resourcefulness that is long enough."
+    entry = CatalogEntry(
+        stable_id=sid,
+        url=sid,
+        title="A",
+        position=0,
+        summary=prior,
+        summary_source="content_paragraph",
+        summary_quality=0.92,
+        quality_flags=(),
+        prior_good_summary=prior,
+        page=ResourceState(),
+    )
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        entry_order=[sid],
+        entries={sid: entry},
+    )
+    essay = Essay(
+        position=1,
+        title="A",
+        url=sid,
+        stable_id=sid,
+        is_permalink=True,
+        summary="Arabic Translation",
+        summary_source="content_paragraph",
+        quality_score=0.1,
+        quality_flags=("too_short", "translation_menu"),
+    )
+    evidence = {sid: PageEnrichEvidence(ok=True, status_code=200)}
+    next_catalog = _apply_enrichment(catalog, [essay], now=T_LATER, page_evidence=evidence)
+    updated = next_catalog.entries[sid]
+    assert updated.summary == prior
+    assert updated.summary_source == "content_paragraph"
+    assert updated.prior_good_summary == prior
+
+
+def test_apply_enrichment_bad_prior_falls_back_to_title() -> None:
+    from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
+    sid = "https://paulgraham.com/a.html"
+    title = "Before the Startup"
+    entry = CatalogEntry(
+        stable_id=sid,
+        url=sid,
+        title=title,
+        position=0,
+        summary="Arabic Translation",
+        summary_source="page",
+        summary_quality=0.9,
+        quality_flags=("translation_menu",),
+        prior_good_summary="Arabic Translation",
+        page=ResourceState(),
+    )
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        entry_order=[sid],
+        entries={sid: entry},
+    )
+    essay = Essay(
+        position=1,
+        title=title,
+        url=sid,
+        stable_id=sid,
+        is_permalink=True,
+        summary="? Get funded by Y Combinator .",
+        summary_source="content_paragraph",
+        quality_score=0.2,
+        quality_flags=("too_short", "promo"),
+    )
+    evidence = {sid: PageEnrichEvidence(ok=True, status_code=200)}
+    next_catalog = _apply_enrichment(catalog, [essay], now=T_LATER, page_evidence=evidence)
+    updated = next_catalog.entries[sid]
+    assert updated.summary == blurb(title)
+    assert updated.summary_source == "title"
+    assert updated.prior_good_summary == blurb(title)
 
 
 def test_catalog_only_path_recover_true_divergent_feeds_publishes(
@@ -1326,9 +1496,13 @@ def test_complete_index_state_copies_byte_counts() -> None:
         raw_sha256=None,
         decoded_sha256=None,
         status_code=304,
+        raw_bytes_received=0,
+        decoded_bytes_received=0,
+        selected_encoding="utf-8",
     )
     assert kept.raw_bytes_received == 10
     assert kept.decoded_bytes_received == 8
+    assert kept.selected_encoding is None
 
 
 def test_rotate_probe_essays_advances_by_attempted() -> None:
@@ -1454,3 +1628,277 @@ def test_single_host_cooldown_injected_into_enrich_and_probes(
     cooldown = enrich.call_args.kwargs["host_cooldown"]
     assert cooldown is created[0]
     assert validate.call_args.kwargs["host_cooldown"] is cooldown
+
+
+def test_material_catalog_digest_ignores_raw_hash() -> None:
+    """PGF-2026-009: wire/raw hashes are provenance-only; decoded hash is material."""
+    base = _clock_catalog(
+        last_success=T0,
+        last_seen=T0,
+        generation_id="g",
+        cursor="0",
+    )
+    sid = next(iter(base.entries))
+    entry = base.entries[sid]
+
+    def _with_hashes(raw: str, decoded: str) -> CatalogEntry:
+        return entry.model_copy(
+            update={
+                "page": entry.page.model_copy(update={"raw_sha256": raw, "decoded_sha256": decoded})
+            }
+        )
+
+    raw_a = _with_hashes("a" * 64, "d" * 64)
+    raw_b = _with_hashes("b" * 64, "d" * 64)
+    decoded_b = _with_hashes("a" * 64, "e" * 64)
+    cat_raw_a = base.model_copy(update={"entries": {sid: raw_a}})
+    cat_raw_b = base.model_copy(update={"entries": {sid: raw_b}})
+    cat_decoded = base.model_copy(update={"entries": {sid: decoded_b}})
+    assert material_catalog_digest(cat_raw_a) == material_catalog_digest(cat_raw_b)
+    assert material_catalog_digest(cat_raw_a) != material_catalog_digest(cat_decoded)
+    titled = base.model_copy(
+        update={"entries": {sid: entry.model_copy(update={"title": "Other title"})}}
+    )
+    assert material_catalog_digest(base) != material_catalog_digest(titled)
+
+
+def test_apply_enrichment_200_persists_hashes_counts_encoding() -> None:
+    """PGF-2026-010: accepted 200 stores hashes, byte counts, selected_encoding."""
+    from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
+    sid = "https://paulgraham.com/a.html"
+    entry = CatalogEntry(
+        stable_id=sid,
+        url=sid,
+        title="A",
+        position=0,
+        page=ResourceState(
+            raw_sha256="0" * 64,
+            decoded_sha256="1" * 64,
+            raw_bytes_received=1,
+            decoded_bytes_received=1,
+            selected_encoding="windows-1252",
+        ),
+    )
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        entry_order=[sid],
+        entries={sid: entry},
+    )
+    essay = Essay(
+        position=1,
+        title="A",
+        url=sid,
+        stable_id=sid,
+        is_permalink=True,
+        summary="A long enough source-derived summary about founders writing software.",
+        content_hash="c" * 64,
+    )
+    evidence = {
+        sid: PageEnrichEvidence(
+            ok=True,
+            status_code=200,
+            raw_sha256="a" * 64,
+            decoded_sha256="b" * 64,
+            raw_bytes_received=100,
+            decoded_bytes_received=80,
+            selected_encoding="utf-8",
+        )
+    }
+    next_catalog = _apply_enrichment(catalog, [essay], now=T_LATER, page_evidence=evidence)
+    page = next_catalog.entries[sid].page
+    assert page.raw_sha256 == "a" * 64
+    assert page.decoded_sha256 == "b" * 64
+    assert page.raw_bytes_received == 100
+    assert page.decoded_bytes_received == 80
+    assert page.selected_encoding == "utf-8"
+    assert page.last_success_at == T_LATER
+
+
+def test_apply_enrichment_304_preserves_hashes_counts_encoding() -> None:
+    """PGF-2026-010: 304 keeps prior hashes/counts/encoding while advancing clocks."""
+    from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
+    sid = "https://paulgraham.com/a.html"
+    entry = CatalogEntry(
+        stable_id=sid,
+        url=sid,
+        title="A",
+        position=0,
+        summary="prior good",
+        prior_good_summary="prior good",
+        page=ResourceState(
+            etag='"v1"',
+            raw_sha256="a" * 64,
+            decoded_sha256="b" * 64,
+            raw_bytes_received=50,
+            decoded_bytes_received=40,
+            selected_encoding="windows-1252",
+            last_success_at=T0,
+            status_code=200,
+        ),
+    )
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        entry_order=[sid],
+        entries={sid: entry},
+    )
+    essay = Essay(
+        position=1,
+        title="A",
+        url=sid,
+        stable_id=sid,
+        is_permalink=True,
+        summary="prior good",
+    )
+    evidence = {
+        sid: PageEnrichEvidence(
+            ok=True,
+            not_modified=True,
+            status_code=304,
+            raw_sha256=None,
+            decoded_sha256=None,
+            raw_bytes_received=0,
+            decoded_bytes_received=0,
+            selected_encoding=None,
+        )
+    }
+    next_catalog = _apply_enrichment(catalog, [essay], now=T_LATER, page_evidence=evidence)
+    page = next_catalog.entries[sid].page
+    assert page.status_code == 304
+    assert page.last_success_at == T_LATER
+    assert page.raw_sha256 == "a" * 64
+    assert page.decoded_sha256 == "b" * 64
+    assert page.raw_bytes_received == 50
+    assert page.decoded_bytes_received == 40
+    assert page.selected_encoding == "windows-1252"
+
+
+def test_validate_links_runs_on_skip_network(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PGF-2026-005: dedicated probes still run when enrich/page fetches are skipped."""
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+
+    html = synthetic_index_html()
+    validate = MagicMock(return_value=None)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.validate_essays_live", validate)
+    settings = _settings(tmp_path, min_items=MIN_ITEMS, enrich=False, validate_links=True)
+    first = run_catalog_pipeline(settings, html=html, now=T0)
+    assert first.action == "updated"
+    assert first.links_checked == first.essay_count
+    assert first.links_skipped == 0
+    validate.reset_mock()
+    second = run_catalog_pipeline(settings, html=html, now=T0)
+    validate.assert_called_once()
+    probed = validate.call_args.args[0]
+    assert len(probed) == second.essay_count
+    assert second.links_checked == second.essay_count
+    assert second.links_skipped == 0
+    assert second.action == "unchanged"
+
+
+def test_validate_links_budget_counts_on_skip_network(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PGF-2026-005: skip-network still applies the dedicated-probe budget."""
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+
+    html = synthetic_index_html()
+    validate = MagicMock(return_value=None)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.validate_essays_live", validate)
+    settings = _settings(
+        tmp_path,
+        min_items=MIN_ITEMS,
+        enrich=False,
+        validate_links=True,
+        max_link_validations=1,
+    )
+    first = run_catalog_pipeline(settings, html=html, now=T0)
+    assert first.action == "updated"
+    assert first.links_checked == 1
+    assert first.links_skipped == first.essay_count - 1
+    validate.reset_mock()
+    second = run_catalog_pipeline(settings, html=html, now=T0)
+    validate.assert_called_once()
+    assert len(validate.call_args.args[0]) == 1
+    assert second.links_checked == 1
+    assert second.links_skipped == second.essay_count - 1
+    assert second.action == "state_changed"
+
+
+def test_pipeline_page_fetch_cursor_is_last_selected_plus_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PGF-2026-008: pipeline persists last selected index + 1, not served count."""
+    html = synthetic_index_html(essay_count=4)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.enrich_essays", _stable_enrich)
+    seed = _settings(tmp_path, min_items=6, enrich=True)
+    first = run_catalog_pipeline(seed, html=html, now=T0)
+    assert first.action == "updated"
+    seeded = load_catalog(default_catalog_path(tmp_path))
+    assert seeded is not None
+    fresh_id = seeded.entry_order[0]
+    aged = {
+        sid: entry.model_copy(
+            update={
+                "page": entry.page.model_copy(
+                    update={"last_success_at": T_LATER if sid == fresh_id else T0}
+                )
+            }
+        )
+        for sid, entry in seeded.entries.items()
+    }
+    versions = dict(seeded.versions)
+    versions["page_fetch_cursor"] = "0"
+    save_catalog(
+        default_catalog_path(tmp_path),
+        seeded.model_copy(
+            update={
+                "entries": aged,
+                "versions": versions,
+                "index": seeded.index.model_copy(update={"last_success_at": T_LATER}),
+            }
+        ),
+    )
+    budgeted = _settings(tmp_path, min_items=6, enrich=True, max_page_fetches=2)
+    second = run_catalog_pipeline(budgeted, html=html, now=T_LATER)
+    on_disk = load_catalog(default_catalog_path(tmp_path))
+    assert on_disk is not None
+    # Due window is indices 1..; budget 2 selects 1 then 2 → next cursor 3.
+    # Served-count advance would persist (0+2)%n == 2.
+    assert on_disk.versions["page_fetch_cursor"] == "3"
+    fetched = [d.stable_id for d in second.refresh_plan.decisions if d.fetch_page]
+    assert len(fetched) == 2
+    assert fresh_id not in fetched
+
+
+def test_production_default_caps_page_fetches_at_ci_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PGF-2026-014: omitted max_page_fetches is 40, not unlimited."""
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+    from paul_graham_essay_feeds.settings import DEFAULT_MAX_PAGE_FETCHES
+
+    html = synthetic_index_html()
+    enrich = MagicMock(side_effect=_stable_enrich)
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.enrich_essays", enrich)
+    settings = Settings.model_validate(
+        {
+            "repo_root": tmp_path,
+            "min_items": MIN_ITEMS,
+            "enrich": True,
+            "force": False,
+            "quiet": True,
+            "validate_links": False,
+        }
+    )
+    assert settings.max_page_fetches == DEFAULT_MAX_PAGE_FETCHES
+    result = run_catalog_pipeline(settings, html=html, now=T0)
+    assert result.action == "updated"
+    fetched = [d.stable_id for d in result.refresh_plan.decisions if d.fetch_page]
+    assert len(fetched) == DEFAULT_MAX_PAGE_FETCHES
+    assert len(enrich.call_args.args[0]) == DEFAULT_MAX_PAGE_FETCHES

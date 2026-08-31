@@ -35,6 +35,7 @@ from paul_graham_essay_feeds.verify import (
     ID_ORDER_MISMATCH,
     MISSING_FILE,
     SELF_LINK_MISMATCH,
+    SEMANTIC_SUMMARY,
     SUMMARY_LENGTH,
     UNICODE_REPLACEMENT,
     UNPARSEABLE_JSON,
@@ -42,6 +43,8 @@ from paul_graham_essay_feeds.verify import (
     VerificationReport,
     assert_verified,
     raise_on_failure,
+    semantic_summary_violations,
+    summary_passes_semantic_gate,
     verify_feed_bytes,
     verify_feed_dir,
 )
@@ -110,6 +113,32 @@ def _write_both_variants(tmp_path: Path, essays: list[Essay] | None = None) -> N
         simple_atom=render_atom(simple),
         simple_json_feed=render_json(simple),
     )
+
+
+def test_semantic_gate_rejects_promo_and_translation() -> None:
+    assert summary_passes_semantic_gate("Arabic Translation") is False
+    assert summary_passes_semantic_gate("? Get funded by Y Combinator .") is False
+    assert semantic_summary_violations("Arabic Translation")[0].code == SEMANTIC_SUMMARY
+    good = "One of the advantages of having kids is that when you have to give advice."
+    assert summary_passes_semantic_gate(good) is True
+    assert semantic_summary_violations(good) == []
+
+
+def test_verify_feed_bytes_rejects_chrome_summary_on_enriched() -> None:
+    essays = _sample()
+    essays[0] = essays[0].model_copy(update={"summary": "Arabic Translation"})
+    rss, atom, jf = _good_triple(essays)
+    report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=2, kind="enriched")
+    assert report.ok is False
+    assert SEMANTIC_SUMMARY in _codes(report)
+
+
+def test_verify_feed_bytes_simple_skips_semantic_gate() -> None:
+    essays = _sample()
+    essays[0] = essays[0].model_copy(update={"summary": "Arabic Translation"})
+    rss, atom, jf = _good_triple(essays)
+    report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=2, kind="simple")
+    assert SEMANTIC_SUMMARY not in _codes(report)
 
 
 def test_verify_feed_bytes_happy_path() -> None:

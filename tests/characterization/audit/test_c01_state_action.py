@@ -31,6 +31,9 @@ def _settings(tmp_path: Path, **kwargs: object) -> Settings:
         "quiet": True,
         "validate_links": False,
         "stale_after_days": 30,
+        # Production defaults cap at 40 (PGF-2026-014); this test needs a full enrich.
+        "max_page_fetches": None,
+        "max_link_validations": None,
     }
     data.update(kwargs)
     return Settings.model_validate(data)
