@@ -452,7 +452,9 @@ def evaluate_discovery_anomaly(
     intersection over stable ids (RV-R-007) — same-size total swaps quarantine.
 
     Removals below ``ABSENCE_QUARANTINE_MIN_REMOVED`` (1-4) are not quarantined
-    here; catalog reconcile applies absence hysteresis (PGF-2026-013).
+    here; catalog reconcile always requires two successful observations before
+    hard-delete (PGF-2026-024). Five-or-more removals still quarantine only
+    when the ratio also exceeds ``max_removal_ratio``.
     """
     prior_count = len(prior_ids)
     if prior_count <= 0:

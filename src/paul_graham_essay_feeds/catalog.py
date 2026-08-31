@@ -11,6 +11,7 @@ import contextlib
 import json
 import os
 import tempfile
+import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -22,7 +23,6 @@ from pydantic import ValidationError
 
 from paul_graham_essay_feeds.models import (
     ABSENCE_CONFIRMATIONS_TO_DELETE,
-    ABSENCE_HYSTERESIS_MAX_REMOVED,
     Catalog,
     CatalogEntry,
     ConfigurationError,
@@ -333,6 +333,16 @@ def load_catalog(path: Path) -> Catalog | None:
         raise ConfigurationError(f"Corrupt catalog at {path}: {exc}") from exc
 
 
+def mint_state_revision() -> str:
+    """Return a new opaque hex token for a durable catalog write (PGF-2026-022)."""
+    return uuid.uuid4().hex
+
+
+def stamp_state_revision(catalog: Catalog) -> Catalog:
+    """Copy ``catalog`` with a fresh ``state_revision``."""
+    return catalog.model_copy(update={"state_revision": mint_state_revision()})
+
+
 def save_catalog(path: Path, catalog: Catalog) -> None:
     """Atomically write ``catalog`` to ``path``."""
     blob = catalog_to_json(catalog).encode("utf-8")
@@ -430,12 +440,11 @@ def reconcile_discovery(
 ) -> tuple[Catalog, ChangeSet]:
     """Reconcile discovered index items against a prior durable catalog.
 
-    Membership aims to mirror the current index. A one-run omission of 1-4
-    **new** absences is held via private ``consecutive_absences`` and is not
-    published as a deletion. A second consecutive observation hard-deletes.
-    Five or more *new* absences hard-delete immediately (already-held ids still
-    follow the streak machine; large-ratio cases are quarantined before
-    reconcile). No public tombstone / soft-retain feed states.
+    Membership aims to mirror the current index. Every previously present id
+    needs two successful index observations (``consecutive_absences >= 2``)
+    before hard-delete (PGF-2026-024). Large-ratio cases are quarantined
+    before reconcile and never increment streaks. No public tombstone /
+    soft-retain feed states.
 
     Prior enrichment is reused when a rediscovered id still exists in
     ``prior.entries``.
@@ -506,20 +515,13 @@ def reconcile_discovery(
 
     absent_ids = [sid for sid in prior_order_list if sid not in discovered_ids]
     held: list[str] = []
-    new_absence_count = 0
-    for sid in absent_ids:
-        existing = prior_entries.get(sid)
-        if existing is not None and existing.consecutive_absences == 0:
-            new_absence_count += 1
-    mass_new = new_absence_count > ABSENCE_HYSTERESIS_MAX_REMOVED
     removed_ids: list[str] = []
     for sid in absent_ids:
         existing = prior_entries.get(sid)
         if existing is None:
             continue
         streak = existing.consecutive_absences + 1
-        is_new = existing.consecutive_absences == 0
-        if (is_new and mass_new) or streak >= ABSENCE_CONFIRMATIONS_TO_DELETE:
+        if streak >= ABSENCE_CONFIRMATIONS_TO_DELETE:
             removed_ids.append(sid)
         else:
             next_entries[sid] = existing.model_copy(update={"consecutive_absences": streak})

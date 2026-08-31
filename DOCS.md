@@ -594,8 +594,11 @@ install from `main`. After the tag is published, flip that one sentence.
 
 ### Branch protection (rulesets)
 
-Path-aware ruleset **intent** (PGF-2026-016, maintainer-apply — this change
-does **not** execute `gh api`; agents must not apply rulesets):
+Path-aware ruleset **intent** (PGF-2026-016 / **PGF-2026-026**,
+maintainer-apply — this change does **not** execute `gh api`; agents must
+not apply rulesets). The active repo ruleset still only blocks deletion and
+non-fast-forward; required CI/PR/tag rules are **not** applied until a
+maintainer runs the snippets below.
 
 | Surface | Policy |
 | :--- | :--- |
@@ -685,6 +688,32 @@ EOF
 > (`actor_id` `15368`) on this ruleset. Path-exclude product files instead so
 > Update feeds can push `feeds/` + `catalog.json` without a source bypass.
 
+Tag protection (separate ruleset; `v*` only from a green SHA — GitHub cannot
+bind “CI passed” into tag create, so require a human who verified CI on that
+exact SHA; break-glass is this same maintainer path):
+
+```bash
+gh api --method POST repos/wyattowalsh/paul-graham-essay-feeds/rulesets \
+  --input - <<'EOF'
+{
+  "name": "protect-version-tags",
+  "target": "tag",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/tags/v*"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    { "type": "deletion" },
+    { "type": "non_fast_forward" }
+  ]
+}
+EOF
+```
+
 ---
 
 ## Troubleshooting
@@ -736,12 +765,12 @@ invented dates; no 1970 entry `updated`.
 ### AD-002 — Catalog SSOT
 
 Schema-versioned **`catalog.json`** is durable SSOT (Pydantic in
-`models.py`). Membership aims to mirror the **current** articles index: a
-one-run omission of 1-4 essays is **held** (private `consecutive_absences`,
-default 0 so existing catalogs load) and is not published as a deletion; a
-second consecutive observation **hard-deletes**. Five or more removals at
-ratio >15% **quarantine** before reconcile (H-03 / PGF-2026-013). No
-lifecycle / soft-retain / tombstone feed states. Prior enrichment is reused
+`models.py`). Membership aims to mirror the **current** articles index: every previously
+present id needs **two successful index observations**
+(`consecutive_absences >= 2`) before hard-delete (PGF-2026-024). Private
+`consecutive_absences` defaults to 0 so existing catalogs load. Five or more
+removals at ratio >15% **quarantine** before reconcile (H-03) and never
+increment streaks. No lifecycle / soft-retain / tombstone feed states. Prior enrichment is reused
 when an id is still on the index. Preserve prior-good summary on recoverable
 enrich failures. Index-only skip is **invalid**; refresh planning uses catalog
 + page state (F-001). Dedicated live probes rotate via
@@ -751,10 +780,13 @@ rotation persists `(last_selected_index + 1) % catalog_size` in
 failures via `catalog_with_page_fetch_cursor`; backoff (`next_retry_at`) is
 independent. Catalog material digest excludes wire/`raw_sha256` (provenance
 only); feed-visible fields plus decoded page hash decide skip vs publish
-(PGF-2026-009). On-disk `catalog.json`
-is `schema_version: 3` (compact diffs: omit per-entry `position` and shared
-`last_seen_at`). Schema 2 files still load via `migrate_catalog`. Published
-bundles stamp a non-null `last_generation_id`.
+(PGF-2026-009). Durable writes also mint `state_revision` (opaque hex).
+Finalize compare-and-swap requires the candidate's base revision to match
+the on-disk catalog; same-material overlay cannot regress clocks, validators,
+cursors, or absence streaks from an older contender (PGF-2026-022). On-disk
+`catalog.json` is `schema_version: 3` (compact diffs: omit per-entry
+`position` and shared `last_seen_at`). Schema 2 files still load via
+`migrate_catalog`. Published bundles stamp a non-null `last_generation_id`.
 
 Feed projections (both deep-verified before write):
 
@@ -787,6 +819,8 @@ UUID URN (protected Turbify ACL chapters). Normalize `www` → apex; strip fragm
   UTF-8 → Windows-1252 fallback); quarantine unexpected U+FFFD.
 - Retry idempotent transients only; honor bounded `Retry-After`; full jitter otherwise.
 - Persist ETag/Last-Modified/hashes/byte counts/`selected_encoding` on accepted
+  200/304 **and** on parse-failed 200 (PGF-2026-023); do not advance
+  `last_success_at` or prior-good on parse failure.
   200; 304 preserves prior hashes/counts/encoding while advancing clocks
   (PGF-2026-010). Conditional GET / 304 as check evidence only
   (AUD-016 / PGF-2026-011: 304 is `NOT_MODIFIED` only with conditionals
@@ -894,7 +928,7 @@ uses `--no-enrich --no-validate-links` and asserts catalog pipeline + feed
 projections under `feeds/`. Privileged publish / verify-product / release
 jobs do not force `setup-uv` `enable-cache: true`.
 
-### AD-009 — Summary extraction quality (PGF-2026-022)
+### AD-009 — Summary extraction quality
 
 Enriched summaries are short source-derived prose, never translation menus,
 YC/book banners, domain-search chrome, or high-link-density related-link
@@ -927,10 +961,13 @@ their paragraph text already passes the gate.
 - **PGF-2026-016 (GitHub ruleset):** operator steps are in
   [§ Branch protection (rulesets)](#branch-protection-rulesets). Agents must
   not `gh api` apply rulesets.
-- **PGF-2026-018 (per-file materialize):** local seven-file visibility —
-  public replace is still one file at a time under the writer lock (catalog
-  + six feeds). A crash can leave a torn seven-file set; `check` is the
-  detector. Do not add a second public tree or rename-swap of a directory.
+- **PGF-2026-018 / PGF-2026-028 (per-file materialize):** three consistency
+  boundaries: (1) **writer crash** — recovery pointer + lock, `check` detects
+  a torn seven-file set; (2) **local concurrent readers** — sequential
+  `os.replace` can mix generations; readers do not take the writer lock;
+  (3) **Git commit publication** — GitHub consumers see one commit. Do not
+  add a second public tree or rename-swap of a directory unless a
+  generation-pointer API is explicitly requested.
 
 ---
 

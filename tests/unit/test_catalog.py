@@ -37,6 +37,11 @@ from paul_graham_essay_feeds.catalog import (
     reconcile_discovery,
     save_catalog,
 )
+from paul_graham_essay_feeds.discover import (
+    ExtractionReport,
+    ExtractionStrategy,
+    evaluate_discovery_anomaly,
+)
 from paul_graham_essay_feeds.models import (
     Catalog,
     CatalogEntry,
@@ -1500,11 +1505,41 @@ def test_one_to_four_omissions_held_five_hard_deleted() -> None:
     for sid in four_cs.held:
         assert payload["entries"][sid]["consecutive_absences"] == 1
 
-    five_gone, five_cs = reconcile_discovery(prior, items[:3], now=T1)
-    assert len(five_cs.removed) == 5
-    assert five_cs.held == []
-    for sid in five_cs.removed:
-        assert sid not in five_gone.entries
+    five_held, five_cs = reconcile_discovery(prior, items[:3], now=T1)
+    assert five_cs.removed == []
+    assert len(five_cs.held) == 5
+    for sid in five_cs.held:
+        assert sid in five_held.entries
+        assert five_held.entries[sid].consecutive_absences == 1
+
+    five_deleted, five_second = reconcile_discovery(five_held, items[:3], now=T2)
+    assert len(five_second.removed) == 5
+    for sid in five_second.removed:
+        assert sid not in five_deleted.entries
+
+
+def test_thirty_five_first_run_omissions_are_held() -> None:
+    """PGF-2026-024: 35 first-run misses (ratio <15% on 234) still hysteresis."""
+    items = [_item(slug=f"e{i:03d}") for i in range(234)]
+    prior, _ = reconcile_discovery(None, items, now=T0)
+    kept = items[:199]
+    _held_cat, held_cs = reconcile_discovery(prior, kept, now=T1)
+    assert held_cs.removed == []
+    assert len(held_cs.held) == 35
+    report = ExtractionReport(
+        strategy=ExtractionStrategy.MARKER,
+        fallback_used=False,
+        marked_count=234,
+        drift_score=0.0,
+    )
+    assert (
+        evaluate_discovery_anomaly(
+            set(prior.entry_order),
+            {it.stable_id for it in kept},
+            report=report,
+        )
+        is None
+    )
 
 
 def test_held_ids_do_not_inflate_five_absence_mass_delete() -> None:

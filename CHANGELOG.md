@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **PGF-2026-022:** Durable `state_revision` CAS on finalize. A slower
+  same-material contender cannot overlay older clocks, validators, cursors,
+  or absence streaks.
+- **PGF-2026-023:** Parse-failed HTTP 200 persists ETag, Last-Modified,
+  hashes, byte counts, and encoding; success TTL and prior-good stay put.
+- **PGF-2026-024:** Every previously present id needs two successful index
+  observations before hard-delete (5+ first-run mass-delete removed).
+
+### Changed
+
+- **PGF-2026-025:** Tag `release.yml` enforces the same raw coverage.xml
+  floor as CI.
+- **PGF-2026-026:** DOCS ruleset snippets cover required checks plus a `v*`
+  tag ruleset (maintainer-apply only).
+- **PGF-2026-028:** DOCS distinguish writer crash recovery, local reader
+  mix, and Git commit atomicity.
+- **PGF-2026-029:** Release job attests wheel/sdist and attaches SHA-256
+  checksums (no SBOM).
+
 ## [1.0.0] - 2026-08-31
 
 Ready for `v1.0.0` (tag not cut in this change). First coherent major after

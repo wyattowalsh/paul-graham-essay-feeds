@@ -36,6 +36,7 @@ from paul_graham_essay_feeds.catalog import (
     catalog_to_json,
     default_catalog_path,
     save_catalog,
+    stamp_state_revision,
 )
 from paul_graham_essay_feeds.feeds import write_feeds
 from paul_graham_essay_feeds.models import (
@@ -224,12 +225,13 @@ def write_staging_generation(
 ) -> str:
     """Write a complete staged generation; return generation id.
 
-    Allocates ``gen_id`` first, stamps ``catalog.last_generation_id``, then
-    serializes the catalog and writes artifacts + MANIFEST so the staged
-    catalog, MANIFEST, pointer, and public catalog share that id.
+    Allocates ``gen_id`` first, stamps ``catalog.last_generation_id`` and a
+    fresh ``state_revision``, then serializes the catalog and writes artifacts
+    + MANIFEST so the staged catalog, MANIFEST, pointer, and public catalog
+    share that id.
     """
     gen_id = uuid.uuid4().hex
-    stamped = catalog.model_copy(update={"last_generation_id": gen_id})
+    stamped = stamp_state_revision(catalog.model_copy(update={"last_generation_id": gen_id}))
     catalog_blob = catalog_to_json(stamped).encode("utf-8")
     gen_dir = Path(root) / _GEN_ROOT_REL / gen_id
     gen_dir.mkdir(parents=True, exist_ok=True)

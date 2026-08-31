@@ -22,6 +22,7 @@ from paul_graham_essay_feeds.catalog import (
 from paul_graham_essay_feeds.feeds import all_feed_paths
 from paul_graham_essay_feeds.models import (
     MATERIALIZE_POINTER_SCHEMA_VERSION,
+    NULL_REPORTER,
     Catalog,
     CatalogEntry,
     Essay,
@@ -32,6 +33,7 @@ from paul_graham_essay_feeds.models import (
 from paul_graham_essay_feeds.pipeline import (
     _apply_enrichment,
     _complete_index_state,
+    _finalize_under_lock,
     _material_unchanged_vs_disk,
     _rotate_probe_essays,
     _save_catalog_under_lock,
@@ -73,6 +75,8 @@ def _clock_catalog(
     cursor: str,
     title: str = "A",
     summary: str = "Short summary content for tests.",
+    state_revision: str | None = None,
+    consecutive_absences: int = 0,
 ) -> Catalog:
     entry = CatalogEntry(
         stable_id="https://paulgraham.com/a.html",
@@ -82,6 +86,7 @@ def _clock_catalog(
         last_seen_at=last_seen,
         observed_updated_at=T0,
         summary=summary,
+        consecutive_absences=consecutive_absences,
         page=ResourceState(last_success_at=last_success),
     )
     return Catalog(
@@ -92,6 +97,7 @@ def _clock_catalog(
         entry_order=[entry.stable_id],
         entries={entry.stable_id: entry},
         last_generation_id=generation_id,
+        state_revision=state_revision,
     )
 
 
@@ -1137,6 +1143,195 @@ def test_save_catalog_under_lock_stale_candidate_aborts(tmp_path: Path) -> None:
     assert entry.title == "B-changed"
     assert material_catalog_digest(on_disk) == material_catalog_digest(g1)
     assert (tmp_path / "feeds" / "rss.xml").read_bytes() == _LOCK_FEED_BYTES["rss"]
+
+
+def test_same_material_older_finalizer_aborts_on_state_revision(tmp_path: Path) -> None:
+    """PGF-2026-022: same-material overlay cannot regress newer operational state."""
+    base_rev = "a" * 32
+    newer = _clock_catalog(
+        last_success=T_LATER,
+        last_seen=T_LATER,
+        generation_id="gen-g0",
+        cursor="7",
+        state_revision=base_rev,
+        consecutive_absences=0,
+    )
+    older = _clock_catalog(
+        last_success=T0,
+        last_seen=T0,
+        generation_id="gen-g0",
+        cursor="1",
+        state_revision=base_rev,
+        consecutive_absences=1,
+    )
+    _write_public_artifacts(
+        tmp_path, newer.model_copy(update={"state_revision": base_rev}), **_LOCK_FEED_BYTES
+    )
+    committed = _save_catalog_under_lock(
+        tmp_path,
+        newer,
+        **_LOCK_FEED_BYTES,
+        base_material_digest=material_catalog_digest(newer),
+        base_state_revision=base_rev,
+    )
+    assert committed.action == "state_changed"
+    assert committed.catalog.state_revision != base_rev
+    on_disk = load_catalog(default_catalog_path(tmp_path))
+    assert on_disk is not None
+    assert on_disk.index.last_success_at == T_LATER
+    assert on_disk.versions["page_fetch_cursor"] == "7"
+
+    with pytest.raises(FeedError, match="state revision"):
+        _save_catalog_under_lock(
+            tmp_path,
+            older,
+            **_LOCK_FEED_BYTES,
+            base_material_digest=material_catalog_digest(older),
+            base_state_revision=base_rev,
+        )
+    reloaded = load_catalog(default_catalog_path(tmp_path))
+    assert reloaded is not None
+    assert reloaded.index.last_success_at == T_LATER
+    assert reloaded.entries[newer.entry_order[0]].consecutive_absences == 0
+    assert reloaded.entries[newer.entry_order[0]].last_seen_at == T_LATER
+    assert reloaded.versions["page_fetch_cursor"] == "7"
+    assert reloaded.state_revision == on_disk.state_revision
+
+
+def test_same_material_force_publish_aborts_on_stale_revision(tmp_path: Path) -> None:
+    """PGF-2026-022: force/materialize path uses the same revision CAS."""
+    base_rev = "b" * 32
+    first = _clock_catalog(
+        last_success=T_LATER,
+        last_seen=T_LATER,
+        generation_id="gen-g0",
+        cursor="2",
+        state_revision=base_rev,
+    )
+    older = _clock_catalog(
+        last_success=T0,
+        last_seen=T0,
+        generation_id="gen-g0",
+        cursor="9",
+        state_revision=base_rev,
+    )
+    _write_public_artifacts(tmp_path, first, **_LOCK_FEED_BYTES)
+    winner = _finalize_under_lock(
+        tmp_path,
+        first,
+        rss=_LOCK_FEED_BYTES["rss"],
+        atom=_LOCK_FEED_BYTES["atom"],
+        json_feed=_LOCK_FEED_BYTES["json_feed"],
+        simple_rss=_LOCK_FEED_BYTES["simple_rss"],
+        simple_atom=_LOCK_FEED_BYTES["simple_atom"],
+        simple_json_feed=_LOCK_FEED_BYTES["simple_json_feed"],
+        reporter=NULL_REPORTER,
+        overlay_clocks=True,
+        verify_existing_on_noop=False,
+        force_publish=True,
+        min_items=1,
+        public_base_url=None,
+        base_material_digest=material_catalog_digest(first),
+        base_state_revision=base_rev,
+    )
+    assert winner.action == "updated"
+    assert winner.catalog.state_revision != base_rev
+
+    with pytest.raises(FeedError, match="state revision"):
+        _finalize_under_lock(
+            tmp_path,
+            older,
+            rss=_LOCK_FEED_BYTES["rss"],
+            atom=_LOCK_FEED_BYTES["atom"],
+            json_feed=_LOCK_FEED_BYTES["json_feed"],
+            simple_rss=_LOCK_FEED_BYTES["simple_rss"],
+            simple_atom=_LOCK_FEED_BYTES["simple_atom"],
+            simple_json_feed=_LOCK_FEED_BYTES["simple_json_feed"],
+            reporter=NULL_REPORTER,
+            overlay_clocks=True,
+            verify_existing_on_noop=False,
+            force_publish=True,
+            min_items=1,
+            public_base_url=None,
+            base_material_digest=material_catalog_digest(older),
+            base_state_revision=base_rev,
+        )
+    reloaded = load_catalog(default_catalog_path(tmp_path))
+    assert reloaded is not None
+    assert reloaded.index.last_success_at == T_LATER
+    assert reloaded.versions["page_fetch_cursor"] == "2"
+
+
+def test_apply_enrichment_parse_failure_persists_transport_evidence() -> None:
+    """PGF-2026-023: parse-failed 200 keeps wire/decode evidence; no success TTL."""
+    from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
+    sid = "https://paulgraham.com/a.html"
+    prior_hash = "b" * 64
+    entry = CatalogEntry(
+        stable_id=sid,
+        url=sid,
+        title="A",
+        position=0,
+        summary="prior good",
+        prior_good_summary="prior good",
+        observed_updated_at=T0,
+        page=ResourceState(
+            etag='"old"',
+            last_modified="Wed, 01 Jan 2020 00:00:00 GMT",
+            raw_sha256=prior_hash,
+            decoded_sha256=prior_hash,
+            last_success_at=T0,
+            failure_count=0,
+            status_code=200,
+        ),
+    )
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        entry_order=[sid],
+        entries={sid: entry},
+    )
+    new_raw = "c" * 64
+    new_decoded = "d" * 64
+    evidence = {
+        sid: PageEnrichEvidence(
+            ok=False,
+            error_kind="parse",
+            error_message="bad html",
+            status_code=200,
+            etag='"new"',
+            last_modified="Thu, 02 Jan 2020 00:00:00 GMT",
+            raw_sha256=new_raw,
+            decoded_sha256=new_decoded,
+            raw_bytes_received=12,
+            decoded_bytes_received=20,
+            selected_encoding="utf-8",
+        )
+    }
+    essay = Essay(
+        position=1,
+        title="A",
+        url=sid,
+        stable_id=sid,
+        is_permalink=True,
+        summary="prior good",
+    )
+    next_catalog = _apply_enrichment(catalog, [essay], now=T_LATER, page_evidence=evidence)
+    page = next_catalog.entries[sid].page
+    assert page.last_success_at == T0
+    assert page.failure_count == 1
+    assert page.last_error_kind == "parse"
+    assert page.status_code == 200
+    assert page.etag == '"new"'
+    assert page.last_modified == "Thu, 02 Jan 2020 00:00:00 GMT"
+    assert page.raw_sha256 == new_raw
+    assert page.decoded_sha256 == new_decoded
+    assert page.raw_bytes_received == 12
+    assert page.decoded_bytes_received == 20
+    assert page.selected_encoding == "utf-8"
+    assert next_catalog.entries[sid].summary == "prior good"
+    assert next_catalog.entries[sid].prior_good_summary == "prior good"
 
 
 def test_complete_index_state_200_and_304_advance_success_and_clear_failure() -> None:

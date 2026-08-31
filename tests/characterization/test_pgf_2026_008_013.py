@@ -72,13 +72,9 @@ def test_pgf_2026_013_one_run_omission_does_not_publish_deletion() -> None:
     assert second.removed == [gone]
     assert gone not in deleted.entries
 
-    four_held, four_cs = reconcile_discovery(prior, items[:2], now=T1)
-    assert len(four_cs.held) == 4
-    mixed, mixed_cs = reconcile_discovery(four_held, items[:1], now=T1)
-    new_miss = items[1].stable_id
-    assert mixed_cs.held == [new_miss]
-    assert new_miss in mixed.entries
-    assert len(mixed_cs.removed) == 4
+    _five_held, five_cs = reconcile_discovery(prior, items[:1], now=T1)
+    assert five_cs.removed == []
+    assert len(five_cs.held) == 5
 
 
 def test_pgf_2026_013_quarantine_floor_unchanged() -> None:

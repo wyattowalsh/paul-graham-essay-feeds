@@ -29,6 +29,7 @@ from paul_graham_essay_feeds.catalog import (
     plan_refresh,
     reconcile_discovery,
     save_catalog,
+    stamp_state_revision,
 )
 from paul_graham_essay_feeds.discover import discover_essays
 from paul_graham_essay_feeds.enrich import (
@@ -268,20 +269,34 @@ def _apply_enrichment(
         # Failure path: no evidence, or explicit ok=False.
         if ev is None or not ev.ok:
             fail_count = int(entry.page.failure_count) + 1
-            page = entry.page.model_copy(
-                update={
-                    "last_checked_at": now,
-                    "last_attempted_at": now,
-                    "last_response_at": now,
-                    "failure_count": fail_count,
-                    "last_error_kind": (ev.error_kind if ev is not None else "missing_evidence"),
-                    "last_error_message": (
-                        ev.error_message if ev is not None else "no enrich evidence"
-                    ),
-                    "next_retry_at": now + failure_backoff_delta(failure_count=fail_count),
-                    "status_code": ev.status_code if ev is not None else entry.page.status_code,
-                }
-            )
+            fail_update: dict[str, object] = {
+                "last_checked_at": now,
+                "last_attempted_at": now,
+                "last_response_at": now,
+                "failure_count": fail_count,
+                "last_error_kind": (ev.error_kind if ev is not None else "missing_evidence"),
+                "last_error_message": (
+                    ev.error_message if ev is not None else "no enrich evidence"
+                ),
+                "next_retry_at": now + failure_backoff_delta(failure_count=fail_count),
+                "status_code": ev.status_code if ev is not None else entry.page.status_code,
+            }
+            if ev is not None:
+                if ev.etag is not None:
+                    fail_update["etag"] = ev.etag
+                if ev.last_modified is not None:
+                    fail_update["last_modified"] = ev.last_modified
+                if ev.raw_sha256 is not None:
+                    fail_update["raw_sha256"] = ev.raw_sha256
+                if ev.decoded_sha256 is not None:
+                    fail_update["decoded_sha256"] = ev.decoded_sha256
+                if ev.raw_bytes_received is not None:
+                    fail_update["raw_bytes_received"] = ev.raw_bytes_received
+                if ev.decoded_bytes_received is not None:
+                    fail_update["decoded_bytes_received"] = ev.decoded_bytes_received
+                if ev.selected_encoding is not None:
+                    fail_update["selected_encoding"] = ev.selected_encoding
+            page = entry.page.model_copy(update=fail_update)
             next_entries[stable_id] = entry.model_copy(update={"page": page})
             continue
 
@@ -672,6 +687,7 @@ def _finalize_under_lock(
     min_items: int,
     public_base_url: str | None,
     base_material_digest: str | None = None,
+    base_state_revision: str | None = None,
 ) -> _LockedWrite:
     """Single writer critical section: lock → recover → verify/recompute → write.
 
@@ -682,6 +698,9 @@ def _finalize_under_lock(
     digest **and** feed bytes. ``force_publish`` always stages after recover
     unless the durable catalog material digest differs from
     ``base_material_digest`` (stale candidate; PGF-2026-002).
+    ``base_state_revision`` must match the durable catalog's ``state_revision``
+    or finalize aborts (PGF-2026-022); same-material overlay cannot regress
+    clocks/cursors/streaks from an older contender.
     """
     from paul_graham_essay_feeds.publication import (
         acquire_write_lock,
@@ -691,8 +710,22 @@ def _finalize_under_lock(
 
     lock = acquire_write_lock(root)
     try:
-        recover_materialize(root)
+        recovered = recover_materialize(root)
         reloaded = load_catalog(default_catalog_path(root))
+        # Crash recovery rematerializes a generation that mints its own
+        # state_revision; skip revision CAS so RV-C-001 overlay/publish can run.
+        # A completed concurrent writer unlinks the pointer, so recover is a
+        # no-op and a revision mismatch still fail-closes (PGF-2026-022).
+        if (
+            not recovered
+            and reloaded is not None
+            and reloaded.state_revision != base_state_revision
+        ):
+            raise FeedError(
+                "Stale finalize: durable catalog state revision changed since this "
+                f"candidate was planned (base {base_state_revision!r}, "
+                f"current {reloaded.state_revision!r}). Re-run to rebase."
+            )
         if reloaded is not None and base_material_digest is not None:
             current_digest = material_catalog_digest(reloaded)
             candidate_digest = material_catalog_digest(catalog)
@@ -716,7 +749,9 @@ def _finalize_under_lock(
                     and material_catalog_digest(reloaded) == material_catalog_digest(catalog)
                 ):
                     if overlay_clocks:
-                        to_save = _overlay_observation_clocks(base=reloaded, clocks=catalog)
+                        to_save = stamp_state_revision(
+                            _overlay_observation_clocks(base=reloaded, clocks=catalog)
+                        )
                         save_catalog(default_catalog_path(root), to_save)
                         logger.info(
                             "Post-lock material matches; overlaying clocks onto reloaded catalog"
@@ -741,7 +776,9 @@ def _finalize_under_lock(
                 simple_json_feed=simple_json_feed,
             ):
                 if reloaded is not None:
-                    to_save = _overlay_observation_clocks(base=reloaded, clocks=catalog)
+                    to_save = stamp_state_revision(
+                        _overlay_observation_clocks(base=reloaded, clocks=catalog)
+                    )
                     save_catalog(default_catalog_path(root), to_save)
                     logger.info(
                         "Post-lock material matches; overlaying clocks onto reloaded catalog"
@@ -766,8 +803,11 @@ def _finalize_under_lock(
             simple_json_feed=simple_json_feed,
             reporter=reporter,
         )
+        published = load_catalog(default_catalog_path(root))
+        if published is None:
+            published = catalog.model_copy(update={"last_generation_id": gen_id})
         return _LockedWrite(
-            catalog=catalog.model_copy(update={"last_generation_id": gen_id}),
+            catalog=published,
             action=PipelineAction.MATERIAL_CHANGED.value,
         )
     finally:
@@ -786,6 +826,7 @@ def _save_catalog_under_lock(
     simple_json_feed: bytes,
     reporter: ProgressReporter | None = None,
     base_material_digest: str | None = None,
+    base_state_revision: str | None = None,
 ) -> _LockedWrite:
     """Lock, recover, then overlay-save or publish in one protected sequence.
 
@@ -812,6 +853,7 @@ def _save_catalog_under_lock(
         min_items=1,
         public_base_url=None,
         base_material_digest=base_material_digest,
+        base_state_revision=base_state_revision,
     )
 
 
@@ -829,6 +871,7 @@ def _publish_catalog_and_feeds(
     reporter: ProgressReporter,
     public_base_url: str | None = None,
     base_material_digest: str | None = None,
+    base_state_revision: str | None = None,
 ) -> Catalog:
     """Verify in memory, then publish via locked staged generation.
 
@@ -871,6 +914,7 @@ def _publish_catalog_and_feeds(
         min_items=min_items,
         public_base_url=public_base_url,
         base_material_digest=base_material_digest,
+        base_state_revision=base_state_revision,
     )
     catalog_path = default_catalog_path(root)
     logger.info(
@@ -980,6 +1024,7 @@ def run_catalog_pipeline(
     # Capture before fingerprint mutation so a settings bump is not treated
     # as a concurrent writer.
     base_material_digest = material_catalog_digest(prior)
+    base_state_revision = prior.state_revision
     fingerprint_changed = prior.material_config_fingerprint != fingerprint
     if fingerprint_changed:
         prior = prior.model_copy(update={"material_config_fingerprint": fingerprint})
@@ -1285,6 +1330,7 @@ def run_catalog_pipeline(
             min_items=settings.min_items,
             public_base_url=settings.public_base_url,
             base_material_digest=base_material_digest,
+            base_state_revision=base_state_revision,
         )
         return _result_for_locked_write(
             committed,
@@ -1323,6 +1369,7 @@ def run_catalog_pipeline(
             simple_json_feed=simple_json_feed,
             reporter=progress,
             base_material_digest=base_material_digest,
+            base_state_revision=base_state_revision,
         )
         return _result_for_locked_write(
             committed,
@@ -1347,6 +1394,7 @@ def run_catalog_pipeline(
         reporter=progress,
         public_base_url=settings.public_base_url,
         base_material_digest=base_material_digest,
+        base_state_revision=base_state_revision,
     )
 
     return PipelineResult(

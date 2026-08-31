@@ -593,6 +593,14 @@ class Catalog(_StrictModel):
     last_generation_id: str | None = Field(
         default=None, description="Last successfully published generation id."
     )
+    state_revision: str | None = Field(
+        default=None,
+        description=(
+            "Opaque hex token of the last durable catalog write (clock overlay "
+            "or material publish). Compare-and-swap for concurrent finalizers "
+            "(PGF-2026-022). None on catalogs never written by this scheme."
+        ),
+    )
     migration_history: list[dict[str, Any]] = Field(
         default_factory=list, description="Idempotent migration records."
     )
