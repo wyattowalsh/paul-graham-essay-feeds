@@ -21,30 +21,36 @@ correct `https` links, short descriptions, guids, and clean Turbify chapter URLs
 
 ## Subscribe
 
-No Python required. Point a feed reader at these hosted files.
+No Python required. Canonical URLs are a typed Cloudflare Worker
+([`pg-essay-feeds.wyattowalsh.workers.dev`](https://pg-essay-feeds.wyattowalsh.workers.dev/))
+that serves the committed `feeds/` files with the correct media types.
+GitHub raw remains a `text/plain` fallback.
 
-**Simple (recommended)** — title and link only:
-
-| Format | Subscribe |
-| :--- | :--- |
-| RSS 2.0 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.simple.xml) |
-| Atom 1.0 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/atom.simple.xml) |
-| JSON Feed 1.1 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/feed.simple.json) |
-
-**Enriched** — short source-derived summaries (semantic gating rejects promo/chrome):
+**Simple (recommended)** — no fetched summaries; deterministic title blurb:
 
 | Format | Subscribe |
 | :--- | :--- |
-| RSS 2.0 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/rss.xml) |
-| Atom 1.0 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/atom.xml) |
-| JSON Feed 1.1 | [Subscribe](https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/feed.json) |
+| RSS 2.0 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/rss.simple.xml) |
+| Atom 1.0 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/atom.simple.xml) |
+| JSON Feed 1.1 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/feed.simple.json) |
+
+**Enriched** — short source excerpts (semantic gating rejects promo/chrome):
+
+| Format | Subscribe |
+| :--- | :--- |
+| RSS 2.0 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/rss.xml) |
+| Atom 1.0 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/atom.xml) |
+| JSON Feed 1.1 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/feed.json) |
+
+**Latest 20** — same files, first twenty items: [`/latest/rss.xml`](https://pg-essay-feeds.wyattowalsh.workers.dev/latest/rss.xml),
+[`/latest/atom.xml`](https://pg-essay-feeds.wyattowalsh.workers.dev/latest/atom.xml),
+[`/latest/feed.json`](https://pg-essay-feeds.wyattowalsh.workers.dev/latest/feed.json)
+(and the `.simple` siblings).
 
 > [!NOTE]
-> **Accepted risk (PGF-2026-015):** GitHub raw serves these files as
-> `text/plain` (the body is still RSS / Atom / JSON Feed). Strict readers
-> that require `application/rss+xml` (or similar) should point at local
-> `feeds/` from the CLI below. This project does not add GitHub Pages or
-> `site/`.
+> Deploy the wrapper from [`host/`](./host/): `npx wrangler deploy`.
+> GitHub raw (`text/plain`) is still accepted-risk fallback, not the
+> canonical subscribe URL.
 
 ---
 
@@ -52,7 +58,7 @@ No Python required. Point a feed reader at these hosted files.
 
 | Path | Format | Contents |
 | :--- | :--- | :--- |
-| `feeds/rss.simple.xml` | RSS 2.0 | **simple** — title/link blurbs only |
+| `feeds/rss.simple.xml` | RSS 2.0 | **simple** — title blurb, no fetched summaries |
 | `feeds/atom.simple.xml` | Atom 1.0 | simple |
 | `feeds/feed.simple.json` | JSON Feed 1.1 | simple |
 | `feeds/rss.xml` | RSS 2.0 | **enriched** — title, link, guid, short description |
@@ -172,7 +178,7 @@ Environment prefix: `PG_ESSAY_FEEDS_` ([pydantic-settings](https://docs.pydantic
 | `PG_ESSAY_FEEDS_STALE_AFTER_DAYS` | `30` |
 | `PG_ESSAY_FEEDS_PUBLIC_BASE_URL` | unset |
 | `PG_ESSAY_FEEDS_ALLOW_DISCOVERY_FALLBACK` | `true` |
-| `PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS` | `0.05` |
+| `PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS` | `0.25` |
 
 ```bash
 export PG_ESSAY_FEEDS_ENRICH=false   # optional: skip per-page scrapes
@@ -199,7 +205,7 @@ export PG_ESSAY_FEEDS_ENRICH=false   # optional: skip per-page scrapes
 | `PG_ESSAY_FEEDS_PUBLIC_BASE_URL` | unset | Public base for feed self links |
 | `PG_ESSAY_FEEDS_STALE_AFTER_DAYS` | `30` | Re-fetch page metadata after N days |
 | `PG_ESSAY_FEEDS_ALLOW_DISCOVERY_FALLBACK` | `true` | Sparse-marker discovery fallback |
-| `PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS` | `0.05` | Min seconds between requests to the same host |
+| `PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS` | `0.25` | Min seconds between requests to the same host |
 | `PG_ESSAY_FEEDS_QUIET` / `PG_ESSAY_FEEDS_VERBOSE` | `false` | Log levels |
 
 See also: [DOCS.md → Configuration](./DOCS.md#configuration).

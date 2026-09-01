@@ -691,7 +691,7 @@ def test_decode_content_encoding_gzip_deflate_br_order(monkeypatch: pytest.Monke
     plain = b"<html>pgf-encoding-order</html>"
     marker = b"|br"
 
-    def fake_br_decompress(data: bytes) -> bytes:
+    def fake_br_decompress(data: bytes, *args: object, **kwargs: object) -> bytes:
         assert data.endswith(marker)
         return data[: -len(marker)]
 
@@ -714,6 +714,20 @@ def test_decode_content_encoding_identity_and_missing() -> None:
     assert _decode_content_encoding(raw, "") == raw
     assert _decode_content_encoding(raw, "identity") == raw
     assert _decode_content_encoding(gzip.compress(raw), "identity, gzip") == raw
+
+
+def test_decode_too_many_encoding_layers_fails_closed() -> None:
+    with pytest.raises(FeedError, match="Too many Content-Encoding layers"):
+        _decode_content_encoding(b"x", "gzip, gzip, gzip, gzip, gzip")
+
+
+def test_decode_gzip_bomb_aborts_before_full_expansion() -> None:
+    bomb = gzip.compress(b"A" * 200_000)
+    with pytest.raises(FeedError, match="over 1000 bytes"):
+        _decode_content_encoding(bomb, "gzip", max_bytes=1000)
+    deflated = zlib.compress(b"B" * 200_000)
+    with pytest.raises(FeedError, match="over 1000 bytes"):
+        _decode_content_encoding(deflated, "deflate", max_bytes=1000)
 
 
 def test_decode_content_encoding_empty_body_known_tokens() -> None:

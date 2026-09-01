@@ -698,7 +698,10 @@ def _parse_content_length(response: httpx.Response) -> int | None:
     return _parse_content_length_value(response.headers.get("content-length"))
 
 
-def _brotli_decompress(data: bytes) -> bytes:
+_MAX_ENCODING_LAYERS: Final = 4
+
+
+def _brotli_decompress(data: bytes, *, max_bytes: int | None = None) -> bytes:
     module = None
     with contextlib.suppress(ImportError):
         module = importlib.import_module("brotli")
@@ -707,10 +710,55 @@ def _brotli_decompress(data: bytes) -> bytes:
             module = importlib.import_module("brotlicffi")
     if module is None:
         raise FeedError("Unsupported Content-Encoding: br (brotli package not installed)")
+    decompressor_cls = getattr(module, "Decompressor", None)
+    if callable(decompressor_cls) and max_bytes is not None:
+        dec = decompressor_cls()
+        out = bytearray()
+        process = getattr(dec, "process", None) or getattr(dec, "decompress", None)
+        if not callable(process):
+            raise FeedError("Unsupported Content-Encoding: br")
+        chunk = process(data)
+        out.extend(chunk)
+        if len(out) > max_bytes:
+            raise FeedError(f"Response over {max_bytes} bytes")
+        is_finished = getattr(dec, "is_finished", None)
+        if callable(is_finished) and not is_finished():
+            finish = getattr(dec, "finish", None)
+            if callable(finish):
+                out.extend(finish())
+        if len(out) > max_bytes:
+            raise FeedError(f"Response over {max_bytes} bytes")
+        return bytes(out)
     decompress = getattr(module, "decompress", None)
     if not callable(decompress):
         raise FeedError("Unsupported Content-Encoding: br")
-    return bytes(decompress(data))
+    body = bytes(decompress(data))
+    if max_bytes is not None and len(body) > max_bytes:
+        raise FeedError(f"Response over {max_bytes} bytes")
+    return body
+
+
+def _zlib_decompress_capped(data: bytes, *, wbits: int, max_bytes: int) -> bytes:
+    """Incrementally inflate gzip/zlib/raw-deflate and abort past ``max_bytes``."""
+    dec = zlib.decompressobj(wbits)
+    out = bytearray()
+    remaining = data
+    while remaining:
+        budget = max_bytes - len(out)
+        if budget <= 0:
+            raise FeedError(f"Response over {max_bytes} bytes")
+        chunk = dec.decompress(remaining, budget)
+        out.extend(chunk)
+        if len(out) > max_bytes:
+            raise FeedError(f"Response over {max_bytes} bytes")
+        leftover = dec.unconsumed_tail
+        if leftover == remaining:
+            break
+        remaining = leftover
+    out.extend(dec.flush())
+    if len(out) > max_bytes:
+        raise FeedError(f"Response over {max_bytes} bytes")
+    return bytes(out)
 
 
 def _content_encoding_tokens(content_encoding: str | None) -> list[str]:
@@ -720,17 +768,29 @@ def _content_encoding_tokens(content_encoding: str | None) -> list[str]:
     return [t.strip().lower() for t in content_encoding.split(",") if t.strip()]
 
 
-def _decode_content_encoding(raw: bytes, content_encoding: str | None) -> bytes:
+def _decode_content_encoding(
+    raw: bytes,
+    content_encoding: str | None,
+    *,
+    max_bytes: int | None = None,
+) -> bytes:
     """Undo Content-Encoding (gzip / deflate / br) in reverse application order.
 
     Missing or ``identity`` is a no-op. Every declared non-identity token must
     be supported; unknown encodings fail closed and are never treated as
     identity (PGF-2026-017). Empty bodies skip decompression after that check
-    so HEAD/304 cannot be misread as a successful identity decode.
+    so HEAD/304 cannot be misread as a successful identity decode. When
+    ``max_bytes`` is set, gzip/deflate inflate incrementally and abort before
+    assembling a larger decoded payload.
     """
     tokens = _content_encoding_tokens(content_encoding)
     if not tokens:
+        if max_bytes is not None and len(raw) > max_bytes:
+            raise FeedError(f"Response over {max_bytes} bytes")
         return raw
+    layers = [t for t in tokens if t != "identity"]
+    if len(layers) > _MAX_ENCODING_LAYERS:
+        raise FeedError(f"Too many Content-Encoding layers ({len(layers)})")
     body = raw
     for token in reversed(tokens):
         if token == "identity":
@@ -740,14 +800,25 @@ def _decode_content_encoding(raw: bytes, content_encoding: str | None) -> bytes:
         if not body:
             continue
         if token in {"gzip", "x-gzip"}:
-            body = gzip.decompress(body)
+            if max_bytes is None:
+                body = gzip.decompress(body)
+            else:
+                body = _zlib_decompress_capped(body, wbits=16 + zlib.MAX_WBITS, max_bytes=max_bytes)
         elif token == "deflate":
-            try:
-                body = zlib.decompress(body)
-            except zlib.error:
-                body = zlib.decompress(body, -zlib.MAX_WBITS)
+            if max_bytes is None:
+                try:
+                    body = zlib.decompress(body)
+                except zlib.error:
+                    body = zlib.decompress(body, -zlib.MAX_WBITS)
+            else:
+                try:
+                    body = _zlib_decompress_capped(body, wbits=zlib.MAX_WBITS, max_bytes=max_bytes)
+                except zlib.error:
+                    body = _zlib_decompress_capped(body, wbits=-zlib.MAX_WBITS, max_bytes=max_bytes)
         else:
-            body = _brotli_decompress(body)
+            body = _brotli_decompress(body, max_bytes=max_bytes)  # type: ignore[misc]
+        if max_bytes is not None and len(body) > max_bytes:
+            raise FeedError(f"Response over {max_bytes} bytes")
     return body
 
 
@@ -780,7 +851,7 @@ def _consume_entity_body(
     raw = bytes(raw_buf)
     encoding = response.headers.get("content-encoding")
     try:
-        decoded = _decode_content_encoding(raw, encoding)
+        decoded = _decode_content_encoding(raw, encoding, max_bytes=max_bytes)
     except FeedError:
         raise
     except (OSError, gzip.BadGzipFile, zlib.error, ValueError) as exc:
@@ -893,7 +964,7 @@ def _build_evidence(
         else:
             kind = ResultKind.FAILED
             error_message = "Unacceptable HTTP 304"
-    elif 200 <= status_code < 300:
+    elif status_code == 200:
         kind = ResultKind.FETCHED
         error_message = None
     else:
@@ -1576,6 +1647,10 @@ def fetch_index(
             if result.response is None:
                 raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
             result.response.raise_for_status()
+            if ev.status_code != 200:
+                raise FeedError(f"HTTP {ev.status_code} is not a usable index document")
+            if not result.body:
+                raise FeedError(f"Empty HTTP 200 body for {url}")
             document = decode_html_document(result.body, transport_charset=ev.charset)
             return IndexFetchResult(
                 html=document.text,

@@ -518,6 +518,30 @@ def _write_feed(root: Path, items: list[object]) -> None:
     )
 
 
+def test_require_contained_path_rejects_symlink_parent(tmp_path: Path) -> None:
+    from paul_graham_essay_feeds.catalog import require_contained_path
+    from paul_graham_essay_feeds.models import FeedError
+
+    target = tmp_path / "feeds"
+    target.symlink_to(tmp_path / "elsewhere")
+    with pytest.raises(FeedError, match="symlink"):
+        require_contained_path(tmp_path, target)
+
+
+def test_require_contained_path_rejects_symlink_parent_directory(tmp_path: Path) -> None:
+    from paul_graham_essay_feeds.catalog import require_contained_path
+    from paul_graham_essay_feeds.models import FeedError
+
+    root = tmp_path / "root"
+    root.mkdir()
+    real = tmp_path / "real"
+    real.mkdir()
+    linked = root / "linked"
+    linked.symlink_to(real)
+    with pytest.raises(FeedError, match="parent"):
+        require_contained_path(root, linked / "file.txt")
+
+
 def test_bootstrap_from_synthetic_feed_json(tmp_path: Path) -> None:
     now = datetime(2026, 7, 25, 12, 0, 0, tzinfo=UTC)
     _write_feed(

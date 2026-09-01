@@ -21,7 +21,8 @@ _SMALL_INDEX = synthetic_index_html(essay_count=1)
 _ESSAY_PAGE = """\
 <html><head>
 <title>Essay 0</title>
-<meta name="description" content="A short summary for essay zero." />
+<meta name="description"
+content="A short summary for essay zero that explains the idea with enough words." />
 </head><body>
 Essay 0
 January 2020

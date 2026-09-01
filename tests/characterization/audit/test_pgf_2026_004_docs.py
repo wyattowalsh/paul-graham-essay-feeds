@@ -10,6 +10,7 @@ from paul_graham_essay_feeds import __version__
 
 _REPO = Path(__file__).resolve().parents[3]
 _RAW = "https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/"
+_HOST = "https://pg-essay-feeds.wyattowalsh.workers.dev/"
 _SIMPLE = ("rss.simple.xml", "atom.simple.xml", "feed.simple.json")
 _ENRICHED = ("rss.xml", "atom.xml", "feed.json")
 _GIT_MAIN = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main"
@@ -64,16 +65,26 @@ def test_readme_subscribe_simple_first_six_raw_feeds() -> None:
     assert "**Simple (recommended)**" in readme
     assert readme.index("**Simple (recommended)**") < readme.index("**Enriched**")
     for name in _SIMPLE + _ENRICHED:
-        url = _RAW + name
+        url = _HOST + name
         assert url in readme, url
         assert f"[Subscribe]({url})" in readme
-    simple_pos = min(readme.index(_RAW + name) for name in _SIMPLE)
-    enriched_pos = min(readme.index(_RAW + name) for name in _ENRICHED)
+    simple_pos = min(readme.index(_HOST + name) for name in _SIMPLE)
+    enriched_pos = min(readme.index(_HOST + name) for name in _ENRICHED)
     assert simple_pos < enriched_pos
     subscribe_block = readme[readme.index("## Subscribe") : readme.index("## What you get")]
     assert "No Python required" in subscribe_block
+    assert "application/rss+xml" in subscribe_block or "workers.dev" in subscribe_block
     assert "uvx" not in subscribe_block
     assert "pip install" not in subscribe_block.lower()
+    worker = _text("host/src/worker.js")
+    assert "application/rss+xml" in worker
+    assert "application/atom+xml" in worker
+    assert "application/feed+json" in worker
+    assert "/latest/rss.xml" in worker
+    assert "HEAD" in worker
+    wrangler = _text("host/wrangler.toml")
+    assert 'directory = "../feeds"' in wrangler
+    assert "run_worker_first = true" in wrangler
 
 
 def test_notice_does_not_relicense_essay_text() -> None:

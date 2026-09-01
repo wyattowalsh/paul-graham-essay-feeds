@@ -57,11 +57,16 @@ EXCLUDED_PATHS: Final = frozenset({"/", "/index.html", "/articles.html", "/rss.h
 PROTECTED_PATHS: Final = frozenset({"/ty/cdn/paulgraham/acl1.txt", "/ty/cdn/paulgraham/acl2.txt"})
 FEED_ID: Final = "tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds"
 FEED_ID_SIMPLE: Final = "tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds:simple"
-FEED_TITLE: Final = "Paul Graham: Essays"
+FEED_TITLE: Final = "Paul Graham Essays — Enriched (Unofficial)"
+FEED_TITLE_SIMPLE: Final = "Paul Graham Essays — Simple (Unofficial)"
 FEED_DESCRIPTION: Final = (
-    "Unofficial metadata feeds for Paul Graham's essays, "
-    "ordered newest to oldest from the official index."
+    "Unofficial titles, links, page metadata, and short source excerpts "
+    "for Paul Graham's essays — never complete essay bodies. Ordered newest "
+    "to oldest from the official index. Dates may be when this feed observed "
+    "or detected a change, not the essay's original publication date."
 )
+HOST_PUBLIC_BASE_URL: Final = "https://pg-essay-feeds.wyattowalsh.workers.dev/"
+LATEST_FEED_ITEMS: Final = 20
 AUTHOR: Final = "Paul Graham"
 AUTHOR_URL: Final = "https://paulgraham.com/"
 # Single source of truth: ``__version__`` in ``__init__.py``.
@@ -677,7 +682,7 @@ class FeedSnapshot(_StrictModel):
         description="Generation logical update time (not wall-clock build)."
     )
     generator: str = Field(min_length=1, description="Generator product string.")
-    title: str = Field(default="Paul Graham Essays", description="Feed title.")
+    title: str = Field(default=FEED_TITLE, description="Feed title.")
     home_page_url: str = Field(
         default="https://paulgraham.com/articles.html",
         description="Feed home / alternate page.",
@@ -957,11 +962,27 @@ def is_content_candidate(url: str, title: str) -> bool:
     return not (host == "paulgraham.com" and path in EXCLUDED_PATHS)
 
 
+_TRACKING_QUERY = re.compile(r"^(utm_|fbclid$|gclid$|mc_eid$)", re.I)
+
+
+def _strip_tracking_query(url: str) -> str:
+    """Drop known tracking parameters from paulgraham.com identity URLs."""
+    parts = urlsplit(url)
+    if not parts.query:
+        return url
+    kept = [
+        pair
+        for pair in parts.query.split("&")
+        if pair and not _TRACKING_QUERY.match(pair.split("=", 1)[0])
+    ]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, "&".join(kept), parts.fragment))
+
+
 def make_stable_id(url: str) -> tuple[str, bool]:
     """Return ``(stable_id, is_permalink)`` for feed guid/id."""
     parts = urlsplit(url)
     if parts.hostname == "paulgraham.com":
-        return url, True
+        return _strip_tracking_query(url), True
     stable = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
     return f"urn:uuid:{uuid.uuid5(uuid.NAMESPACE_URL, stable)}", False
 

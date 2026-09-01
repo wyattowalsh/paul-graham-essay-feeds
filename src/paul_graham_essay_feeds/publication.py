@@ -35,6 +35,7 @@ from paul_graham_essay_feeds.catalog import (
     atomic_write_text,
     catalog_to_json,
     default_catalog_path,
+    require_contained_path,
     save_catalog,
     stamp_state_revision,
 )
@@ -230,6 +231,8 @@ def write_staging_generation(
     + MANIFEST so the staged catalog, MANIFEST, pointer, and public catalog
     share that id.
     """
+    require_contained_path(Path(root), Path(root) / _GEN_ROOT_REL)
+    require_contained_path(Path(root), Path(root) / "feeds")
     gen_id = uuid.uuid4().hex
     stamped = stamp_state_revision(catalog.model_copy(update={"last_generation_id": gen_id}))
     catalog_blob = catalog_to_json(stamped).encode("utf-8")
@@ -315,6 +318,24 @@ def verify_staging_manifest(gen_dir: Path) -> None:
     extras = sorted(_disk_file_rels(gen_dir) - allowed)
     if extras:
         raise FeedError(f"Unexpected extra staged files: {', '.join(extras)}")
+
+    dir_id = gen_dir.name
+    if dir_id != manifest.gen_id:
+        raise FeedError(
+            f"Staging gen_id mismatch: directory {dir_id!r} vs manifest {manifest.gen_id!r}"
+        )
+    catalog_path = _require_contained_regular_file(gen_dir, "catalog.json")
+    try:
+        staged_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise FeedError("Unreadable staged catalog.json") from exc
+    catalog_gen = (
+        staged_catalog.get("last_generation_id") if isinstance(staged_catalog, dict) else None
+    )
+    if catalog_gen != manifest.gen_id:
+        raise FeedError(
+            f"Staging gen_id mismatch: catalog {catalog_gen!r} vs manifest {manifest.gen_id!r}"
+        )
 
     for rel in STAGING_ARTIFACT_RELS:
         path = _require_contained_regular_file(gen_dir, rel)

@@ -27,6 +27,8 @@ articles.html
 
 # HTTP validator sidecar between publishes — never tracked
 .cache/
+host/node_modules/
+host/.wrangler/
 
 # Local program evidence / agent ledgers (not source of truth)
 /audit/

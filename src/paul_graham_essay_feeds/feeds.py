@@ -19,7 +19,7 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from loguru import logger
 
-from paul_graham_essay_feeds.catalog import atomic_write_bytes
+from paul_graham_essay_feeds.catalog import atomic_write_bytes, require_contained_path
 from paul_graham_essay_feeds.models import (
     ATOM_NS,
     AUTHOR,
@@ -30,6 +30,7 @@ from paul_graham_essay_feeds.models import (
     FEED_ID_SIMPLE,
     FEED_SUMMARY_CHARS,
     FEED_TITLE,
+    FEED_TITLE_SIMPLE,
     JSON_FEED_VERSION,
     NULL_REPORTER,
     SOURCE_URL,
@@ -176,10 +177,12 @@ def catalog_to_feed_snapshot(
     )
     json_name = SIMPLE_FEED_NAMES["json"] if variant == "simple" else ENRICHED_FEED_NAMES["json"]
     feed_url = _join_public_artifact(base, json_name) if base is not None else None
+    title = FEED_TITLE_SIMPLE if variant == "simple" else FEED_TITLE
 
     return FeedSnapshot(
         logical_updated_at=logical_updated_at,
         generator=generator,
+        title=title,
         feed_url=feed_url,
         public_base_url=base,
         variant=variant,
@@ -211,7 +214,7 @@ def render_rss(snapshot: FeedSnapshot) -> bytes:
     root = ET.Element("rss", {"version": "2.0"})
     ch = ET.SubElement(root, "channel")
     for tag, val in (
-        ("title", FEED_TITLE),
+        ("title", snapshot.title),
         ("link", SOURCE_URL),
         ("description", FEED_DESCRIPTION),
         ("language", "en-US"),
@@ -265,7 +268,7 @@ def render_atom(snapshot: FeedSnapshot) -> bytes:
             "{http://www.w3.org/XML/1998/namespace}lang": "en",
         },
     )
-    ET.SubElement(feed, "title").text = FEED_TITLE
+    ET.SubElement(feed, "title").text = snapshot.title
     # Distinct Atom feed IDs for simple vs enriched subscriptions (H-15 / RV-R-002).
     atom_feed_id = FEED_ID_SIMPLE if snapshot.variant == "simple" else FEED_ID
     ET.SubElement(feed, "id").text = atom_feed_id
@@ -326,7 +329,7 @@ def render_json(snapshot: FeedSnapshot) -> bytes:
 
     payload: dict = {
         "version": JSON_FEED_VERSION,
-        "title": FEED_TITLE,
+        "title": snapshot.title,
         "home_page_url": SOURCE_URL,
         "description": FEED_DESCRIPTION,
         "authors": [{"name": AUTHOR, "url": AUTHOR_URL}],
@@ -403,7 +406,7 @@ def write_feeds(
 ) -> None:
     """Atomically publish all six feed artifacts under ``feeds/``."""
     progress = reporter or NULL_REPORTER
-    feeds_dir = root / relative_dir
+    feeds_dir = require_contained_path(Path(root), Path(root) / relative_dir)
     feeds_dir.mkdir(parents=True, exist_ok=True)
     paths = all_feed_paths(root, relative_dir=relative_dir)
 
@@ -425,7 +428,8 @@ def write_feeds(
 
 def verify_feed_artifacts(root: Path, *, min_items: int) -> None:
     """Deep-validate on-disk enriched and simple ``feeds/`` projections."""
-    from paul_graham_essay_feeds.verify import raise_on_failure, verify_feed_bytes
+    from paul_graham_essay_feeds.catalog import default_catalog_path
+    from paul_graham_essay_feeds.verify import raise_on_failure, verify_bundle, verify_feed_bytes
 
     kinds: tuple[Literal["enriched", "simple"], ...] = ("enriched", "simple")
     for kind in kinds:
@@ -445,6 +449,17 @@ def verify_feed_artifacts(root: Path, *, min_items: int) -> None:
                 kind=kind,
             )
         )
+    catalog_path = default_catalog_path(root)
+    if catalog_path.is_file():
+        from paul_graham_essay_feeds.catalog import load_catalog
+        from paul_graham_essay_feeds.models import ConfigurationError
+
+        try:
+            loaded = load_catalog(catalog_path)
+        except (OSError, FeedError, ConfigurationError, ValueError):
+            loaded = None
+        if loaded is not None:
+            raise_on_failure(verify_bundle(Path(root), min_items=min_items))
 
 
 def _entry_summary(summary: str | None, title: str) -> str:

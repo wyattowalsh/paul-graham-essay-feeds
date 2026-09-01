@@ -17,10 +17,12 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from paul_graham_essay_feeds.enrich import score_summary_quality, summary_passes_quality_gate
 from paul_graham_essay_feeds.models import (
+    ALLOWED_HOSTS,
     ATOM_NS,
     FEED_ID,
     FEED_ID_SIMPLE,
     FEED_SUMMARY_CHARS,
+    GENERATOR,
     FeedError,
     VerificationError,
 )
@@ -62,6 +64,9 @@ FEED_ID_COLLISION: Final = "FEED_ID_COLLISION"
 VARIANT_IDENTITY: Final = "VARIANT_IDENTITY"
 FEED_CLOCK: Final = "FEED_CLOCK"
 SEMANTIC_SUMMARY: Final = "SEMANTIC_SUMMARY"
+CATALOG_UNREADABLE: Final = "CATALOG_UNREADABLE"
+CATALOG_FIELD_MISMATCH: Final = "CATALOG_FIELD_MISMATCH"
+ITEM_HOST: Final = "ITEM_HOST"
 _MAX_ARTIFACT_BYTES: Final = 20 * 1024 * 1024
 
 _REPLACEMENT = "\ufffd"
@@ -1428,6 +1433,150 @@ def verify_feed_dir(
     )
     merged = [*violations, *report.violations, *extras]
     return VerificationReport(ok=len(merged) == 0, violations=merged)
+
+
+def _https_allowlisted_item_url(url: str) -> bool:
+    parts = urlsplit(url.strip())
+    if parts.scheme != "https" or parts.username or parts.password or parts.fragment:
+        return False
+    host = (parts.hostname or "").lower()
+    if host == "www.paulgraham.com":
+        host = "paulgraham.com"
+    return host in ALLOWED_HOSTS
+
+
+def verify_bundle(
+    root: Path,
+    *,
+    min_items: int,
+    public_base_url: str | None = None,
+) -> VerificationReport:
+    """Catalog is the oracle: every public feed field must match its projection."""
+    from paul_graham_essay_feeds.catalog import default_catalog_path, load_catalog
+    from paul_graham_essay_feeds.feeds import catalog_to_feed_snapshot
+    from paul_graham_essay_feeds.models import ConfigurationError
+
+    violations: list[VerificationViolation] = []
+    catalog_path = default_catalog_path(root)
+    catalog = None
+    if not catalog_path.is_file():
+        catalog = None
+    else:
+        try:
+            catalog = load_catalog(catalog_path)
+        except (OSError, FeedError, ConfigurationError, ValueError) as exc:
+            return VerificationReport(
+                ok=False,
+                violations=[
+                    VerificationViolation(
+                        code=CATALOG_UNREADABLE,
+                        message=f"Unable to load catalog.json: {exc}",
+                        path="catalog.json",
+                    )
+                ],
+            )
+        if catalog is None:
+            return VerificationReport(
+                ok=False,
+                violations=[
+                    VerificationViolation(
+                        code=CATALOG_UNREADABLE,
+                        message="Unable to load catalog.json",
+                        path="catalog.json",
+                    )
+                ],
+            )
+
+    for kind in ("enriched", "simple"):
+        dir_report = verify_feed_dir(
+            root,
+            min_items=min_items,
+            kind=kind,  # type: ignore[arg-type]
+            public_base_url=public_base_url,
+        )
+        violations.extend(dir_report.violations)
+        if catalog is None:
+            continue
+        mode = "title_only" if kind == "simple" else "enriched"
+        expected = catalog_to_feed_snapshot(
+            catalog,
+            generator=GENERATOR,
+            public_base_url=public_base_url,
+            summary_mode=mode,  # type: ignore[arg-type]
+        )
+        names = _feed_names(kind)  # type: ignore[arg-type]
+        paths = _feed_paths(root, kind=kind)  # type: ignore[arg-type]
+        parsers = (
+            ("rss", _parse_rss_items),
+            ("atom", _parse_atom_items),
+            ("json", _parse_json_items),
+        )
+        expected_ids = [item.id for item in expected.items]
+        expected_titles = [item.title for item in expected.items]
+        expected_urls = [item.url for item in expected.items]
+        expected_summaries = [item.summary for item in expected.items]
+        for key, parser in parsers:
+            path = paths[key]
+            rel = f"feeds/{names[key]}"
+            if not path.is_file():
+                continue
+            try:
+                raw = path.read_bytes()
+            except OSError:
+                continue
+            parsed = parser(raw, path=rel)
+            if isinstance(parsed, VerificationViolation):
+                continue
+            got_ids = [row.item_id for row in parsed]
+            if got_ids != expected_ids:
+                violations.append(
+                    VerificationViolation(
+                        code=CATALOG_FIELD_MISMATCH,
+                        message=f"{rel} ids diverge from catalog projection",
+                        path=rel,
+                    )
+                )
+            for index, row in enumerate(parsed):
+                if index >= len(expected.items):
+                    break
+                if row.title != expected_titles[index]:
+                    violations.append(
+                        VerificationViolation(
+                            code=CATALOG_FIELD_MISMATCH,
+                            message=f"{rel} title diverges from catalog at index {index}",
+                            path=rel,
+                            index=index,
+                        )
+                    )
+                if row.url != expected_urls[index]:
+                    violations.append(
+                        VerificationViolation(
+                            code=CATALOG_FIELD_MISMATCH,
+                            message=f"{rel} url diverges from catalog at index {index}",
+                            path=rel,
+                            index=index,
+                        )
+                    )
+                if row.summary != expected_summaries[index]:
+                    violations.append(
+                        VerificationViolation(
+                            code=CATALOG_FIELD_MISMATCH,
+                            message=f"{rel} summary diverges from catalog at index {index}",
+                            path=rel,
+                            index=index,
+                        )
+                    )
+                if row.url and not _https_allowlisted_item_url(row.url):
+                    violations.append(
+                        VerificationViolation(
+                            code=ITEM_HOST,
+                            message=f"{rel} items[{index}] url is not https allowlisted",
+                            path=rel,
+                            index=index,
+                        )
+                    )
+
+    return VerificationReport(ok=len(violations) == 0, violations=violations)
 
 
 def raise_on_failure(report: VerificationReport) -> None:

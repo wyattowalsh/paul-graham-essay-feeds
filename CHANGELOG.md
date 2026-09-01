@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Typed Cloudflare Worker in `host/` serves committed feeds with
+  `application/rss+xml`, `application/atom+xml`, and `application/feed+json`,
+  plus `/latest/*` projections of the newest 20 items. GET/HEAD/OPTIONS,
+  CORS, and ETag/304 are supported. GitHub raw remains `text/plain` fallback.
+- `--debug` prints unexpected-error tracebacks; `--allow-bootstrap-fallback`
+  is required for discovery fallback when no prior catalog exists.
+- Release artifacts include an sdist smoke test, `requirements.txt`, and a
+  CycloneDX SBOM (`bom.cdx.json`).
+
 ### Fixed
+
+- Parse-failed page validators no longer authorize a later HTTP 304 success.
+- `check` treats the catalog as the feed oracle (title/URL/summary/id).
+- Gzip/deflate decode aborts at the decoded-size cap instead of inflating
+  first. HTTP 204/206 are not successful page/index bodies.
+- Missing catalog after recover with a planned revision is a stale finalize.
+- Staging manifest binds directory name, `gen_id`, and `last_generation_id`.
+
 
 - **PGF-2026-030:** Crash recovery no longer skips `state_revision`
   compare-and-swap. Recover rematerializes first, then revision comparison
@@ -36,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PGF-2026-028:** DOCS distinguish writer crash recovery, local reader
   mix, and Git commit atomicity.
 - **PGF-2026-029:** Release job attests wheel/sdist and attaches SHA-256
-  checksums (no SBOM).
+  checksums plus a CycloneDX SBOM.
 - **PGF-2026-036:** Optional `brotli` extra; CI job runs the Brotli decode
   path. Missing-brotli fail-closed unit test is unchanged.
 

@@ -232,8 +232,15 @@ class Settings(BaseSettings):
             "(full due corpus). Opt-in via --all-pages or PG_ESSAY_FEEDS_ALL_PAGES."
         ),
     )
+    allow_bootstrap_fallback: bool = Field(
+        default=False,
+        description=(
+            "Allow discovery fallback when no prior catalog exists. "
+            "Established catalogs still use allow_discovery_fallback."
+        ),
+    )
     host_cooldown_seconds: float = Field(
-        default=0.05,
+        default=0.25,
         ge=0.0,
         description="Minimum seconds between requests to the same host.",
     )

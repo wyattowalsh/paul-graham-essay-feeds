@@ -53,6 +53,23 @@ _V2_TO_V3_MIGRATION_NAME: Final[str] = "compact_catalog_diffs"
 # ---------------------------------------------------------------------------
 
 
+def require_contained_path(root: Path, target: Path) -> Path:
+    """Reject symlink parents and paths that resolve outside ``root``."""
+    root_r = Path(root).resolve()
+    path = Path(target)
+    if path.is_symlink():
+        raise FeedError(f"Writable path must not be a symlink: {path}")
+    parent = path.parent
+    if parent.is_symlink():
+        raise FeedError(f"Writable parent must not be a symlink: {parent}")
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(root_r)
+    except ValueError as exc:
+        raise FeedError(f"Writable path escapes repository root: {path}") from exc
+    return path
+
+
 def atomic_write_bytes(path: Path, data: bytes, *, mode: int = _FILE_MODE) -> None:
     """Atomically write ``data`` to ``path`` (mkstemp → write → fsync → chmod → replace).
 
@@ -70,6 +87,11 @@ def atomic_write_bytes(path: Path, data: bytes, *, mode: int = _FILE_MODE) -> No
             os.fsync(handle.fileno())
         os.chmod(tmp, mode)
         os.replace(tmp, path)
+        dir_fd = os.open(str(path.parent), os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
     except Exception:
         with contextlib.suppress(OSError):
             os.unlink(tmp)

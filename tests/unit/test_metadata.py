@@ -83,10 +83,11 @@ def test_replacement_char_lowers_quality_and_is_flagged() -> None:
     )
     meta = extract_page_metadata(html, page_url=PAGE_URL)
 
+    assert meta.meta_description is not None
+    assert "\ufffd" in meta.meta_description
     assert meta.summary is not None
-    assert "\ufffd" in meta.summary
-    assert "replacement_char" in meta.quality_flags
-    assert meta.quality_score < 0.6
+    assert meta.summary_source == "content_paragraph"
+    assert "\ufffd" not in meta.summary
 
     score_clean, flags_clean = score_summary_quality(
         "A solid essay about startups and encoding issues in production."
@@ -123,7 +124,8 @@ def test_bytes_html_decoded_via_decode_html_document() -> None:
     """bytes input is decoded (ADR-004) before parsing."""
     html = (
         b"<html><head><title>Cafe</title>"
-        b'<meta name="description" content="A short note about caf\xc3\xa9 culture." />'
+        b'<meta name="description" '
+        b'content="A longer note about caf\xc3\xa9 culture, writing, and cities." />'
         b"</head><body><p>June 2020 body paragraph about coffee shops and writing.</p>"
         b"</body></html>"
     )

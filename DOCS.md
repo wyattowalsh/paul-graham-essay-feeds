@@ -17,8 +17,8 @@ Maintainer reference for **paul-graham-essay-feeds**.
 > [§ Architecture decisions](#architecture-decisions-normative) below.
 
 > [!TIP]
-> End users: subscribe from **[README.md](./README.md)** (hosted raw GitHub
-> feeds; no Python). This file is for architecture, CLI contracts, and CI.
+> End users: subscribe from **[README.md](./README.md)** (typed Worker URLs;
+> no Python). This file is for architecture, CLI contracts, and CI.
 > Colab is maintainer / custom generation, not the subscribe path.
 
 ---
@@ -125,6 +125,7 @@ raw fetch → decode → discover → catalog reconcile → refresh plan
 catalog.json              # durable SSOT (repo root) — mirrors current index
 feeds/rss.xml|atom.xml|feed.json                 # enriched
 feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
+host/                         # Cloudflare Worker MIME wrapper (not site/)
 # no site/* · no state/generations/ · no current.json · no feeds/validated/
 ```
 
@@ -152,6 +153,7 @@ Entry points: `cli:main` / `__main__.py`. Schema SSOT is Pydantic `models.py` (n
 | :--- | :--- |
 | `catalog.json` | Durable catalog SSOT (repo root) — current index only |
 | `feeds/` | Six flat projections: enriched + simple (see AD-002) |
+| `host/` | Cloudflare Worker that serves committed `feeds/` with typed MIME |
 | `.cache/` | Gitignored HTTP validator sidecar |
 | `notebook.ipynb` | Maintainer / custom generation (HTML intro + generate → `feeds.zip`) |
 
@@ -222,6 +224,8 @@ the same way as dual bools. If both quiet and verbose end up true, quiet wins.
 | `--from-feeds` | off | Seed the in-memory catalog candidate from existing feeds; persist only after successful verification/publication |
 | `--abandon-recovery` / `--no-abandon-recovery` | off | Explicit repair for irrecoverable `.cache/materialize.json` (quarantines pointer + generation). Not a third command. |
 | `--result-file PATH` | — | Append `links_checked`, `links_skipped`, then `action=unchanged\|state_changed\|updated`; also writes `$GITHUB_OUTPUT` when set (quiet success side-channel) |
+| `--allow-bootstrap-fallback` | off | Allow discovery fallback when no prior catalog exists |
+| `--debug` | off | Print tracebacks for unexpected errors |
 | `-q` / `--quiet` | off (env) | Quiet success → zero stdout **and** stderr; errors only; result-file / `$GITHUB_OUTPUT` still write |
 | `-v` / `--verbose` | off (env) | Debug logs |
 
@@ -231,12 +235,14 @@ Deep-verifies both enriched and simple `feeds/` sets (item-count parity across
 RSS/Atom/JSON; enriched JSON `content_text` == `summary` with length in
 `[1, FEED_SUMMARY_CHARS]`). Root `catalog.json` is **required** (M-25): `check`
 loads it and asserts `entry_order` ids match ordered ids in both `feed.json` and
-`feed.simple.json`. No `site/` requirement.
+`feed.simple.json`. No `site/` requirement. Hosted subscribe URLs are the
+`host/` Worker (typed MIME), not GitHub Pages.
 
 | Flag | Default | Meaning |
 | :--- | :--- | :--- |
 | `--repo-root PATH` | cwd / env | Root containing `feeds/` |
 | `--min-items INT` | `Settings.min_items` (`MIN_ITEMS`) | Floor for item count |
+| `--debug` | off | Print tracebacks for unexpected errors |
 | `-q` / `--quiet` | off (env) | Quiet success → zero stdout **and** stderr; errors only |
 | `-v` / `--verbose` | off (env) | Debug logs |
 
@@ -269,7 +275,7 @@ Env-only (no CLI flag): `MAX_BYTES`, `LINK_WORKERS`, `ENRICH_WORKERS`, `STALE_AF
 | `PG_ESSAY_FEEDS_MAX_LINK_VALIDATIONS` | `40` | Cap dedicated link probes per run (`none`/`unlimited` = uncapped; empty keeps 40) |
 | `PG_ESSAY_FEEDS_ALL_PAGES` | `false` | Uncap both fetch budgets (same as `--all-pages`) |
 | `PG_ESSAY_FEEDS_ALLOW_DISCOVERY_FALLBACK` | `true` | Sparse-marker discovery fallback (env-only) |
-| `PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS` | `0.05` | Min seconds between requests to the same host (shared `HostCooldown`; env-only) |
+| `PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS` | `0.25` | Min seconds between requests to the same host (shared `HostCooldown`; env-only) |
 | `PG_ESSAY_FEEDS_QUIET` / `PG_ESSAY_FEEDS_VERBOSE` | false | Log levels |
 
 ```bash
@@ -391,11 +397,12 @@ byte cap.
 Turbify query strings are stripped for stable identity.
 
 > [!NOTE]
-> **PGF-2026-015 (accepted-risk):** GitHub raw serves committed `feeds/*` as
-> `text/plain` (the body is still RSS / Atom / JSON). This project does not add
-> GitHub Pages or `site/`. Strict readers that require `application/rss+xml`
-> should point at local `feeds/` from the CLI. Typed CDN hosting is out of
-> scope.
+> **PGF-2026-015 (accepted-risk):** GitHub raw still serves committed `feeds/*`
+> as `text/plain`. Canonical subscribe URLs are the Cloudflare Worker in
+> [`host/`](./host/) (`https://pg-essay-feeds.wyattowalsh.workers.dev/`), which
+> serves the same committed bytes with `application/rss+xml`,
+> `application/atom+xml`, and `application/feed+json`. Raw GitHub remains
+> fallback. This is a MIME wrapper, not `site/` and not a second publisher.
 
 ---
 
@@ -500,7 +507,7 @@ uv build --no-sources
 ## Notebook (maintainer / custom generation)
 
 [`notebook.ipynb`](./notebook.ipynb) is **not** the subscribe path. Readers
-use the hosted raw GitHub feeds in README. Colab is for generating a private
+use the typed Worker subscribe URLs in README. Colab is for generating a private
 `feeds.zip`.
 
 1. HTML hero (`IPython.display.HTML`, `#@title` + `cellView: form` so code stays
@@ -833,7 +840,7 @@ UUID URN (protected Turbify ACL chapters). Normalize `www` → apex; strip fragm
   Content-Encoding tokens fail closed when unsupported — unknown encodings are
   never treated as identity (PGF-2026-017). Supported codings: gzip / x-gzip,
   deflate, br (optional brotli package; missing-brotli error is unchanged).
-- Shared `HostCooldown` (default `host_cooldown_seconds=0.05`) spaces enrich GETs
+- Shared `HostCooldown` (default `host_cooldown_seconds=0.25`) spaces enrich GETs
   and dedicated probes to the same host (AUD-017).
 
 ### AD-005 — Publication
@@ -969,10 +976,11 @@ their paragraph text already passes the gate.
 
 ### Accepted risks (document only)
 
-- **PGF-2026-015 (raw GitHub MIME):** hosted subscribe URLs are raw
-  `githubusercontent.com` blobs. GitHub serves them as `text/plain`, so some
-  readers will not autodetect RSS/Atom/JSON Feed. Typed CDN hosting is out of
-  scope; do not add a MIME-forcing proxy in this repo.
+- **PGF-2026-015 (raw GitHub MIME):** GitHub raw still serves
+  `githubusercontent.com` blobs as `text/plain`. Canonical subscribe URLs are
+  the `host/` Worker (`application/rss+xml`, `application/atom+xml`,
+  `application/feed+json`). Raw GitHub is accepted-risk fallback. Do not add
+  `site/` or a second generated tree.
 - **PGF-2026-016 (GitHub ruleset):** operator steps are in
   [§ Branch protection (rulesets)](#branch-protection-rulesets). Agents must
   not `gh api` apply rulesets.

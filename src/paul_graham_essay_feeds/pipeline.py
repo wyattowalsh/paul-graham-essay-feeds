@@ -20,6 +20,7 @@ from loguru import logger
 from paul_graham_essay_feeds import __version__
 from paul_graham_essay_feeds.catalog import (
     ChangeSet,
+    RefreshDecision,
     RefreshPlan,
     bootstrap_catalog_from_feeds,
     catalog_with_page_fetch_cursor,
@@ -33,6 +34,7 @@ from paul_graham_essay_feeds.catalog import (
 )
 from paul_graham_essay_feeds.discover import discover_essays
 from paul_graham_essay_feeds.enrich import (
+    LinkProbeReport,
     PageEnrichEvidence,
     enrich_essays,
     score_summary_quality,
@@ -110,6 +112,9 @@ class PipelineResult:
     changed_paths: tuple[str, ...] = ()
     links_checked: int = 0
     links_skipped: int = 0
+    links_healthy: int = 0
+    links_failed: int = 0
+    links_failed_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -301,6 +306,25 @@ def _apply_enrichment(
             continue
 
         if ev.not_modified:
+            # Parse-failed validators must not mint a 304 success (audit P0-1).
+            if entry.page.last_error_kind == "parse":
+                fail_count = int(entry.page.failure_count) + 1
+                page = entry.page.model_copy(
+                    update={
+                        "last_checked_at": now,
+                        "last_attempted_at": now,
+                        "last_response_at": now,
+                        "failure_count": fail_count,
+                        "last_error_kind": "parse",
+                        "last_error_message": (
+                            entry.page.last_error_message or "parse-failed representation"
+                        ),
+                        "next_retry_at": now + failure_backoff_delta(failure_count=fail_count),
+                        "status_code": 304,
+                    }
+                )
+                next_entries[stable_id] = entry.model_copy(update={"page": page})
+                continue
             # 304: retain prior-good / summary; successful validation clocks only.
             # Preserve hashes, byte counts, and selected_encoding (PGF-2026-010).
             page = entry.page.model_copy(
@@ -353,10 +377,16 @@ def _apply_enrichment(
             quality, flags = score_summary_quality(effective)
             prior_good = effective if summary_passes_semantic_gate(effective) else None
 
+        next_decoded = (
+            ev.decoded_sha256
+            if ev.decoded_sha256 is not None
+            else (essay.content_hash or entry.page.decoded_sha256)
+        )
         material = (
             (effective or "") != (entry.summary or "")
             or (essay.published_hint or None) != (entry.published_hint or None)
             or essay.published_at != entry.published_at
+            or (next_decoded is not None and next_decoded != entry.page.decoded_sha256)
         )
         # Successful 200 body path: persist hashes, byte counts, encoding.
         page_etag = ev.etag if ev.status_code == 200 else entry.page.etag
@@ -366,11 +396,7 @@ def _apply_enrichment(
             etag=page_etag,
             last_modified=page_last_modified,
             raw_sha256=ev.raw_sha256 if ev.raw_sha256 is not None else entry.page.raw_sha256,
-            decoded_sha256=(
-                ev.decoded_sha256
-                if ev.decoded_sha256 is not None
-                else (essay.content_hash or entry.page.decoded_sha256)
-            ),
+            decoded_sha256=next_decoded,
             raw_bytes_received=(
                 ev.raw_bytes_received
                 if ev.raw_bytes_received is not None
@@ -609,6 +635,9 @@ def _result_for_locked_write(
     essay_count: int,
     links_checked: int = 0,
     links_skipped: int = 0,
+    links_healthy: int = 0,
+    links_failed: int = 0,
+    links_failed_ids: tuple[str, ...] = (),
 ) -> PipelineResult:
     """Map a lock-section outcome onto ``PipelineResult`` side-channel fields."""
     if committed.action == PipelineAction.NO_CHANGE.value:
@@ -631,6 +660,9 @@ def _result_for_locked_write(
         changed_paths=changed_paths,
         links_checked=links_checked,
         links_skipped=links_skipped,
+        links_healthy=links_healthy,
+        links_failed=links_failed,
+        links_failed_ids=links_failed_ids,
     )
 
 
@@ -719,6 +751,12 @@ def _finalize_under_lock(
         # candidate planned from the pre-recovery base must abort and rebase
         # (PGF-2026-030). A completed concurrent writer unlinks the pointer so
         # recover is a no-op and a revision mismatch still fail-closes.
+        # A missing catalog is not "no competing writer" when this candidate
+        # planned from a real revision (audit P1-8).
+        if reloaded is None and base_state_revision is not None:
+            raise FeedError(
+                "Stale finalize: durable catalog is missing after recover; re-run to rebase."
+            )
         if reloaded is not None and reloaded.state_revision != base_state_revision:
             raise FeedError(
                 "Stale finalize: durable catalog state revision changed since this "
@@ -807,6 +845,11 @@ def _finalize_under_lock(
             raise FeedError(
                 "Publication integrity: catalog.json missing after materialize; "
                 f"generation {gen_id} did not land. Re-run to rebase."
+            )
+        if published.last_generation_id != gen_id:
+            raise FeedError(
+                "Publication integrity: catalog last_generation_id "
+                f"{published.last_generation_id!r} != requested {gen_id!r}."
             )
         return _LockedWrite(
             catalog=published,
@@ -1105,11 +1148,16 @@ def run_catalog_pipeline(
         index_hash = content_sha256(index_html)
         from paul_graham_essay_feeds.discover import evaluate_discovery_anomaly
 
+        allow_fallback = (
+            settings.allow_discovery_fallback
+            if prior.entry_order
+            else settings.allow_bootstrap_fallback
+        )
         discovered, discovery_report = discover_essays(
             index_html,
             base_url=settings.source_url,
             min_items=settings.min_items,
-            allow_fallback=settings.allow_discovery_fallback,
+            allow_fallback=allow_fallback,
         )
         quarantine = evaluate_discovery_anomaly(
             set(prior.entry_order),
@@ -1131,11 +1179,6 @@ def run_catalog_pipeline(
         now=observed,
         max_page_fetches=settings.max_page_fetches,
     )
-    # Persist (last_selected_index + 1) % size after attempts, including
-    # failures (PGF-2026-008). Backoff is unchanged (planner already cleared
-    # fetch_page for not-due pages).
-    catalog = catalog_with_page_fetch_cursor(catalog, plan.decisions)
-
     skip_network = (not fingerprint_changed) and _should_skip_publish(
         root=root, force=settings.force, changeset=changeset, plan=plan
     )
@@ -1143,9 +1186,22 @@ def run_catalog_pipeline(
     # Skip-network omits enrich GETs; dedicated probes still run independently
     # when validate_links is on (PGF-2026-005).
     enrich_ids = due_ids if settings.enrich and not skip_network else set()
+    attempted_decisions = [
+        RefreshDecision(
+            stable_id=d.stable_id,
+            fetch_page=d.stable_id in enrich_ids,
+            reasons=d.reasons,
+        )
+        for d in plan.decisions
+    ]
+    # Persist cursor from IDs actually attempted this run (audit P2-14).
+    catalog = catalog_with_page_fetch_cursor(catalog, attempted_decisions)
     link_cursor_next: str | None = None
     links_checked = 0
     links_skipped = 0
+    links_healthy = 0
+    links_failed = 0
+    links_failed_ids: tuple[str, ...] = ()
     host_cooldown: HostCooldown | None = None
     all_due_use_enrich_get = False
 
@@ -1196,7 +1252,7 @@ def run_catalog_pipeline(
             )
         elif skip_network and probe_essays:
             logger.info("Live-checking {} URLs (link-validation phase)…", len(probe_essays))
-        validate_essays_live(
+        probe_report = validate_essays_live(
             probe_essays,
             timeout=settings.link_timeout,
             retries=settings.retries,
@@ -1206,6 +1262,11 @@ def run_catalog_pipeline(
             host_cooldown_seconds=settings.host_cooldown_seconds,
             host_cooldown=host_cooldown,
         )
+        if not isinstance(probe_report, LinkProbeReport):
+            probe_report = LinkProbeReport(checked=len(probe_essays), ok=0, failures=())
+        links_healthy = probe_report.ok
+        links_failed = probe_report.failed
+        links_failed_ids = probe_report.failures
         if probe_essays and next_link_cursor != prev_link_cursor:
             link_cursor_next = str(next_link_cursor)
 
@@ -1218,14 +1279,15 @@ def run_catalog_pipeline(
                     len(due_essays),
                     len(essays),
                 )
-            page_validators = {
-                sid: (
-                    catalog.entries[sid].page.etag,
-                    catalog.entries[sid].page.last_modified,
-                )
-                for sid in due_ids
-                if sid in catalog.entries
-            }
+            page_validators = {}
+            for sid in due_ids:
+                entry = catalog.entries.get(sid)
+                if entry is None:
+                    continue
+                if entry.page.last_error_kind == "parse":
+                    page_validators[sid] = (None, None)
+                else:
+                    page_validators[sid] = (entry.page.etag, entry.page.last_modified)
             page_evidence: dict[str, PageEnrichEvidence] = {}
             enriched = enrich_essays(
                 due_essays,
@@ -1344,6 +1406,9 @@ def run_catalog_pipeline(
             essay_count=len(essays),
             links_checked=links_checked,
             links_skipped=links_skipped,
+            links_healthy=links_healthy,
+            links_failed=links_failed,
+            links_failed_ids=links_failed_ids,
         )
 
     # Post-enrich material-noop: feed bytes match disk, but page clocks may have
@@ -1383,6 +1448,9 @@ def run_catalog_pipeline(
             essay_count=len(essays),
             links_checked=links_checked,
             links_skipped=links_skipped,
+            links_healthy=links_healthy,
+            links_failed=links_failed,
+            links_failed_ids=links_failed_ids,
         )
 
     published = _publish_catalog_and_feeds(
@@ -1412,4 +1480,7 @@ def run_catalog_pipeline(
         changed_paths=_MATERIAL_CHANGED_PATHS,
         links_checked=links_checked,
         links_skipped=links_skipped,
+        links_healthy=links_healthy,
+        links_failed=links_failed,
+        links_failed_ids=links_failed_ids,
     )

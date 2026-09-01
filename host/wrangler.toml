@@ -1,0 +1,15 @@
+name = "pg-essay-feeds"
+main = "src/worker.js"
+compatibility_date = "2026-08-31"
+workers_dev = true
+
+[assets]
+directory = "../feeds"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability]
+enabled = true
+
+[observability.logs]
+head_sampling_rate = 1

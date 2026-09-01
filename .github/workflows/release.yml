@@ -191,6 +191,46 @@ jobs:
           test -f "$wheel"
           uv run --isolated --no-project --with "$wheel" pg-essay-feeds --help
 
+      - name: Sdist smoke
+        run: |
+          set -euo pipefail
+          sdist="$(echo dist/*.tar.gz)"
+          test -f "$sdist"
+          uv run --isolated --no-project --with "$sdist" pg-essay-feeds --help
+
+      - name: CycloneDX SBOM from lock
+        run: |
+          set -euo pipefail
+          uv export --frozen --no-dev --no-hashes --no-annotate -o dist/requirements.txt
+          uv run python - <<'PY'
+          import json
+          from pathlib import Path
+          reqs = []
+          for line in Path("dist/requirements.txt").read_text(encoding="utf-8").splitlines():
+              text = line.strip()
+              if not text or text.startswith("#") or text.startswith("-"):
+                  continue
+              reqs.append(text)
+          bom = {
+              "bomFormat": "CycloneDX",
+              "specVersion": "1.5",
+              "version": 1,
+              "metadata": {
+                  "component": {
+                      "type": "library",
+                      "name": "paul-graham-essay-feeds",
+                      "version": "1.0.0",
+                  }
+              },
+              "components": [
+                  {"type": "library", "name": row.split("==")[0], "version": row}
+                  for row in reqs
+              ],
+          }
+          Path("dist/bom.cdx.json").write_text(json.dumps(bom, indent=2) + "\n", encoding="utf-8")
+          print("wrote dist/bom.cdx.json", len(reqs), "components")
+          PY
+
       - name: Upload dist
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

@@ -196,3 +196,27 @@ def test_rejects_unknown_schema_version(tmp_path: Path) -> None:
     _rewrite_manifest(gen_dir, schema_version=99)
     with pytest.raises(FeedError):
         verify_staging_manifest(gen_dir)
+
+
+def test_rejects_gen_id_vs_dirname(tmp_path: Path) -> None:
+    gen_dir = _stage(tmp_path)
+    _rewrite_manifest(gen_dir, gen_id="0" * 32)
+    with pytest.raises(FeedError, match="directory"):
+        verify_staging_manifest(gen_dir)
+
+
+def test_rejects_gen_id_vs_catalog(tmp_path: Path) -> None:
+    gen_dir = _stage(tmp_path)
+    catalog_path = gen_dir / "catalog.json"
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    catalog["last_generation_id"] = "a" * 32
+    catalog_path.write_text(json.dumps(catalog) + "\n", encoding="utf-8")
+    with pytest.raises(FeedError, match="catalog"):
+        verify_staging_manifest(gen_dir)
+
+
+def test_rejects_unreadable_staged_catalog(tmp_path: Path) -> None:
+    gen_dir = _stage(tmp_path)
+    (gen_dir / "catalog.json").write_bytes(b"\xff\xfe")
+    with pytest.raises(FeedError, match="Unreadable staged catalog"):
+        verify_staging_manifest(gen_dir)

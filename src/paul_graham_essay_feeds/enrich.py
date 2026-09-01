@@ -57,6 +57,13 @@ _USER_AGENT = user_agent(" link-check")
 # existing ``Link probe issue:`` line as well — tests and logs may depend on it.
 REACHABILITY_FAIL_TOKEN: Final = "PGF_REACHABILITY_FAIL"
 ENRICH_DEGRADED_TOKEN: Final = "PGF_ENRICH_DEGRADED"
+_SOURCE_PRIORITY: Final[dict[SummarySource, int]] = {
+    "meta_description": 0,
+    "og_description": 1,
+    "twitter_description": 2,
+    "content_paragraph": 3,
+    "title": 4,
+}
 
 # Month+year on the page is a human hint only (AD-003); never invent day-1 dates.
 _MONTH_YEAR = re.compile(
@@ -595,23 +602,36 @@ def _parse_page(html: str, *, page_url: str) -> _ParsedPage:
         og_description,
     )
 
+    ranked: list[tuple[int, SummarySource, str]] = []
+    for source, text in (
+        ("meta_description", meta_description),
+        ("og_description", og_description),
+        ("twitter_description", twitter_description),
+        ("content_paragraph", content_paragraph),
+    ):
+        if not text:
+            continue
+        clipped = truncate_text(text, FEED_SUMMARY_CHARS) or None
+        if not clipped:
+            continue
+        ranked.append((_SOURCE_PRIORITY[source], source, clipped))
+
     summary: str | None = None
     summary_source: SummarySource | None = None
-    if meta_description:
-        summary = meta_description
-        summary_source = "meta_description"
-    elif og_description:
-        summary = og_description
-        summary_source = "og_description"
-    elif twitter_description:
-        summary = twitter_description
-        summary_source = "twitter_description"
-    elif content_paragraph:
-        summary = content_paragraph
-        summary_source = "content_paragraph"
-
-    if summary:
-        summary = truncate_text(summary, FEED_SUMMARY_CHARS) or None
+    if ranked:
+        scored: list[tuple[float, int, SummarySource, str, tuple[str, ...]]] = []
+        for priority, source, text in ranked:
+            score, flags = score_summary_quality(text)
+            if not summary_passes_quality_gate(text, score=score, flags=flags):
+                continue
+            scored.append((score, -priority, source, text, flags))
+        if scored:
+            scored.sort(reverse=True)
+            _best_score, _neg_pri, summary_source, summary, _flags = scored[0]
+        else:
+            # All candidates failed the semantic gate; keep source-priority order
+            # so later pipeline fallback (prior-good / title) still has a sample.
+            _pri, summary_source, summary = ranked[0]
 
     def _cap(value: str | None) -> str | None:
         if not value:
@@ -756,6 +776,10 @@ def _fetch_page(
     if result.response is None:
         raise httpx.TransportError(ev.error_message or f"Fetch failed for {url}")
     result.response.raise_for_status()
+    if ev.status_code != 200:
+        raise FeedError(f"HTTP {ev.status_code} is not a usable essay page")
+    if not result.body:
+        raise FeedError(f"Empty HTTP 200 body for {url}")
     document = decode_html_document(result.body, transport_charset=ev.charset)
     return _PageGet(
         html=document.text,

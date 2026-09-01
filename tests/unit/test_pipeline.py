@@ -1342,6 +1342,25 @@ def test_recover_force_publish_stale_candidate_aborts(tmp_path: Path) -> None:
     assert (tmp_path / "feeds" / "atom.xml").read_bytes() == _RECOVERED_FEED_BYTES["atom"]
 
 
+def test_missing_catalog_with_planned_revision_aborts(tmp_path: Path) -> None:
+    """P1-8: planned revision plus missing catalog is stale, not a first write."""
+    stale = _clock_catalog(
+        last_success=T0,
+        last_seen=T0,
+        generation_id="gen-g0",
+        cursor="1",
+        state_revision="f" * 32,
+    )
+    with pytest.raises(FeedError, match="catalog is missing"):
+        _save_catalog_under_lock(
+            tmp_path,
+            stale,
+            **_LOCK_FEED_BYTES,
+            base_material_digest=material_catalog_digest(stale),
+            base_state_revision="f" * 32,
+        )
+
+
 def test_post_materialize_missing_catalog_raises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1457,6 +1476,58 @@ def test_apply_enrichment_parse_failure_persists_transport_evidence() -> None:
     assert page.selected_encoding == "utf-8"
     assert next_catalog.entries[sid].summary == "prior good"
     assert next_catalog.entries[sid].prior_good_summary == "prior good"
+
+
+def test_parse_fail_validators_do_not_authorize_304_success() -> None:
+    """Parse-failed ETag must not mint last_success_at via a later 304."""
+    from paul_graham_essay_feeds.enrich import PageEnrichEvidence
+
+    sid = "https://paulgraham.com/a.html"
+    entry = CatalogEntry(
+        stable_id=sid,
+        url=sid,
+        title="A",
+        position=0,
+        summary="prior good",
+        prior_good_summary="prior good",
+        observed_updated_at=T0,
+        page=ResourceState(
+            etag='"new"',
+            last_success_at=T0,
+            failure_count=1,
+            last_error_kind="parse",
+            last_error_message="bad html",
+            status_code=200,
+        ),
+    )
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        entry_order=[sid],
+        entries={sid: entry},
+    )
+    evidence = {
+        sid: PageEnrichEvidence(
+            ok=True,
+            not_modified=True,
+            status_code=304,
+            etag='"new"',
+        )
+    }
+    essay = Essay(
+        position=1,
+        title="A",
+        url=sid,
+        stable_id=sid,
+        is_permalink=True,
+        summary="prior good",
+    )
+    next_catalog = _apply_enrichment(catalog, [essay], now=T_LATER, page_evidence=evidence)
+    page = next_catalog.entries[sid].page
+    assert page.last_success_at == T0
+    assert page.last_error_kind == "parse"
+    assert page.failure_count == 2
+    assert page.status_code == 304
 
 
 def test_complete_index_state_200_and_304_advance_success_and_clear_failure() -> None:

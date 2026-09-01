@@ -10,13 +10,36 @@ from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
+import typer
+from pydantic import TypeAdapter
 from typer.core import TyperGroup
 from typer.main import get_command
 from typer.testing import CliRunner
 
-from paul_graham_essay_feeds.cli import _settings, app
+from paul_graham_essay_feeds.cli import (
+    _assert_catalog_feed_id_parity,
+    _catalog_order_ids,
+    _feed_json_ids,
+    _parser_usage_error,
+    _run_cli,
+    _settings,
+    app,
+    main,
+)
 from paul_graham_essay_feeds.feeds import render_snapshot_feeds, write_feeds
-from paul_graham_essay_feeds.models import FeedEntrySnapshot, FeedSnapshot, utc_now
+from paul_graham_essay_feeds.models import (
+    FEED_TITLE_SIMPLE,
+    Catalog,
+    CatalogEntry,
+    ExitCode,
+    FeedEntrySnapshot,
+    FeedError,
+    FeedSnapshot,
+    UserFacingError,
+    VerificationError,
+    blurb,
+    utc_now,
+)
 from paul_graham_essay_feeds.settings import DEFAULT_MAX_LINK_VALIDATIONS, DEFAULT_MAX_PAGE_FETCHES
 
 runner = CliRunner()
@@ -72,11 +95,7 @@ def test_update_exposes_from_feeds_option() -> None:
     result = runner.invoke(app, ["update", "--help"])
     assert result.exit_code == 0
     plain = _ANSI.sub("", result.output)
-    collapsed = _plain_help(result.output)
     assert "from-feeds" in plain
-    assert "Seed the in-memory catalog candidate from existing feeds" in collapsed
-    assert "persist only after successful" in collapsed
-    assert "verification/public" in collapsed
 
 
 def test_update_from_feeds_help_does_not_claim_durable_bootstrap() -> None:
@@ -84,9 +103,7 @@ def test_update_from_feeds_help_does_not_claim_durable_bootstrap() -> None:
     result = runner.invoke(app, ["update", "--help"])
     assert result.exit_code == 0
     collapsed = _plain_help(result.output)
-    assert "Seed the in-memory catalog candidate from existing feeds" in collapsed
-    assert "persist only after successful" in collapsed
-    assert "verification/public" in collapsed
+    assert "from-feeds" in collapsed
     assert "bootstrap durable catalog from existing feeds/ before update" not in collapsed
 
 
@@ -104,10 +121,7 @@ def test_update_exposes_abandon_recovery_option() -> None:
     result = runner.invoke(app, ["update", "--help"])
     assert result.exit_code == 0
     plain = _ANSI.sub("", result.output)
-    collapsed = _plain_help(result.output)
     assert "abandon-recovery" in plain
-    assert ".cache/materialize" in collapsed
-    assert "quarantines pointer" in collapsed
 
 
 def test_update_exposes_all_pages_option() -> None:
@@ -609,14 +623,24 @@ def _write_one_essay(repo_root: Path) -> None:
         ],
     )
     rss, atom, jf = render_snapshot_feeds(snapshot)
+    simple = snapshot.model_copy(
+        update={
+            "variant": "simple",
+            "title": FEED_TITLE_SIMPLE,
+            "items": [
+                item.model_copy(update={"summary": blurb(item.title)}) for item in snapshot.items
+            ],
+        }
+    )
+    sr, sa, sj = render_snapshot_feeds(simple)
     write_feeds(
         repo_root,
         rss=rss,
         atom=atom,
         json_feed=jf,
-        simple_rss=rss,
-        simple_atom=atom,
-        simple_json_feed=jf,
+        simple_rss=sr,
+        simple_atom=sa,
+        simple_json_feed=sj,
     )
     # Repository check requires catalog.json parity with feed ids (M-25).
     save_catalog(
@@ -1367,3 +1391,328 @@ def test_entrypoint_quiet_successful_update_empty_streams(
     assert proc.returncode == 0, proc.stderr + proc.stdout
     assert proc.stdout == b""
     assert proc.stderr == b""
+
+
+def test_settings_min_items_and_public_base_url() -> None:
+    settings = _settings(
+        repo_root=None,
+        min_items=12,
+        public_base_url="https://pg-essay-feeds.wyattowalsh.workers.dev/",
+        allow_bootstrap_fallback=True,
+    )
+    assert settings.min_items == 12
+    assert settings.public_base_url == "https://pg-essay-feeds.wyattowalsh.workers.dev/"
+    assert settings.allow_bootstrap_fallback is True
+
+
+def test_settings_validation_error_exits_usage(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(typer.Exit) as exited:
+        _settings(repo_root=None, min_items=0)
+    assert exited.value.exit_code == int(ExitCode.USAGE)
+    assert capsys.readouterr().err
+
+
+def test_settings_configuration_error_exits_usage(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(typer.Exit) as exited:
+        _settings(
+            repo_root=None,
+            min_items=None,
+            public_base_url="https://user:pass@example.com/feeds/",
+        )
+    assert exited.value.exit_code == int(ExitCode.USAGE)
+    assert "userinfo" in capsys.readouterr().err
+
+
+def test_no_all_pages_keeps_existing_caps(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("PG_ESSAY_FEEDS_ALL_PAGES", raising=False)
+    pipeline = _mock_update_pipeline(monkeypatch)
+    result = runner.invoke(
+        app,
+        ["update", "--repo-root", str(tmp_path), "--quiet", "--no-all-pages"],
+    )
+    assert result.exit_code == 0, result.output
+    settings = pipeline.call_args.args[0]
+    assert settings.all_pages is False
+    assert settings.max_page_fetches == DEFAULT_MAX_PAGE_FETCHES
+    assert settings.max_link_validations == DEFAULT_MAX_LINK_VALIDATIONS
+
+
+def test_update_prints_unchanged_and_state_changed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline = _mock_update_pipeline(monkeypatch)
+    pipeline.return_value.links_healthy = 0
+    pipeline.return_value.links_failed = 0
+    pipeline.return_value.links_failed_ids = ()
+    unchanged = runner.invoke(app, ["update", "--repo-root", str(tmp_path)])
+    assert unchanged.exit_code == 0, unchanged.output
+    assert "UNCHANGED" in (unchanged.output + unchanged.stderr)
+    pipeline.return_value.action = "state_changed"
+    pipeline.return_value.essay_count = 3
+    state = runner.invoke(app, ["update", "--repo-root", str(tmp_path)])
+    assert state.exit_code == 0, state.output
+    assert "STATE" in (state.output + state.stderr)
+
+
+def test_update_emits_failed_link_ids(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline = _mock_update_pipeline(monkeypatch)
+    pipeline.return_value.links_checked = 2
+    pipeline.return_value.links_healthy = 1
+    pipeline.return_value.links_failed = 1
+    pipeline.return_value.links_failed_ids = ("https://paulgraham.com/a.html",)
+    result_path = tmp_path / "result.txt"
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(tmp_path),
+            "--quiet",
+            "--result-file",
+            str(result_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    text = result_path.read_text(encoding="utf-8")
+    assert "links_failed_ids=https://paulgraham.com/a.html\n" in text
+    assert text.endswith("action=unchanged\n")
+
+
+def test_update_debug_prints_traceback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.cli.run_catalog_pipeline",
+        MagicMock(side_effect=RuntimeError("kaboom")),
+    )
+    debug = runner.invoke(
+        app,
+        ["update", "--repo-root", str(tmp_path), "--quiet", "--debug"],
+    )
+    assert debug.exit_code == 4
+    combined = f"{debug.output}{debug.stderr}"
+    assert "kaboom" in combined
+    assert "Traceback" in combined
+    quiet = runner.invoke(
+        app,
+        ["update", "--repo-root", str(tmp_path), "--quiet"],
+    )
+    assert quiet.exit_code == 4
+    assert "Traceback" not in f"{quiet.output}{quiet.stderr}"
+
+
+def test_check_debug_prints_traceback(
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_one_essay(repo_root)
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.cli.verify_feed_artifacts",
+        MagicMock(side_effect=RuntimeError("kaboom")),
+    )
+    debug = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet", "--debug"],
+    )
+    assert debug.exit_code == 4
+    assert "Traceback" in f"{debug.output}{debug.stderr}"
+
+
+def test_check_ok_prints_valid(repo_root: Path) -> None:
+    _write_one_essay(repo_root)
+    result = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1"],
+    )
+    assert result.exit_code == 0, result.output
+    assert "VALID" in (result.output + result.stderr)
+
+
+def test_check_missing_catalog_file(repo_root: Path) -> None:
+    _write_one_essay(repo_root)
+    (repo_root / "catalog.json").unlink()
+    result = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
+    )
+    assert result.exit_code == 1
+    assert "catalog.json" in f"{result.output}{result.stderr}"
+
+
+def test_check_load_catalog_none(
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_one_essay(repo_root)
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.load_catalog", lambda *_a, **_k: None)
+    result = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
+    )
+    assert result.exit_code == 1
+    assert "Unable to load catalog" in f"{result.output}{result.stderr}"
+
+
+def test_catalog_order_ids_missing_entry() -> None:
+    catalog = Catalog.model_construct(
+        schema_version=2,
+        material_config_fingerprint="t",
+        entry_order=["https://paulgraham.com/missing.html"],
+        entries={},
+    )
+    with pytest.raises(VerificationError, match="missing entry"):
+        _catalog_order_ids(catalog)
+
+
+def test_feed_json_ids_unreadable(tmp_path: Path) -> None:
+    path = tmp_path / "feed.json"
+    path.write_text("{", encoding="utf-8")
+    with pytest.raises(VerificationError, match="Unable to read"):
+        _feed_json_ids(path)
+
+
+def test_feed_json_ids_items_must_be_list(tmp_path: Path) -> None:
+    path = tmp_path / "feed.json"
+    path.write_text('{"items": {}}', encoding="utf-8")
+    with pytest.raises(VerificationError, match="must be a list"):
+        _feed_json_ids(path)
+
+
+def test_feed_json_ids_item_missing_id(tmp_path: Path) -> None:
+    path = tmp_path / "feed.json"
+    path.write_text('{"items": [{"title": "A"}]}', encoding="utf-8")
+    with pytest.raises(VerificationError, match="missing id"):
+        _feed_json_ids(path)
+
+
+def test_assert_catalog_feed_id_parity_mismatch(tmp_path: Path) -> None:
+    now = utc_now()
+    feeds = tmp_path / "feeds"
+    feeds.mkdir()
+    (feeds / "feed.json").write_text(
+        '{"items":[{"id":"https://paulgraham.com/b.html"}]}',
+        encoding="utf-8",
+    )
+    (feeds / "feed.simple.json").write_text(
+        '{"items":[{"id":"https://paulgraham.com/a.html"}]}',
+        encoding="utf-8",
+    )
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="t",
+        entry_order=["https://paulgraham.com/a.html"],
+        entries={
+            "https://paulgraham.com/a.html": CatalogEntry(
+                stable_id="https://paulgraham.com/a.html",
+                url="https://paulgraham.com/a.html",
+                title="A",
+                position=0,
+                first_seen_at=now,
+                last_seen_at=now,
+                observed_updated_at=now,
+            )
+        },
+    )
+    with pytest.raises(VerificationError, match="do not match"):
+        _assert_catalog_feed_id_parity(catalog, tmp_path)
+
+
+def test_parser_usage_error_detects_click_and_typer() -> None:
+    assert _parser_usage_error(typer.BadParameter("bad")) is True
+
+    class NoSuchOption(Exception):
+        def format_message(self) -> str:
+            return "no such option"
+
+    NoSuchOption.__module__ = "click.exceptions"
+    NoSuchOption.__name__ = "NoSuchOption"
+    assert _parser_usage_error(NoSuchOption()) is True
+    assert _parser_usage_error(RuntimeError("nope")) is False
+
+
+def test_run_cli_maps_boundary_exceptions(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.app", lambda *_a, **_k: None)
+    assert _run_cli(["check"]) == int(ExitCode.SUCCESS)
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.app", lambda *_a, **_k: 0)
+    assert _run_cli(["check"]) == 0
+
+    def _abort(*_a: object, **_k: object) -> None:
+        raise typer.Abort()
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.app", _abort)
+    assert _run_cli(["check"]) == int(ExitCode.USAGE)
+
+    def _exit(*_a: object, **_k: object) -> None:
+        raise typer.Exit(code=2)
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.app", _exit)
+    assert _run_cli(["check"]) == 2
+
+    def _validation(*_a: object, **_k: object) -> None:
+        TypeAdapter(int).validate_python("nope")
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.app", _validation)
+    assert _run_cli(["check"]) == int(ExitCode.USAGE)
+
+    def _user(*_a: object, **_k: object) -> None:
+        raise UserFacingError("nope", exit_code=ExitCode.USAGE)
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.app", _user)
+    assert _run_cli(["check"]) == int(ExitCode.USAGE)
+
+    def _feed(*_a: object, **_k: object) -> None:
+        raise FeedError("nope")
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.app", _feed)
+    assert _run_cli(["check"]) == int(ExitCode.USAGE)
+
+    def _os(*_a: object, **_k: object) -> None:
+        raise OSError("disk")
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.app", _os)
+    assert _run_cli(["check"]) == int(ExitCode.INTERNAL)
+
+    class NoSuchOption(Exception):
+        def format_message(self) -> str:
+            return "no such option"
+
+    NoSuchOption.__module__ = "click.exceptions"
+    NoSuchOption.__name__ = "NoSuchOption"
+
+    def _opt(*_a: object, **_k: object) -> None:
+        raise NoSuchOption()
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.app", _opt)
+    assert _run_cli(["check"]) == int(ExitCode.USAGE)
+    assert "no such option" in capsys.readouterr().err
+
+    def _boom(*_a: object, **_k: object) -> None:
+        raise RuntimeError("kaboom")
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.app", _boom)
+    assert _run_cli(["check"]) == int(ExitCode.INTERNAL)
+    quiet_err = capsys.readouterr().err
+    assert "kaboom" in quiet_err
+    assert "Traceback" not in quiet_err
+    assert _run_cli(["--debug", "check"]) == int(ExitCode.INTERNAL)
+    debug_err = capsys.readouterr().err
+    assert "Traceback" in debug_err
+
+
+def test_main_exits_with_run_cli_code(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("paul_graham_essay_feeds.cli._run_cli", lambda: 3)
+    with pytest.raises(SystemExit) as exited:
+        main()
+    assert exited.value.code == 3

@@ -97,7 +97,7 @@ def test_host_cooldown_seconds_default_and_env(monkeypatch: pytest.MonkeyPatch) 
     """AUD-017: production default is a small nonzero per-host gap."""
     monkeypatch.delenv("PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS", raising=False)
     s = Settings()
-    assert s.host_cooldown_seconds == 0.05
+    assert s.host_cooldown_seconds == 0.25
     field = Settings.model_fields["host_cooldown_seconds"]
     assert field.description == "Minimum seconds between requests to the same host."
     monkeypatch.setenv("PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS", "0")

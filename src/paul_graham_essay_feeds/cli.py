@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import traceback
 from pathlib import Path
 from typing import Annotated
 
@@ -42,6 +43,7 @@ from paul_graham_essay_feeds.settings import (
 )
 
 console = Console(stderr=True)
+_DEBUG = False
 
 
 def _catalog_order_ids(catalog: Catalog) -> list[str]:
@@ -89,12 +91,29 @@ def _emit_update_action(
     result_file: Path | None,
     links_checked: int = 0,
     links_skipped: int = 0,
+    links_healthy: int = 0,
+    links_failed: int = 0,
+    links_failed_ids: tuple[str, ...] = (),
+    links_attempted: int | None = None,
 ) -> None:
     """Append machine side-channel keys for ``--result-file`` / ``$GITHUB_OUTPUT``.
 
     ``action`` is last so existing consumers that ``endswith`` still match.
     """
-    payload = f"links_checked={links_checked}\nlinks_skipped={links_skipped}\naction={action}\n"
+    attempted = links_checked if links_attempted is None else links_attempted
+    payload = (
+        f"links_checked={links_checked}\n"
+        f"links_attempted={attempted}\n"
+        f"links_healthy={links_healthy}\n"
+        f"links_failed={links_failed}\n"
+        f"links_skipped={links_skipped}\n"
+        f"action={action}\n"
+    )
+    if links_failed_ids:
+        payload = payload.replace(
+            f"action={action}\n",
+            "links_failed_ids=" + ",".join(links_failed_ids[:50]) + f"\naction={action}\n",
+        )
     if result_file is not None:
         result_file.parent.mkdir(parents=True, exist_ok=True)
         with result_file.open("a", encoding="utf-8") as handle:
@@ -151,6 +170,7 @@ def _settings(
     force: bool | None = None,
     public_base_url: str | None = None,
     all_pages: bool | None = None,
+    allow_bootstrap_fallback: bool | None = None,
 ) -> Settings:
     """Merge CLI overrides onto pydantic-settings (COMMANDLINE > env/.env > defaults)."""
     try:
@@ -176,6 +196,8 @@ def _settings(
             data["verbose"] = verbose
         if public_base_url is not None:
             data["public_base_url"] = public_base_url
+        if allow_bootstrap_fallback is not None:
+            data["allow_bootstrap_fallback"] = allow_bootstrap_fallback
         if all_pages is True:
             data["all_pages"] = True
         elif all_pages is False:
@@ -288,6 +310,17 @@ def update_cmd(
             ),
         ),
     ] = None,
+    allow_bootstrap_fallback: Annotated[
+        bool,
+        typer.Option(
+            "--allow-bootstrap-fallback/--no-allow-bootstrap-fallback",
+            help="Allow discovery fallback when no prior catalog exists",
+        ),
+    ] = False,
+    debug: Annotated[
+        bool,
+        typer.Option("--debug", help="Print tracebacks for unexpected errors"),
+    ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Errors only")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Debug logs")] = False,
 ) -> None:
@@ -304,7 +337,10 @@ def update_cmd(
         force=force,
         public_base_url=public_base_url,
         all_pages=all_pages,
+        allow_bootstrap_fallback=True if allow_bootstrap_fallback else None,
     )
+    global _DEBUG
+    _DEBUG = bool(debug)
     configure_logging(verbose=settings.verbose, quiet=settings.quiet)
     try:
         reporter = ProgressReporter(
@@ -332,6 +368,10 @@ def update_cmd(
             result_file=result_file,
             links_checked=result.links_checked,
             links_skipped=result.links_skipped,
+            links_healthy=result.links_healthy,
+            links_failed=result.links_failed,
+            links_failed_ids=result.links_failed_ids,
+            links_attempted=result.links_checked,
         )
         if settings.quiet:
             return
@@ -355,7 +395,10 @@ def update_cmd(
         logger.error("{}", exc)
         raise typer.Exit(code=exit_code_for_exception(exc)) from exc
     except Exception as exc:
-        logger.error("{}", exc)
+        if _DEBUG:
+            logger.exception("{}", exc)
+        else:
+            logger.error("{}", exc)
         raise typer.Exit(code=exit_code_for_exception(exc)) from exc
 
 
@@ -370,6 +413,10 @@ def check_cmd(
         int | None,
         typer.Option("--min-items", help="Safety floor for essay count"),
     ] = None,
+    debug: Annotated[
+        bool,
+        typer.Option("--debug", help="Print tracebacks for unexpected errors"),
+    ] = False,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Errors only")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Debug logs")] = False,
 ) -> None:
@@ -380,6 +427,8 @@ def check_cmd(
         quiet=_cmdline_or_none(ctx, "quiet", quiet),
         verbose=_cmdline_or_none(ctx, "verbose", verbose),
     )
+    global _DEBUG
+    _DEBUG = bool(debug)
     configure_logging(verbose=settings.verbose, quiet=settings.quiet)
     try:
         root = settings.repo_root
@@ -408,7 +457,10 @@ def check_cmd(
         logger.error("{}", exc)
         raise typer.Exit(code=exit_code_for_exception(exc)) from exc
     except Exception as exc:
-        logger.error("{}", exc)
+        if _DEBUG:
+            logger.exception("{}", exc)
+        else:
+            logger.error("{}", exc)
         raise typer.Exit(code=exit_code_for_exception(exc)) from exc
 
 
@@ -458,6 +510,8 @@ def _run_cli(args: list[str] | None = None) -> int:
             message = formatter() if callable(formatter) else str(exc)
             print(f"Error: {message}", file=sys.stderr)
             return int(ExitCode.USAGE)
+        if _DEBUG or "--debug" in (args or sys.argv):
+            traceback.print_exc()
         print(str(exc), file=sys.stderr)
         return int(ExitCode.INTERNAL)
     if isinstance(result, int):

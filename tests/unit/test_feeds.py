@@ -28,6 +28,7 @@ from paul_graham_essay_feeds.models import (
     ATOM_NS,
     FEED_ID_SIMPLE,
     FEED_SUMMARY_CHARS,
+    FEED_TITLE_SIMPLE,
     Catalog,
     CatalogEntry,
     FeedEntrySnapshot,
@@ -932,6 +933,7 @@ def test_simple_golden_fixtures_parity() -> None:
     snap = FeedSnapshot(
         logical_updated_at=datetime(2024, 6, 1, 12, 0, 0, tzinfo=UTC),
         generator="pg-essay-feeds/0.1.0",
+        title=FEED_TITLE_SIMPLE,
         variant="simple",
         index_hash="abc123",
         index_fingerprint=(
@@ -967,3 +969,53 @@ def test_simple_golden_fixtures_parity() -> None:
     assert render_rss(snap) == (fixtures / "golden.rss.simple.xml").read_bytes()
     assert atom == (fixtures / "golden.atom.simple.xml").read_bytes()
     assert render_json(snap) == (fixtures / "golden.feed.simple.json").read_bytes()
+
+
+def test_verify_bundle_rejects_catalog_title_mismatch(tmp_path: Path) -> None:
+    from paul_graham_essay_feeds.catalog import save_catalog
+    from paul_graham_essay_feeds.models import GENERATOR, utc_now
+    from paul_graham_essay_feeds.verify import CATALOG_FIELD_MISMATCH, verify_bundle
+
+    now = utc_now()
+    sid = "https://paulgraham.com/a.html"
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        entry_order=[sid],
+        entries={
+            sid: CatalogEntry(
+                stable_id=sid,
+                url=sid,
+                title="Catalog Title",
+                position=0,
+                first_seen_at=now,
+                last_seen_at=now,
+                observed_updated_at=now,
+                summary="Catalog summary text for the oracle.",
+            )
+        },
+    )
+    save_catalog(tmp_path / "catalog.json", catalog)
+    snap = catalog_to_feed_snapshot(catalog, generator=GENERATOR, summary_mode="enriched")
+    poisoned = snap.model_copy(
+        update={
+            "items": [
+                snap.items[0].model_copy(update={"title": "Wrong Title"}),
+            ]
+        }
+    )
+    rss, atom, jf = render_snapshot_feeds(poisoned)
+    simple = catalog_to_feed_snapshot(catalog, generator=GENERATOR, summary_mode="title_only")
+    sr, sa, sj = render_snapshot_feeds(simple)
+    write_feeds(
+        tmp_path,
+        rss=rss,
+        atom=atom,
+        json_feed=jf,
+        simple_rss=sr,
+        simple_atom=sa,
+        simple_json_feed=sj,
+    )
+    report = verify_bundle(tmp_path, min_items=1)
+    assert report.ok is False
+    assert any(v.code == CATALOG_FIELD_MISMATCH for v in report.violations)

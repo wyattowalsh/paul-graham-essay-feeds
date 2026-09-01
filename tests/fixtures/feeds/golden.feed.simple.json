@@ -1,8 +1,8 @@
 {
   "version": "https://jsonfeed.org/version/1.1",
-  "title": "Paul Graham: Essays",
+  "title": "Paul Graham Essays — Simple (Unofficial)",
   "home_page_url": "https://paulgraham.com/articles.html",
-  "description": "Unofficial metadata feeds for Paul Graham's essays, ordered newest to oldest from the official index.",
+  "description": "Unofficial titles, links, page metadata, and short source excerpts for Paul Graham's essays — never complete essay bodies. Ordered newest to oldest from the official index. Dates may be when this feed observed or detected a change, not the essay's original publication date.",
   "authors": [
     {
       "name": "Paul Graham",

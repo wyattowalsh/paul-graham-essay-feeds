@@ -3,10 +3,10 @@
 ## Mission
 
 Unofficial metadata-only RSS / Atom / JSON Feed for
-https://paulgraham.com/articles.html. Hosted raw GitHub feeds + local CLI
-(+ Colab for custom generation), with a schema-versioned durable catalog.
-The GitHub repo (`feeds/` + `catalog.json`) is the published product — no
-separate publish/site surface.
+https://paulgraham.com/articles.html. Local CLI (+ Colab notebook), with a
+schema-versioned durable catalog. The GitHub repo (`feeds/` + `catalog.json`)
+is the published product. `host/` is a Cloudflare Worker MIME wrapper over
+those committed files — not `site/` and not a second publisher.
 
 ---
 
@@ -39,6 +39,7 @@ raw fetch → decode → discover → catalog reconcile → refresh plan
 catalog.json              # durable SSOT (repo root) — mirrors current index
 feeds/rss.xml|atom.xml|feed.json                 # enriched
 feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
+host/                         # typed MIME wrapper over committed feeds/
 # no site/*
 ```
 
@@ -49,6 +50,7 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 | Area | Responsibility |
 | :--- | :--- |
 | `src/paul_graham_essay_feeds/` | Domain package (~11 modules: cli, settings, pipeline, http, discover, enrich, catalog, feeds, verify, models, publication) |
+| `host/` | Cloudflare Worker: correct MIME + `/latest/*` over committed `feeds/` |
 | `tests/` | unit / integration / e2e / smoke / live / characterization |
 | `DOCS.md` | Developer + architecture decision SSOT |
 
@@ -76,6 +78,7 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 - Schema-versioned durable catalog (not flat `data/essays.json`)
 - Deterministic flat feed projections under `feeds/` (enriched + simple)
 - Configurable public base URL for feed self links
+- `host/` Worker that serves committed `feeds/` with typed MIME (not `site/`)
 
 ### Forbidden
 
