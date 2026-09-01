@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **PGF-2026-040:** GitHub Pages rebuilds after scheduled bot commits.
+  `pages.yml` listens for `workflow_run` on “Update feeds” and assembles from
+  the `product_sha` in the `product-identity` artifact, not
+  `workflow_run.head_sha` (the pre-push source). `GITHUB_TOKEN` pushes still
+  do not fire `on.push`.
 - Parse-failed page validators no longer authorize a later HTTP 304 success.
 - `check` treats the catalog as the feed oracle (title/URL/summary/id).
 - Gzip/deflate decode aborts at the decoded-size cap instead of inflating

@@ -446,6 +446,7 @@ just cov
 | `release.yml` | on tag `v*`: version match, quality gates, `uv build --no-sources`, wheel smoke, GitHub Release. Privileged `setup-uv` does not force `enable-cache: true` |
 | `update-feeds.yml` | scheduled live refresh → upload seven-file workspace → publish gates the **downloaded** candidate (not a sibling source checkout) → commit `feeds/` + `catalog.json` to `main` → `product_sha=$(git rev-parse HEAD)` → re-check that tree → attest seven subjects plus provenance context (source SHA, candidate digest, subjects, product SHA). Bot push still `--force-with-lease`. Publish `setup-uv` sets `enable-cache: false` |
 | `verify-product.yml` | `workflow_run` after “Update feeds” (or `workflow_dispatch` with an explicit SHA): check + audit slice on the **product SHA** from the `product-identity` artifact or the explicit ref — never mutable `main` HEAD. `GITHUB_TOKEN` push does not retrigger `ci.yml`. `setup-uv` does not force cache |
+| `pages.yml` | assemble `_site` from committed `feeds/` and deploy GitHub Pages. `on.push` still covers human commits. Scheduled bot commits use `workflow_run` after “Update feeds” and check out the **product SHA** from `product-identity` — never `workflow_run.head_sha` (the pre-push source). Failed Update-feeds runs do not deploy (PGF-2026-040) |
 | Dependabot | weekly `uv` + `github-actions` |
 
 CI policy: exit 0 on matrix; full-SHA action pins; least privilege on generation jobs;
@@ -617,10 +618,11 @@ on a branch ruleset, and the Settings UI is not a fallback for that design.
 pushes them, records `product_sha=$(git rev-parse HEAD)`, re-checks that tree,
 and attests the seven files plus a provenance document naming source SHA,
 candidate digest, subjects, and product SHA. A `GITHUB_TOKEN` push does **not**
-retrigger `on: push` CI. `verify-product.yml` (`workflow_run` after “Update
-feeds”, or `workflow_dispatch` with an explicit SHA) checks out that product
-SHA from the `product-identity` artifact — not mutable `main` HEAD. Signing is
-the Actions artifact attestation, not a repo GPG key.
+retrigger `on: push` CI or `pages.yml`. `verify-product.yml` and `pages.yml`
+both use `workflow_run` after “Update feeds” and check out that product SHA
+from the `product-identity` artifact — not mutable `main` HEAD and not
+`workflow_run.head_sha` (PGF-2026-040). Signing is the Actions artifact
+attestation, not a repo GPG key.
 
 Operator options (neither is applied by documentation):
 
@@ -932,8 +934,10 @@ commits the catalog.
   workspace binds to one `product_sha`; the attestation subjects include
   provenance context naming source SHA, candidate digest, the seven product
   paths, and product SHA. `verify-product.yml` checks that SHA, not mutable
-  `main` HEAD. Release tags additionally run `git merge-base --is-ancestor`
-  against `origin/main` (PGF-2026-033). Wheel/sdist checksums live in
+  `main` HEAD. `pages.yml` uses the same product SHA so hosted subscribe
+  URLs track bot commits (PGF-2026-040). Release tags additionally run
+  `git merge-base --is-ancestor` against `origin/main` (PGF-2026-033).
+  Wheel/sdist checksums live in
   `SHA256SUMS.txt` on the GitHub Release. Consumers verify with
   `sha256sum -c SHA256SUMS.txt` and
   `gh attestation verify dist/*.whl --repo wyattowalsh/paul-graham-essay-feeds`

@@ -82,6 +82,15 @@ def test_verify_product_checks_product_sha_not_mutable_main() -> None:
     assert "product_sha:" in text
 
 
+def test_pages_checks_out_product_sha_on_update_feeds_workflow_run() -> None:
+    text = (_WORKFLOWS / "pages.yml").read_text(encoding="utf-8")
+    assert "workflow_run:" in text
+    assert 'workflows: ["Update feeds"]' in text
+    assert "ref: ${{ steps.identity.outputs.product_sha }}" in text
+    assert "ref: ${{ github.event.workflow_run.head_sha }}" not in text
+    assert "name: product-identity" in text
+
+
 def test_source_verify_skips_when_publish_gates_candidate() -> None:
     """Broken source product must not fail a candidate repair publish."""
     text = (_WORKFLOWS / "update-feeds.yml").read_text(encoding="utf-8")

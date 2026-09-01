@@ -119,6 +119,8 @@ def test_docs_record_lock_generation_cas_coverage_sha_and_accepted_risks() -> No
     assert "PGF-2026-012" in docs
     assert "PGF-2026-015" in docs
     assert "text/plain" in docs
+    assert "PGF-2026-040" in docs
+    assert "workflow_run.head_sha" in docs
     assert "PGF-2026-016" in docs
     assert "gh api" in docs
     assert "protect-main" in docs
