@@ -9,9 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **PGF-2026-022:** Durable `state_revision` CAS on finalize. A slower
-  same-material contender cannot overlay older clocks, validators, cursors,
-  or absence streaks.
+- **PGF-2026-030:** Crash recovery no longer skips `state_revision`
+  compare-and-swap. Recover rematerializes first, then revision comparison
+  always runs; a stale candidate aborts and must re-run. (Unreleased CAS was
+  briefly labeled `PGF-2026-022`; that id remains the extraction-quality work
+  in `[1.0.0]`.)
+- **PGF-2026-039:** Missing `catalog.json` after materialize raises instead
+  of returning an in-memory stand-in. Hatch sdist excludes `.grok/`.
 - **PGF-2026-023:** Parse-failed HTTP 200 persists ETag, Last-Modified,
   hashes, byte counts, and encoding; success TTL and prior-good stay put.
 - **PGF-2026-024:** Every previously present id needs two successful index
@@ -19,14 +23,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **PGF-2026-032:** DOCS no longer prescribe `conditions.file_path` branch
+  rulesets (not available on this public user-owned repo).
+- **PGF-2026-033:** `release.yml` requires the tagged SHA to be an ancestor
+  of `origin/main` (blobless fetch; not `--depth=1`).
+- **PGF-2026-034:** Release quality/build copies CI feed-format contracts,
+  offline pipeline smoke, and `py.typed` wheel assertion.
 - **PGF-2026-025:** Tag `release.yml` enforces the same raw coverage.xml
   floor as CI.
 - **PGF-2026-026:** DOCS ruleset snippets cover required checks plus a `v*`
-  tag ruleset (maintainer-apply only).
+  tag ruleset (maintainer-apply only; no path exception).
 - **PGF-2026-028:** DOCS distinguish writer crash recovery, local reader
   mix, and Git commit atomicity.
 - **PGF-2026-029:** Release job attests wheel/sdist and attaches SHA-256
   checksums (no SBOM).
+- **PGF-2026-036:** Optional `brotli` extra; CI job runs the Brotli decode
+  path. Missing-brotli fail-closed unit test is unchanged.
 
 ## [1.0.0] - 2026-08-31
 

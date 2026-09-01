@@ -115,11 +115,12 @@ def test_docs_record_lock_generation_cas_coverage_sha_and_accepted_risks() -> No
     assert "text/plain" in docs
     assert "PGF-2026-016" in docs
     assert "gh api" in docs
-    assert "protect-main-source" in docs
-    assert "Bot path bypass" in docs
+    assert "protect-main" in docs
+    assert "conditions.file_path" in docs
     assert "does **not** execute `gh api`" in docs
     assert "Agents must" in docs
     assert "not `gh api` apply rulesets" in docs
+    assert "PGF-2026-032" in docs
     assert "PGF-2026-018" in docs
     assert "local seven-file visibility" in docs
     notebook = json.loads(_text("notebook.ipynb"))

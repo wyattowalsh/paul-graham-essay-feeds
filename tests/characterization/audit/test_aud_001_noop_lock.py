@@ -72,9 +72,15 @@ def test_aud_001_seeded_pointer_recovers_on_unchanged_update(tmp_path: Path) -> 
     )
     assert pointer.is_file()
 
-    second = run_catalog_pipeline(settings, html=html, now=T0)
+    with pytest.raises(FeedError, match="state revision"):
+        run_catalog_pipeline(settings, html=html, now=T0)
     assert not pointer.exists()
-    assert second.action in {"unchanged", "state_changed"}
+    recovered = load_catalog(default_catalog_path(tmp_path))
+    assert recovered is not None
+    assert recovered.last_generation_id == gen_id
+
+    third = run_catalog_pipeline(settings, html=html, now=T0)
+    assert third.action in {"unchanged", "state_changed"}
 
 
 def test_aud_001_corrupt_feed_does_not_report_unchanged(tmp_path: Path) -> None:

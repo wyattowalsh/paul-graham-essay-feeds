@@ -14,12 +14,18 @@ concurrency:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Require tagged commit is an ancestor of origin/main
+        run: |
+          set -euo pipefail
+          git fetch origin main --filter=blob:none
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
 
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
@@ -69,6 +75,83 @@ jobs:
           test -f feeds/feed.simple.json
           test ! -d feeds/validated
 
+      - name: Assert feed format contracts
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          ATOM_NS = "http://www.w3.org/2005/Atom"
+          JSON_FEED_VERSION = "https://jsonfeed.org/version/1.1"
+
+          def local_name(tag: str) -> str:
+              return tag.split("}", 1)[-1]
+
+          def assert_rss(path: Path) -> None:
+              root = ET.parse(path).getroot()
+              assert local_name(root.tag) == "rss", f"{path}: root tag {root.tag!r}"
+              assert root.get("version") == "2.0", f"{path}: version {root.get('version')!r}"
+              channels = [child for child in root if local_name(child.tag) == "channel"]
+              assert len(channels) == 1, f"{path}: expected 1 channel, got {len(channels)}"
+
+          def assert_atom(path: Path) -> None:
+              root = ET.parse(path).getroot()
+              if not root.tag.startswith("{"):
+                  raise AssertionError(f"{path}: Atom root missing namespace: {root.tag!r}")
+              ns, local = root.tag[1:].split("}", 1)
+              assert ns == ATOM_NS, f"{path}: default ns {ns!r}"
+              assert local == "feed", f"{path}: root {local!r}"
+              for name in ("id", "title", "updated"):
+                  el = root.find(f"{{{ATOM_NS}}}{name}")
+                  assert el is not None, f"{path}: missing {name}"
+                  assert (el.text or "").strip(), f"{path}: empty {name}"
+
+          def assert_json_feed(path: Path) -> None:
+              payload = json.loads(path.read_text(encoding="utf-8"))
+              assert payload.get("version") == JSON_FEED_VERSION, (
+                  f"{path}: version {payload.get('version')!r}"
+              )
+              title = payload.get("title")
+              assert isinstance(title, str) and title.strip(), f"{path}: title"
+              assert isinstance(payload.get("items"), list), f"{path}: items must be a list"
+
+          assert_rss(Path("feeds/rss.xml"))
+          assert_rss(Path("feeds/rss.simple.xml"))
+          assert_atom(Path("feeds/atom.xml"))
+          assert_atom(Path("feeds/atom.simple.xml"))
+          assert_json_feed(Path("feeds/feed.json"))
+          assert_json_feed(Path("feeds/feed.simple.json"))
+          PY
+
+      - name: Offline pipeline smoke
+        run: |
+          set -euo pipefail
+          ROOT="${RUNNER_TEMP}/pg-smoke"
+          mkdir -p "$ROOT"
+          uv run python -c "
+          from pathlib import Path
+          from tests.html_samples import synthetic_index_html
+          Path('${ROOT}/articles.html').write_text(synthetic_index_html(), encoding='utf-8')
+          "
+          uv run pg-essay-feeds update --repo-root "$ROOT" --quiet --no-enrich \
+            --no-validate-links --source-file "$ROOT/articles.html"
+          uv run pg-essay-feeds check --repo-root "$ROOT" --quiet
+          test -f "$ROOT/feeds/rss.xml"
+          test -f "$ROOT/feeds/atom.xml"
+          test -f "$ROOT/feeds/feed.json"
+          test -f "$ROOT/feeds/rss.simple.xml"
+          test -f "$ROOT/feeds/atom.simple.xml"
+          test -f "$ROOT/feeds/feed.simple.json"
+          test ! -d "$ROOT/feeds/validated"
+          test -f "$ROOT/catalog.json"
+          test ! -d "$ROOT/state/generations"
+          test ! -f "$ROOT/state/current.json"
+          test ! -d "$ROOT/site"
+
   build:
     needs: quality
     runs-on: ubuntu-latest
@@ -84,9 +167,22 @@ jobs:
         with:
           version: "0.12.0"
           enable-cache: false
+          python-version: "3.13"
 
       - name: Build
         run: uv build --no-sources
+
+      - name: Wheel contains py.typed
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import zipfile, pathlib
+          wheels = list(pathlib.Path("dist").glob("*.whl"))
+          assert wheels, "no wheel"
+          with zipfile.ZipFile(wheels[0]) as zf:
+              assert "paul_graham_essay_feeds/py.typed" in zf.namelist()
+          print("ok", wheels[0].name)
+          PY
 
       - name: Wheel smoke
         run: |

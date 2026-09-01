@@ -598,7 +598,8 @@ class Catalog(_StrictModel):
         description=(
             "Opaque hex token of the last durable catalog write (clock overlay "
             "or material publish). Compare-and-swap for concurrent finalizers "
-            "(PGF-2026-022). None on catalogs never written by this scheme."
+            "including after crash recovery (PGF-2026-030). None on catalogs "
+            "never written by this scheme."
         ),
     )
     migration_history: list[dict[str, Any]] = Field(

@@ -334,7 +334,7 @@ def load_catalog(path: Path) -> Catalog | None:
 
 
 def mint_state_revision() -> str:
-    """Return a new opaque hex token for a durable catalog write (PGF-2026-022)."""
+    """Return a new opaque hex token for a durable catalog write (PGF-2026-030)."""
     return uuid.uuid4().hex
 
 

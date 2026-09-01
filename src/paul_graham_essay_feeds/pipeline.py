@@ -699,8 +699,10 @@ def _finalize_under_lock(
     unless the durable catalog material digest differs from
     ``base_material_digest`` (stale candidate; PGF-2026-002).
     ``base_state_revision`` must match the durable catalog's ``state_revision``
-    or finalize aborts (PGF-2026-022); same-material overlay cannot regress
-    clocks/cursors/streaks from an older contender.
+    or finalize aborts (PGF-2026-030). Recovery is an intervening durable write
+    (it rematerializes a generation that already minted a revision) and does
+    not skip compare-and-swap. Same-material overlay cannot regress clocks,
+    cursors, or streaks from an older contender.
     """
     from paul_graham_essay_feeds.publication import (
         acquire_write_lock,
@@ -710,17 +712,14 @@ def _finalize_under_lock(
 
     lock = acquire_write_lock(root)
     try:
-        recovered = recover_materialize(root)
+        recover_materialize(root)
         reloaded = load_catalog(default_catalog_path(root))
-        # Crash recovery rematerializes a generation that mints its own
-        # state_revision; skip revision CAS so RV-C-001 overlay/publish can run.
-        # A completed concurrent writer unlinks the pointer, so recover is a
-        # no-op and a revision mismatch still fail-closes (PGF-2026-022).
-        if (
-            not recovered
-            and reloaded is not None
-            and reloaded.state_revision != base_state_revision
-        ):
+        # Recover first so public state is repaired, then compare unconditionally.
+        # A recovered generation minted its own state_revision; that is why the
+        # candidate planned from the pre-recovery base must abort and rebase
+        # (PGF-2026-030). A completed concurrent writer unlinks the pointer so
+        # recover is a no-op and a revision mismatch still fail-closes.
+        if reloaded is not None and reloaded.state_revision != base_state_revision:
             raise FeedError(
                 "Stale finalize: durable catalog state revision changed since this "
                 f"candidate was planned (base {base_state_revision!r}, "
@@ -805,7 +804,10 @@ def _finalize_under_lock(
         )
         published = load_catalog(default_catalog_path(root))
         if published is None:
-            published = catalog.model_copy(update={"last_generation_id": gen_id})
+            raise FeedError(
+                "Publication integrity: catalog.json missing after materialize; "
+                f"generation {gen_id} did not land. Re-run to rebase."
+            )
         return _LockedWrite(
             catalog=published,
             action=PipelineAction.MATERIAL_CHANGED.value,
@@ -833,9 +835,11 @@ def _save_catalog_under_lock(
     The decisive disk comparison always runs after ``acquire_write_lock`` and
     ``recover_materialize`` (PGF-P0-001), including when recovery is a no-op.
     Matching material overlays this-run clocks onto the **reloaded** catalog
-    (never the pre-lock object). Differing material publishes this run's feeds
-    and catalog together **without** releasing the lock (RV-R-001 / RV-C-001)
-    only when the durable digest still matches ``base_material_digest``.
+    (never the pre-lock object) only when ``state_revision`` still matches
+    ``base_state_revision`` after recover (PGF-2026-030). Differing material
+    publishes this run's feeds and catalog together **without** releasing the
+    lock (RV-R-001 / RV-C-001) only when the durable digest still matches
+    ``base_material_digest``.
     """
     return _finalize_under_lock(
         root,

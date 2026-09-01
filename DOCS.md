@@ -594,32 +594,33 @@ install from `main`. After the tag is published, flip that one sentence.
 
 ### Branch protection (rulesets)
 
-Path-aware ruleset **intent** (PGF-2026-016 / **PGF-2026-026**,
-maintainer-apply — this change does **not** execute `gh api`; agents must
-not apply rulesets). The active repo ruleset still only blocks deletion and
-non-fast-forward; required CI/PR/tag rules are **not** applied until a
-maintainer runs the snippets below.
+Maintainer-apply only — this change does **not** execute `gh api`; agents must
+not apply rulesets. The live ruleset still only blocks deletion and
+non-fast-forward on `main` (PGF-2026-031).
 
-| Surface | Policy |
+A public user-owned repository **cannot** express “the bot may push only
+`feeds/**` + `catalog.json`; every other path requires a pull request”
+(PGF-2026-032). Branch and tag rulesets target refs (`conditions.ref_name`).
+File-path restrictions belong to **push rulesets**, which GitHub documents
+for Team-plan private/internal repositories and their fork networks — not
+this public user-owned repo. There is no `conditions.file_path` include/exclude
+on a branch ruleset, and the Settings UI is not a fallback for that design.
+
+`update-feeds.yml` still stages only those seven product paths, force-with-lease
+pushes them, records `product_sha=$(git rev-parse HEAD)`, re-checks that tree,
+and attests the seven files plus a provenance document naming source SHA,
+candidate digest, subjects, and product SHA. A `GITHUB_TOKEN` push does **not**
+retrigger `on: push` CI. `verify-product.yml` (`workflow_run` after “Update
+feeds”, or `workflow_dispatch` with an explicit SHA) checks out that product
+SHA from the `product-identity` artifact — not mutable `main` HEAD. Signing is
+the Actions artifact attestation, not a repo GPG key.
+
+Operator options (neither is applied by documentation):
+
+| Option | Meaning |
 | :--- | :--- |
-| Source on `main` | Require a pull request + CI checks |
-| Product files | **Bot path bypass:** exclude `feeds/**/*` and `catalog.json` so `github-actions[bot]` from the **Update feeds** workflow can push **only** those seven files |
-| Bypass | Do **not** add the GitHub Actions app as a global `bypass_actors` Integration (that would let any workflow skip PRs on source) |
-
-`update-feeds.yml` already stages only those seven product paths. Publish copies
-the downloaded candidate workspace onto the product paths, checks it, then
-force-with-lease pushes. After the push it records `product_sha=$(git rev-parse
-HEAD)`, re-checks that tree, and attests the seven files plus a provenance
-document naming source SHA, candidate digest, subjects, and product SHA. A
-`GITHUB_TOKEN` push does **not** retrigger `on: push` CI. `verify-product.yml`
-(`workflow_run` after “Update feeds”, or `workflow_dispatch` with an explicit
-SHA) checks out that product SHA from the `product-identity` artifact — not
-mutable `main` HEAD. Signing is the Actions artifact attestation, not a repo
-GPG key. Ruleset apply is still a maintainer action (partial until applied).
-
-If REST rejects `conditions.file_path`, set the same exclude in the UI
-(Settings → Rules → Rulesets → targeting / target files) using `fnmatch`
-(`feeds/**/*`, `catalog.json`).
+| **Preferred (later)** | Generated-product pull request: Update feeds opens/updates one PR; protect all of `main` uniformly (required PR + `quality (3.12/3.13/3.14)` + dist). Needs a GitHub App or PAT so `GITHUB_TOKEN` PRs are not stuck on Actions approval. |
+| **Acceptable now** | Keep the seven-file privileged push. Do **not** grant the generic GitHub Actions integration (`actor_id` `15368`) a global `bypass_actors` on source. |
 
 List existing rulesets (read-only):
 
@@ -627,14 +628,16 @@ List existing rulesets (read-only):
 gh api repos/wyattowalsh/paul-graham-essay-feeds/rulesets
 ```
 
-Create (first time) or replace `RULESET_ID` via PUT:
+Uniform `main` protection (no path exception — do not run unless a maintainer
+asks; this conflicts with today’s privileged seven-file push until the
+preferred option is implemented):
 
 ```bash
 # Create — do not run from an agent session unless a maintainer asks.
 gh api --method POST repos/wyattowalsh/paul-graham-essay-feeds/rulesets \
   --input - <<'EOF'
 {
-  "name": "protect-main-source",
+  "name": "protect-main",
   "target": "branch",
   "enforcement": "active",
   "bypass_actors": [],
@@ -642,13 +645,11 @@ gh api --method POST repos/wyattowalsh/paul-graham-essay-feeds/rulesets \
     "ref_name": {
       "include": ["refs/heads/main"],
       "exclude": []
-    },
-    "file_path": {
-      "include": ["**/*"],
-      "exclude": ["feeds/**/*", "catalog.json"]
     }
   },
   "rules": [
+    { "type": "deletion" },
+    { "type": "non_fast_forward" },
     {
       "type": "pull_request",
       "parameters": {
@@ -674,23 +675,19 @@ gh api --method POST repos/wyattowalsh/paul-graham-essay-feeds/rulesets \
   ]
 }
 EOF
-
-# Update an existing ruleset (replace RULESET_ID from the list call).
-gh api --method PUT \
-  repos/wyattowalsh/paul-graham-essay-feeds/rulesets/RULESET_ID \
-  --input - <<'EOF'
-{ ...same body as POST... }
-EOF
 ```
 
 > [!WARNING]
 > Do not grant `bypass_actors` `actor_type: Integration` / GitHub Actions
-> (`actor_id` `15368`) on this ruleset. Path-exclude product files instead so
-> Update feeds can push `feeds/` + `catalog.json` without a source bypass.
+> (`actor_id` `15368`) on a source ruleset. That would let any sufficiently
+> privileged workflow skip review on `src/` and workflows.
 
-Tag protection (separate ruleset; `v*` only from a green SHA — GitHub cannot
-bind “CI passed” into tag create, so require a human who verified CI on that
-exact SHA; break-glass is this same maintainer path):
+Tag protection (separate ruleset; restrict creation of `v*` to a human who
+verified CI on that exact SHA — GitHub cannot bind “CI passed” into tag
+create; `release.yml` also requires the tagged SHA to be an ancestor of
+`origin/main`). Restricting `creation` with empty `bypass_actors` relies on
+repository-admin bypass to cut tags; add a named bypass actor if you want a
+non-admin release role:
 
 ```bash
 gh api --method POST repos/wyattowalsh/paul-graham-essay-feeds/rulesets \
@@ -707,6 +704,8 @@ gh api --method POST repos/wyattowalsh/paul-graham-essay-feeds/rulesets \
     }
   },
   "rules": [
+    { "type": "creation" },
+    { "type": "update" },
     { "type": "deletion" },
     { "type": "non_fast_forward" }
   ]
@@ -782,8 +781,10 @@ independent. Catalog material digest excludes wire/`raw_sha256` (provenance
 only); feed-visible fields plus decoded page hash decide skip vs publish
 (PGF-2026-009). Durable writes also mint `state_revision` (opaque hex).
 Finalize compare-and-swap requires the candidate's base revision to match
-the on-disk catalog; same-material overlay cannot regress clocks, validators,
-cursors, or absence streaks from an older contender (PGF-2026-022). On-disk
+the on-disk catalog **after** `recover_materialize`; recovery is an intervening
+durable write and does not skip the check. Same-material overlay cannot regress
+clocks, validators, cursors, or absence streaks from an older contender
+(PGF-2026-030). On-disk
 `catalog.json` is `schema_version: 3` (compact diffs: omit per-entry
 `position` and shared `last_seen_at`). Schema 2 files still load via
 `migrate_catalog`. Published bundles stamp a non-null `last_generation_id`.
@@ -852,6 +853,10 @@ generation tree / `current.json`, no `site/`, no `feeds/validated/`.
 Private gitignored `.cache/generations` + `.cache/materialize.json` + writer lock
 remain the recovery implementation.
 
+`atomic_write_bytes` writes a same-directory temp file, `fsync`s that file,
+then `os.replace`. It does **not** `fsync` the parent directory afterward.
+That is process-crash safe on normal filesystems, not power-loss-proof.
+
 Every durable decision (including the planner **skip** / no-op path) runs
 **under the writer lock**: `acquire_write_lock` → `recover_materialize` → verify
 the existing seven-file bundle (skip path) or stage/publish (AUD-001). Network
@@ -864,17 +869,21 @@ artifacts + MANIFEST so manifest, pointer, and public catalog agree
 (PGF-2026-003). Recover is fail-closed: malformed or unverifiable pointers
 raise after a best-effort quarantine; they are never silently deleted
 (AUD-005). `--abandon-recovery` is the explicit repair for that
-irrecoverable pointer.
+irrecoverable pointer. After recover, revision compare-and-swap always runs;
+a recovered generation that minted a new `state_revision` forces abort-and-rerun
+(PGF-2026-030). A missing `catalog.json` after materialize raises rather than
+returning an in-memory stand-in (PGF-2026-039).
 
 Material-noop after enrich may still persist catalog clocks when feed bytes are
 unchanged. The decisive comparison and chosen write happen **after** acquiring
 the writer lock and after `recover_materialize`, including when recovery is a
 no-op (PGF-P0-001 / RV-R-001). Matching post-lock disk overlays this run's
-non-material clocks onto the **reloaded** catalog. If the durable catalog
-material digest differs from the digest the candidate was based on, finalize
-aborts with `FeedError` rather than publishing a slower older candidate over
-a newer accepted state (PGF-2026-002). Same-base new material still publishes
-feeds and catalog together in the same lock (RV-C-001). Never
+non-material clocks onto the **reloaded** catalog only when the durable
+`state_revision` still matches the candidate's planning base. If the durable
+catalog material digest differs from the digest the candidate was based on,
+finalize aborts with `FeedError` rather than publishing a slower older candidate
+over a newer accepted state (PGF-2026-002). Same-base new material
+still publishes feeds and catalog together in the same lock (RV-C-001). Never
 catalog-only-save the pre-lock object. The path returns `action=state_changed`
 (not `unchanged`) when only the catalog is written, so scheduled automation
 commits the catalog.
@@ -916,7 +925,13 @@ commits the catalog.
   workspace binds to one `product_sha`; the attestation subjects include
   provenance context naming source SHA, candidate digest, the seven product
   paths, and product SHA. `verify-product.yml` checks that SHA, not mutable
-  `main` HEAD.
+  `main` HEAD. Release tags additionally run `git merge-base --is-ancestor`
+  against `origin/main` (PGF-2026-033). Wheel/sdist checksums live in
+  `SHA256SUMS.txt` on the GitHub Release. Consumers verify with
+  `sha256sum -c SHA256SUMS.txt` and
+  `gh attestation verify dist/*.whl --repo wyattowalsh/paul-graham-essay-feeds`
+  (expected workflow: `.github/workflows/release.yml`). Attestations are not
+  useful unless verified.
 
 ### AD-008 — CI clean
 

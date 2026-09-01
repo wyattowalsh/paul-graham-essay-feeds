@@ -459,7 +459,38 @@ def test_update_abandon_recovery_error_skips_pipeline(
         ],
     )
     assert result.exit_code == 1
+    assert result.stdout == ""
+    combined = f"{result.stderr or ''}{result.output or ''}"
+    assert "stuck pointer" in combined
     pipeline.assert_not_called()
+
+
+def test_update_result_file_not_written_on_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from paul_graham_essay_feeds.models import FeedError
+
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.cli.run_catalog_pipeline",
+        MagicMock(side_effect=FeedError("stale finalize")),
+    )
+    result_path = tmp_path / "result.txt"
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(tmp_path),
+            "--quiet",
+            "--result-file",
+            str(result_path),
+        ],
+    )
+    assert result.exit_code == 1
+    combined = f"{result.stderr or ''}{result.output or ''}"
+    assert "stale finalize" in combined
+    assert not result_path.exists()
 
 
 def test_update_result_file_and_github_output(

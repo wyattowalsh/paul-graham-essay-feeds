@@ -65,6 +65,14 @@ _LOCK_FEED_BYTES = _LockFeedBytes(
     simple_atom=b"<feed/>",
     simple_json_feed=b"{}",
 )
+_RECOVERED_FEED_BYTES = _LockFeedBytes(
+    rss=b"<rss>RECOVERED</rss>",
+    atom=b"<feed>RECOVERED</feed>",
+    json_feed=b'{"title":"recovered"}',
+    simple_rss=b"<rss>RECOVERED</rss>",
+    simple_atom=b"<feed>RECOVERED</feed>",
+    simple_json_feed=b'{"title":"recovered"}',
+)
 
 
 def _clock_catalog(
@@ -1011,9 +1019,9 @@ def test_save_catalog_under_lock_recovers_then_saves(
 
 
 def test_save_catalog_under_lock_recover_true_overlays_reloaded_catalog(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
-    """RV-C-001: recover True + matching material saves clocks onto reloaded G1."""
+    """PGF-2026-030: recover True + matching material aborts; recovered G1 stays."""
     pre = _clock_catalog(
         last_success=T_LATER,
         last_seen=T_LATER,
@@ -1026,38 +1034,24 @@ def test_save_catalog_under_lock_recover_true_overlays_reloaded_catalog(
         generation_id="gen-g1",
         cursor="0",
     )
-    saved_catalogs: list[Catalog] = []
-    original_save = save_catalog
-
-    def _capture_save(path: Path, catalog: Catalog) -> None:
-        saved_catalogs.append(catalog)
-        original_save(path, catalog)
-
-    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.save_catalog", _capture_save)
     staged_gen_id = _write_pending_generation(tmp_path, g1, **_LOCK_FEED_BYTES)
-    committed = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
+    with pytest.raises(FeedError, match="state revision"):
+        _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
 
-    saved = committed.catalog
-    assert committed.action == "state_changed"
-    assert saved is not pre
-    assert saved_catalogs == [saved]
-    assert saved.last_generation_id == staged_gen_id
-    assert saved.last_generation_id != "gen-g1"
-    assert saved.index.last_success_at == T_LATER
-    assert saved.versions["page_fetch_cursor"] == "3"
-    entry = next(iter(saved.entries.values()))
-    assert entry.last_seen_at == T_LATER
-    assert entry.page.last_success_at == T_LATER
     on_disk = load_catalog(default_catalog_path(tmp_path))
     assert on_disk is not None
     assert on_disk.last_generation_id == staged_gen_id
-    assert on_disk.index.last_success_at == T_LATER
+    assert on_disk.index.last_success_at == T0
+    assert on_disk.versions["page_fetch_cursor"] == "0"
+    entry = next(iter(on_disk.entries.values()))
+    assert entry.last_seen_at == T0
+    assert entry.page.last_success_at == T0
 
 
 def test_save_catalog_under_lock_recover_true_divergent_material_does_not_save_pre(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
-    """RV-C-001: recover True + different feeds publishes this-run bytes under lock."""
+    """PGF-2026-030: recover True + different feeds aborts; recovered feeds stay."""
     pre = _clock_catalog(
         last_success=T_LATER,
         last_seen=T_LATER,
@@ -1071,7 +1065,7 @@ def test_save_catalog_under_lock_recover_true_divergent_material_does_not_save_p
         cursor="0",
     )
     poison = b"<rss>G1-POISON</rss>"
-    _write_pending_generation(
+    staged_gen_id = _write_pending_generation(
         tmp_path,
         g1,
         rss=poison,
@@ -1081,18 +1075,15 @@ def test_save_catalog_under_lock_recover_true_divergent_material_does_not_save_p
         simple_atom=poison,
         simple_json_feed=poison,
     )
-    committed = _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
+    with pytest.raises(FeedError, match="state revision"):
+        _save_catalog_under_lock(tmp_path, pre, **_LOCK_FEED_BYTES)
 
-    assert committed.action == "updated"
-    assert committed.catalog is not pre
     on_disk = load_catalog(default_catalog_path(tmp_path))
     assert on_disk is not None
-    assert on_disk.index.last_success_at == T_LATER
-    assert on_disk.last_generation_id != "gen-g1"
-    assert committed.catalog.last_generation_id == on_disk.last_generation_id
-    assert committed.catalog.last_generation_id is not None
-    assert (tmp_path / "feeds" / "rss.xml").read_bytes() == _LOCK_FEED_BYTES["rss"]
-    assert (tmp_path / "feeds" / "atom.xml").read_bytes() == _LOCK_FEED_BYTES["atom"]
+    assert on_disk.index.last_success_at == T0
+    assert on_disk.last_generation_id == staged_gen_id
+    assert (tmp_path / "feeds" / "rss.xml").read_bytes() == poison
+    assert (tmp_path / "feeds" / "atom.xml").read_bytes() == poison
 
 
 def test_save_catalog_under_lock_stale_candidate_aborts(tmp_path: Path) -> None:
@@ -1146,7 +1137,7 @@ def test_save_catalog_under_lock_stale_candidate_aborts(tmp_path: Path) -> None:
 
 
 def test_same_material_older_finalizer_aborts_on_state_revision(tmp_path: Path) -> None:
-    """PGF-2026-022: same-material overlay cannot regress newer operational state."""
+    """PGF-2026-030: same-material overlay cannot regress newer operational state."""
     base_rev = "a" * 32
     newer = _clock_catalog(
         last_success=T_LATER,
@@ -1199,7 +1190,7 @@ def test_same_material_older_finalizer_aborts_on_state_revision(tmp_path: Path) 
 
 
 def test_same_material_force_publish_aborts_on_stale_revision(tmp_path: Path) -> None:
-    """PGF-2026-022: force/materialize path uses the same revision CAS."""
+    """PGF-2026-030: force/materialize path uses the same revision CAS."""
     base_rev = "b" * 32
     first = _clock_catalog(
         last_success=T_LATER,
@@ -1260,6 +1251,140 @@ def test_same_material_force_publish_aborts_on_stale_revision(tmp_path: Path) ->
     assert reloaded is not None
     assert reloaded.index.last_success_at == T_LATER
     assert reloaded.versions["page_fetch_cursor"] == "2"
+
+
+def test_recover_same_material_stale_overlay_aborts(tmp_path: Path) -> None:
+    """PGF-2026-030: recover + same-material overlay cannot regress recovered RB."""
+    base_rev = "c" * 32
+    stale = _clock_catalog(
+        last_success=T0,
+        last_seen=T0,
+        generation_id="gen-g0",
+        cursor="1",
+        state_revision=base_rev,
+        consecutive_absences=1,
+    )
+    newer = _clock_catalog(
+        last_success=T_LATER,
+        last_seen=T_LATER,
+        generation_id="gen-gb",
+        cursor="7",
+        state_revision=base_rev,
+        consecutive_absences=0,
+    )
+    _write_public_artifacts(tmp_path, stale, **_LOCK_FEED_BYTES)
+    staged_id = _write_pending_generation(tmp_path, newer, **_LOCK_FEED_BYTES)
+    with pytest.raises(FeedError, match="state revision"):
+        _save_catalog_under_lock(
+            tmp_path,
+            stale,
+            **_LOCK_FEED_BYTES,
+            base_material_digest=material_catalog_digest(stale),
+            base_state_revision=base_rev,
+        )
+    reloaded = load_catalog(default_catalog_path(tmp_path))
+    assert reloaded is not None
+    assert reloaded.last_generation_id == staged_id
+    assert reloaded.state_revision != base_rev
+    assert reloaded.index.last_success_at == T_LATER
+    assert reloaded.versions["page_fetch_cursor"] == "7"
+    entry = reloaded.entries[newer.entry_order[0]]
+    assert entry.consecutive_absences == 0
+    assert entry.last_seen_at == T_LATER
+    assert (tmp_path / "feeds" / "rss.xml").read_bytes() == _LOCK_FEED_BYTES["rss"]
+
+
+def test_recover_force_publish_stale_candidate_aborts(tmp_path: Path) -> None:
+    """PGF-2026-030: recover + force_publish leaves the recovered generation public."""
+    base_rev = "d" * 32
+    stale = _clock_catalog(
+        last_success=T0,
+        last_seen=T0,
+        generation_id="gen-g0",
+        cursor="9",
+        state_revision=base_rev,
+    )
+    newer = _clock_catalog(
+        last_success=T_LATER,
+        last_seen=T_LATER,
+        generation_id="gen-gb",
+        cursor="2",
+        state_revision=base_rev,
+    )
+    _write_public_artifacts(tmp_path, stale, **_LOCK_FEED_BYTES)
+    staged_id = _write_pending_generation(tmp_path, newer, **_RECOVERED_FEED_BYTES)
+    with pytest.raises(FeedError, match="state revision"):
+        _finalize_under_lock(
+            tmp_path,
+            stale,
+            rss=_LOCK_FEED_BYTES["rss"],
+            atom=_LOCK_FEED_BYTES["atom"],
+            json_feed=_LOCK_FEED_BYTES["json_feed"],
+            simple_rss=_LOCK_FEED_BYTES["simple_rss"],
+            simple_atom=_LOCK_FEED_BYTES["simple_atom"],
+            simple_json_feed=_LOCK_FEED_BYTES["simple_json_feed"],
+            reporter=NULL_REPORTER,
+            overlay_clocks=True,
+            verify_existing_on_noop=False,
+            force_publish=True,
+            min_items=1,
+            public_base_url=None,
+            base_material_digest=material_catalog_digest(stale),
+            base_state_revision=base_rev,
+        )
+    reloaded = load_catalog(default_catalog_path(tmp_path))
+    assert reloaded is not None
+    assert reloaded.last_generation_id == staged_id
+    assert reloaded.state_revision != base_rev
+    assert reloaded.index.last_success_at == T_LATER
+    assert reloaded.versions["page_fetch_cursor"] == "2"
+    assert (tmp_path / "feeds" / "rss.xml").read_bytes() == _RECOVERED_FEED_BYTES["rss"]
+    assert (tmp_path / "feeds" / "atom.xml").read_bytes() == _RECOVERED_FEED_BYTES["atom"]
+
+
+def test_post_materialize_missing_catalog_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PGF-2026-039: missing catalog.json after materialize is not a successful update."""
+    base_rev = "e" * 32
+    catalog = _clock_catalog(
+        last_success=T_LATER,
+        last_seen=T_LATER,
+        generation_id="gen-g0",
+        cursor="2",
+        state_revision=base_rev,
+    )
+    _write_public_artifacts(tmp_path, catalog, **_LOCK_FEED_BYTES)
+    real_load = load_catalog
+    calls = {"n": 0}
+
+    def _load_after_recover_only(path: Path) -> Catalog | None:
+        calls["n"] += 1
+        loaded = real_load(path)
+        if calls["n"] >= 2:
+            return None
+        return loaded
+
+    monkeypatch.setattr("paul_graham_essay_feeds.pipeline.load_catalog", _load_after_recover_only)
+    with pytest.raises(FeedError, match=r"catalog\.json missing after materialize"):
+        _finalize_under_lock(
+            tmp_path,
+            catalog,
+            rss=_LOCK_FEED_BYTES["rss"],
+            atom=_LOCK_FEED_BYTES["atom"],
+            json_feed=_LOCK_FEED_BYTES["json_feed"],
+            simple_rss=_LOCK_FEED_BYTES["simple_rss"],
+            simple_atom=_LOCK_FEED_BYTES["simple_atom"],
+            simple_json_feed=_LOCK_FEED_BYTES["simple_json_feed"],
+            reporter=NULL_REPORTER,
+            overlay_clocks=True,
+            verify_existing_on_noop=False,
+            force_publish=True,
+            min_items=1,
+            public_base_url=None,
+            base_material_digest=material_catalog_digest(catalog),
+            base_state_revision=base_rev,
+        )
 
 
 def test_apply_enrichment_parse_failure_persists_transport_evidence() -> None:
@@ -1607,11 +1732,11 @@ def test_apply_enrichment_bad_prior_falls_back_to_title() -> None:
     assert updated.prior_good_summary == blurb(title)
 
 
-def test_catalog_only_path_recover_true_divergent_feeds_publishes(
+def test_catalog_only_path_recover_true_divergent_feeds_aborts(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """RV-C-001: catalog-only path publishes when recover rematerializes other feeds."""
+    """PGF-2026-030: catalog-only path aborts after recover rematerializes other feeds."""
     from paul_graham_essay_feeds.models import MIN_ITEMS
 
     html = synthetic_index_html()
@@ -1626,7 +1751,6 @@ def test_catalog_only_path_recover_true_divergent_feeds_publishes(
     )
     first = run_catalog_pipeline(settings, html=html, now=T0)
     assert first.action == "updated"
-    first_rss = (tmp_path / "feeds" / "rss.xml").read_bytes()
 
     seeded = load_catalog(default_catalog_path(tmp_path))
     assert seeded is not None
@@ -1645,7 +1769,7 @@ def test_catalog_only_path_recover_true_divergent_feeds_publishes(
 
     poison = b"<rss>G1-POISON</rss>"
     g1 = seeded.model_copy(update={"last_generation_id": "gen-g1"})
-    _write_pending_generation(
+    staged_id = _write_pending_generation(
         tmp_path,
         g1,
         rss=poison,
@@ -1656,16 +1780,12 @@ def test_catalog_only_path_recover_true_divergent_feeds_publishes(
         simple_json_feed=poison,
     )
 
-    second = run_catalog_pipeline(settings, html=html, now=T_LATER)
-    assert second.action == "updated"
-    assert second.skipped is False
-    assert (tmp_path / "feeds" / "rss.xml").read_bytes() != poison
-    assert (tmp_path / "feeds" / "rss.xml").read_bytes() == first_rss
+    with pytest.raises(FeedError, match="state revision"):
+        run_catalog_pipeline(settings, html=html, now=T_LATER)
     on_disk = load_catalog(default_catalog_path(tmp_path))
     assert on_disk is not None
-    for entry in on_disk.entries.values():
-        assert entry.page.last_checked_at is not None
-        assert entry.page.last_checked_at >= T_LATER - timedelta(days=1)
+    assert on_disk.last_generation_id == staged_id
+    assert (tmp_path / "feeds" / "rss.xml").read_bytes() == poison
 
 
 def test_complete_index_state_copies_byte_counts() -> None:

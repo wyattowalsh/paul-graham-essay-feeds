@@ -23,3 +23,17 @@ In scope: the CLI, publication lock/staging, HTTP client, and the committed
 
 Out of scope: paulgraham.com, GitHub raw MIME (`text/plain` on hosted
 subscribe URLs), and third-party feed readers.
+
+## Verifying a GitHub Release
+
+After `v1.0.0` exists, consumers can check wheel/sdist integrity:
+
+```bash
+sha256sum -c SHA256SUMS.txt
+gh attestation verify dist/*.whl --repo wyattowalsh/paul-graham-essay-feeds
+gh attestation verify dist/*.tar.gz --repo wyattowalsh/paul-graham-essay-feeds
+```
+
+Expect repository `wyattowalsh/paul-graham-essay-feeds` and workflow
+`.github/workflows/release.yml`. Generation of attestations is not the
+security benefit; verification is.
