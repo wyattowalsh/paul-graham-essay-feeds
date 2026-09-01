@@ -29,6 +29,7 @@ suite, `pg-essay-feeds check --quiet`.
 
 - CLI is `update` + `check` only. Quiet success is zero stdout and stderr.
 - No `site/`, OPML, full essay bodies, invented day-1 dates, or LLM summaries.
+  GitHub Pages is a deploy projection of `feeds/`, not a second tree.
 - Catalog is SSOT; feeds are projections. Ship `check` and the seven product
   files together.
 - Software is MIT; essay text and derived titles/summaries remain Paul

@@ -82,21 +82,23 @@ alias c := check
 @pages:
     {{ uv }} run python -m paul_graham_essay_feeds.pages --out _site
 
-# Full local quality gate: lint → type → test → check
+# Full local quality gate: lint → type → test → check → pages
 [group("checks")]
-[doc("Full local quality gate: lint → type → test → check")]
-all: lint type test check
+[doc("Full local quality gate: lint → type → test → check → pages")]
+all: lint type test check pages
 alias a := all
 
-# Offline CI mirror: sync lock, lint, type, test, quiet check, build
+# Offline CI mirror: sync lock, lint, type, test, quiet check, pages, build
 [group("checks")]
-[doc("Offline CI mirror: locked sync, lint, type, test, quiet check, wheel build")]
+[doc("Offline CI mirror: locked sync, lint, type, test, quiet check, pages, wheel build")]
 ci-local: sync-locked
     {{ uv }} run ruff format --check .
     {{ uv }} run ruff check .
     {{ uv }} run ty check
     {{ uv }} run pytest --cov-fail-under=90
     {{ uv }} run pg-essay-feeds check --quiet
+    {{ uv }} run python -m paul_graham_essay_feeds.pages --out _site
+    cmp -s feeds/rss.xml _site/rss.xml
     {{ uv }} build --no-sources
 alias cil := ci-local
 

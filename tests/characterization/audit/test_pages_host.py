@@ -16,6 +16,8 @@ def test_pages_workflow_deploys_assembled_artifact() -> None:
     assert "actions/deploy-pages@" in text
     assert "include-hidden-files: true" in text
     assert "persist-credentials: false" in text
+    ci = (_REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "paul_graham_essay_feeds.pages" in ci
     assert "site/" not in text
     assert "host/" not in text
 

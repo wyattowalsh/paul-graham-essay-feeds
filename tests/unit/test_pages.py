@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
 
-from paul_graham_essay_feeds.models import LATEST_FEED_ITEMS, FeedError
+from paul_graham_essay_feeds.models import ATOM_NS, LATEST_FEED_ITEMS, FeedError
 from paul_graham_essay_feeds.pages import (
     assemble_pages,
     index_html,
@@ -15,6 +16,8 @@ from paul_graham_essay_feeds.pages import (
     main,
     slice_latest,
 )
+
+_REPO = Path(__file__).resolve().parents[2]
 
 
 def test_kind_for_name() -> None:
@@ -58,6 +61,13 @@ def test_slice_latest_rejects_non_object_json() -> None:
         slice_latest("{", "json")
 
 
+def test_slice_latest_json_non_list_items_still_rewrites_title() -> None:
+    raw = json.dumps({"title": "Paul Graham Essays — Enriched (Unofficial)", "items": "nope"})
+    data = json.loads(slice_latest(raw, "json"))
+    assert data["items"] == "nope"
+    assert "Latest enriched" in data["title"]
+
+
 def test_assemble_pages_writes_feeds_latest_and_index(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     feeds = repo / "feeds"
@@ -79,8 +89,11 @@ def test_assemble_pages_writes_feeds_latest_and_index(tmp_path: Path) -> None:
     dest = tmp_path / "_site"
     assemble_pages(repo, dest)
     assert (dest / ".nojekyll").is_file()
-    assert "Paul Graham essay feeds" in (dest / "index.html").read_text(encoding="utf-8")
+    html = (dest / "index.html").read_text(encoding="utf-8")
+    assert "<body>" in html
+    assert "Paul Graham essay feeds" in html
     assert (dest / "rss.xml").read_bytes() == (feeds / "rss.xml").read_bytes()
+    assert (dest / "feeds" / "rss.xml").read_bytes() == (feeds / "rss.xml").read_bytes()
     latest_rss = (dest / "latest" / "rss.xml").read_text(encoding="utf-8")
     assert latest_rss.count("<item>") == 3
     latest_json = json.loads((dest / "latest" / "feed.json").read_text(encoding="utf-8"))
@@ -90,6 +103,43 @@ def test_assemble_pages_writes_feeds_latest_and_index(tmp_path: Path) -> None:
 def test_assemble_pages_missing_feeds(tmp_path: Path) -> None:
     with pytest.raises(FeedError, match="Missing feeds"):
         assemble_pages(tmp_path, tmp_path / "out")
+
+
+def test_assemble_pages_refuses_repo_root(tmp_path: Path) -> None:
+    (tmp_path / "feeds").mkdir()
+    with pytest.raises(FeedError, match="repository root"):
+        assemble_pages(tmp_path, tmp_path)
+
+
+def test_assemble_pages_replaces_stale_output(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    feeds = repo / "feeds"
+    feeds.mkdir(parents=True)
+    body = "<rss><channel><item><title>A</title></item></channel></rss>"
+    json_body = '{"title":"T","items":[]}\n'
+    for name in ("rss.xml", "atom.xml", "rss.simple.xml", "atom.simple.xml"):
+        (feeds / name).write_text(body, encoding="utf-8")
+    (feeds / "feed.json").write_text(json_body, encoding="utf-8")
+    (feeds / "feed.simple.json").write_text(json_body, encoding="utf-8")
+    dest = tmp_path / "_site"
+    dest.mkdir()
+    (dest / "stale.txt").write_text("leftover", encoding="utf-8")
+    assemble_pages(repo, dest)
+    assert not (dest / "stale.txt").exists()
+    assert (dest / "rss.xml").is_file()
+
+
+def test_assemble_committed_feeds_latest_is_well_formed(tmp_path: Path) -> None:
+    dest = tmp_path / "_site"
+    assemble_pages(_REPO, dest)
+    assert (dest / "rss.xml").read_bytes() == (_REPO / "feeds" / "rss.xml").read_bytes()
+    rss = ET.parse(dest / "latest" / "rss.xml")
+    assert len(list(rss.getroot().iter("item"))) == LATEST_FEED_ITEMS
+    atom = ET.parse(dest / "latest" / "atom.xml")
+    assert len(atom.getroot().findall(f"{{{ATOM_NS}}}entry")) == LATEST_FEED_ITEMS
+    data = json.loads((dest / "latest" / "feed.json").read_text(encoding="utf-8"))
+    assert len(data["items"]) == LATEST_FEED_ITEMS
+    assert "Latest" in data["title"]
 
 
 def test_assemble_pages_missing_artifact(tmp_path: Path) -> None:
@@ -102,7 +152,27 @@ def test_index_html_uses_relative_links() -> None:
     html = index_html()
     assert "href='rss.simple.xml'" in html or 'href="rss.simple.xml"' in html
     assert "latest/rss.xml" in html
+    assert "<head>" in html
+    assert "<body>" in html
     assert "site/" not in html
+
+
+def test_assemble_pages_replaces_file_dest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    repo = tmp_path / "repo"
+    feeds = repo / "feeds"
+    feeds.mkdir(parents=True)
+    body = "<rss><channel><item><title>A</title></item></channel></rss>"
+    json_body = '{"title":"T","items":[]}\n'
+    for name in ("rss.xml", "atom.xml", "rss.simple.xml", "atom.simple.xml"):
+        (feeds / name).write_text(body, encoding="utf-8")
+    (feeds / "feed.json").write_text(json_body, encoding="utf-8")
+    (feeds / "feed.simple.json").write_text(json_body, encoding="utf-8")
+    dest = tmp_path / "built"
+    dest.write_text("not a directory", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    assemble_pages(repo, Path("built"))
+    assert dest.is_dir()
+    assert (dest / "rss.xml").is_file()
 
 
 def test_pages_main_writes_out(tmp_path: Path) -> None:

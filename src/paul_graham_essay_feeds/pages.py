@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 from pathlib import Path
 from typing import Literal
 
@@ -80,6 +81,7 @@ def index_html(*, origin: str = HOST_PUBLIC_BASE_URL) -> str:
     )
     return f"""<!doctype html>
 <html lang="en">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Paul Graham essay feeds (unofficial)</title>
@@ -114,6 +116,8 @@ def index_html(*, origin: str = HOST_PUBLIC_BASE_URL) -> str:
   code {{ font-size: 0.86em; }}
   footer {{ margin-top: 2rem; font-size: 0.82rem; color: light-dark(#8a8378, #8f877c); }}
 </style>
+</head>
+<body>
 <p class="kicker">Unofficial · metadata only</p>
 <h1>Paul Graham essay feeds</h1>
 <p>Titles, links, and short excerpts — never complete essays.
@@ -124,26 +128,43 @@ Hosted on GitHub Pages at <code>{base}</code>.</p>
 </table>
 <footer>Same bytes as the repository <code>feeds/</code> tree.
 Simple is title-only; enriched adds short source excerpts.</footer>
+</body>
 </html>
 """
 
 
 def assemble_pages(repo_root: Path, dest: Path) -> Path:
-    """Copy committed feeds, write ``/latest/*``, index, and ``.nojekyll``."""
+    """Copy committed feeds, write ``/latest/*``, index, and ``.nojekyll``.
+
+    Also mirrors the six files under ``feeds/`` so the previous GitHub Pages
+    layout (``/feeds/rss.xml``) keeps working.
+    """
     root = Path(repo_root).resolve()
     dest = Path(dest)
+    if not dest.is_absolute():
+        dest = (Path.cwd() / dest).resolve()
     feeds = root / "feeds"
+    if dest in (root, feeds):
+        raise FeedError("Pages output must not be the repository root or feeds/")
     if not feeds.is_dir():
         raise FeedError(f"Missing feeds directory: {feeds}")
-    dest.mkdir(parents=True, exist_ok=True)
+    if dest.exists():
+        if dest.is_dir():
+            shutil.rmtree(dest)
+        else:
+            dest.unlink()
+    dest.mkdir(parents=True)
     latest_dir = dest / "latest"
-    latest_dir.mkdir(parents=True, exist_ok=True)
+    latest_dir.mkdir()
+    mirror = dest / "feeds"
+    mirror.mkdir()
     for name in _FEED_NAMES:
         src = feeds / name
         if not src.is_file():
             raise FeedError(f"Missing feed artifact: {src}")
         payload = src.read_bytes()
         (dest / name).write_bytes(payload)
+        (mirror / name).write_bytes(payload)
         sliced = slice_latest(payload.decode("utf-8"), kind_for_name(name))
         (latest_dir / name).write_text(sliced, encoding="utf-8", newline="\n")
     (dest / "index.html").write_text(index_html(), encoding="utf-8", newline="\n")

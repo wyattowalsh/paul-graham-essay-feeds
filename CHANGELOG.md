@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - GitHub Pages (`https://wyattowalsh.github.io/paul-graham-essay-feeds/`)
   is the canonical subscribe origin: committed `feeds/` plus a `/latest/*`
-  projection of the newest 20 items. GitHub raw remains `text/plain` fallback.
+  projection of the newest 20 items. The previous `/feeds/*.xml` layout is
+  mirrored in the Pages artifact. GitHub raw remains `text/plain` fallback.
 - `--debug` prints unexpected-error tracebacks; `--allow-bootstrap-fallback`
   is required for discovery fallback when no prior catalog exists.
 - Release artifacts include an sdist smoke test, `requirements.txt`, and a
