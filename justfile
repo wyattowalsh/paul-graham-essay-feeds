@@ -76,6 +76,12 @@ alias types := type
     {{ uv }} run pg-essay-feeds check
 alias c := check
 
+# Assemble GitHub Pages artifact into _site/
+[group("checks")]
+[doc("Assemble GitHub Pages artifact into _site/")]
+@pages:
+    {{ uv }} run python -m paul_graham_essay_feeds.pages --out _site
+
 # Full local quality gate: lint → type → test → check
 [group("checks")]
 [doc("Full local quality gate: lint → type → test → check")]

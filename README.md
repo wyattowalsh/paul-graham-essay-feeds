@@ -21,34 +21,33 @@ correct `https` links, short descriptions, guids, and clean Turbify chapter URLs
 
 ## Subscribe
 
-No Python required. Canonical URLs are a typed Cloudflare Worker
-([`pg-essay-feeds.wyattowalsh.workers.dev`](https://pg-essay-feeds.wyattowalsh.workers.dev/))
-that serves the committed `feeds/` files with the correct media types.
-GitHub raw remains a `text/plain` fallback.
+No Python required. Canonical URLs are GitHub Pages
+([`wyattowalsh.github.io/paul-graham-essay-feeds`](https://wyattowalsh.github.io/paul-graham-essay-feeds/))
+serving the committed `feeds/` files. GitHub raw remains a `text/plain` fallback.
 
 **Simple (recommended)** — no fetched summaries; deterministic title blurb:
 
 | Format | Subscribe |
 | :--- | :--- |
-| RSS 2.0 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/rss.simple.xml) |
-| Atom 1.0 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/atom.simple.xml) |
-| JSON Feed 1.1 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/feed.simple.json) |
+| RSS 2.0 | [Subscribe](https://wyattowalsh.github.io/paul-graham-essay-feeds/rss.simple.xml) |
+| Atom 1.0 | [Subscribe](https://wyattowalsh.github.io/paul-graham-essay-feeds/atom.simple.xml) |
+| JSON Feed 1.1 | [Subscribe](https://wyattowalsh.github.io/paul-graham-essay-feeds/feed.simple.json) |
 
 **Enriched** — short source excerpts (semantic gating rejects promo/chrome):
 
 | Format | Subscribe |
 | :--- | :--- |
-| RSS 2.0 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/rss.xml) |
-| Atom 1.0 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/atom.xml) |
-| JSON Feed 1.1 | [Subscribe](https://pg-essay-feeds.wyattowalsh.workers.dev/feed.json) |
+| RSS 2.0 | [Subscribe](https://wyattowalsh.github.io/paul-graham-essay-feeds/rss.xml) |
+| Atom 1.0 | [Subscribe](https://wyattowalsh.github.io/paul-graham-essay-feeds/atom.xml) |
+| JSON Feed 1.1 | [Subscribe](https://wyattowalsh.github.io/paul-graham-essay-feeds/feed.json) |
 
-**Latest 20** — same files, first twenty items: [`/latest/rss.xml`](https://pg-essay-feeds.wyattowalsh.workers.dev/latest/rss.xml),
-[`/latest/atom.xml`](https://pg-essay-feeds.wyattowalsh.workers.dev/latest/atom.xml),
-[`/latest/feed.json`](https://pg-essay-feeds.wyattowalsh.workers.dev/latest/feed.json)
+**Latest 20** — same files, first twenty items: [`/latest/rss.xml`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/rss.xml),
+[`/latest/atom.xml`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/atom.xml),
+[`/latest/feed.json`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/feed.json)
 (and the `.simple` siblings).
 
 > [!NOTE]
-> Deploy the wrapper from [`host/`](./host/): `npx wrangler deploy`.
+> Pages serves `.xml` as `application/xml` and `.json` as `application/json`.
 > GitHub raw (`text/plain`) is still accepted-risk fallback, not the
 > canonical subscribe URL.
 

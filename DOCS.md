@@ -17,7 +17,7 @@ Maintainer reference for **paul-graham-essay-feeds**.
 > [§ Architecture decisions](#architecture-decisions-normative) below.
 
 > [!TIP]
-> End users: subscribe from **[README.md](./README.md)** (typed Worker URLs;
+> End users: subscribe from **[README.md](./README.md)** (GitHub Pages URLs;
 > no Python). This file is for architecture, CLI contracts, and CI.
 > Colab is maintainer / custom generation, not the subscribe path.
 
@@ -125,7 +125,7 @@ raw fetch → decode → discover → catalog reconcile → refresh plan
 catalog.json              # durable SSOT (repo root) — mirrors current index
 feeds/rss.xml|atom.xml|feed.json                 # enriched
 feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
-host/                         # Cloudflare Worker MIME wrapper (not site/)
+# GitHub Pages: assembled projection of feeds/ + /latest/* (not committed)
 # no site/* · no state/generations/ · no current.json · no feeds/validated/
 ```
 
@@ -144,6 +144,7 @@ host/                         # Cloudflare Worker MIME wrapper (not site/)
 | `pipeline.py` | orchestrate + verify-then-publish root catalog + feeds |
 | `publication.py` | writer lock, staged `.cache/generations`, materialize/recover |
 | `cli.py` | Typer: `update` / `check` only |
+| `pages.py` | Assemble GitHub Pages artifact from committed `feeds/` |
 
 Entry points: `cli:main` / `__main__.py`. Schema SSOT is Pydantic `models.py` (no parallel JSON Schema tree).
 
@@ -153,7 +154,6 @@ Entry points: `cli:main` / `__main__.py`. Schema SSOT is Pydantic `models.py` (n
 | :--- | :--- |
 | `catalog.json` | Durable catalog SSOT (repo root) — current index only |
 | `feeds/` | Six flat projections: enriched + simple (see AD-002) |
-| `host/` | Cloudflare Worker that serves committed `feeds/` with typed MIME |
 | `.cache/` | Gitignored HTTP validator sidecar |
 | `notebook.ipynb` | Maintainer / custom generation (HTML intro + generate → `feeds.zip`) |
 
@@ -235,8 +235,8 @@ Deep-verifies both enriched and simple `feeds/` sets (item-count parity across
 RSS/Atom/JSON; enriched JSON `content_text` == `summary` with length in
 `[1, FEED_SUMMARY_CHARS]`). Root `catalog.json` is **required** (M-25): `check`
 loads it and asserts `entry_order` ids match ordered ids in both `feed.json` and
-`feed.simple.json`. No `site/` requirement. Hosted subscribe URLs are the
-`host/` Worker (typed MIME), not GitHub Pages.
+`feed.simple.json`. No `site/` requirement. Hosted subscribe URLs are GitHub
+Pages (`https://wyattowalsh.github.io/paul-graham-essay-feeds/`).
 
 | Flag | Default | Meaning |
 | :--- | :--- | :--- |
@@ -398,11 +398,11 @@ Turbify query strings are stripped for stable identity.
 
 > [!NOTE]
 > **PGF-2026-015 (accepted-risk):** GitHub raw still serves committed `feeds/*`
-> as `text/plain`. Canonical subscribe URLs are the Cloudflare Worker in
-> [`host/`](./host/) (`https://pg-essay-feeds.wyattowalsh.workers.dev/`), which
-> serves the same committed bytes with `application/rss+xml`,
-> `application/atom+xml`, and `application/feed+json`. Raw GitHub remains
-> fallback. This is a MIME wrapper, not `site/` and not a second publisher.
+> as `text/plain`. Canonical subscribe URLs are GitHub Pages
+> (`https://wyattowalsh.github.io/paul-graham-essay-feeds/`), which serves the
+> same committed bytes as `application/xml` / `application/json` (Pages cannot
+> set `application/rss+xml` or `application/feed+json`). Raw GitHub remains
+> fallback. Pages is a deploy projection, not `site/` and not a second publisher.
 
 ---
 
@@ -507,7 +507,7 @@ uv build --no-sources
 ## Notebook (maintainer / custom generation)
 
 [`notebook.ipynb`](./notebook.ipynb) is **not** the subscribe path. Readers
-use the typed Worker subscribe URLs in README. Colab is for generating a private
+use the GitHub Pages subscribe URLs in README. Colab is for generating a private
 `feeds.zip`.
 
 1. HTML hero (`IPython.display.HTML`, `#@title` + `cellView: form` so code stays
@@ -978,9 +978,8 @@ their paragraph text already passes the gate.
 
 - **PGF-2026-015 (raw GitHub MIME):** GitHub raw still serves
   `githubusercontent.com` blobs as `text/plain`. Canonical subscribe URLs are
-  the `host/` Worker (`application/rss+xml`, `application/atom+xml`,
-  `application/feed+json`). Raw GitHub is accepted-risk fallback. Do not add
-  `site/` or a second generated tree.
+  GitHub Pages (`application/xml` / `application/json`). Raw GitHub is
+  accepted-risk fallback. Do not add `site/` or a second generated tree.
 - **PGF-2026-016 (GitHub ruleset):** operator steps are in
   [§ Branch protection (rulesets)](#branch-protection-rulesets). Agents must
   not `gh api` apply rulesets.

@@ -10,7 +10,7 @@ from paul_graham_essay_feeds import __version__
 
 _REPO = Path(__file__).resolve().parents[3]
 _RAW = "https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds/"
-_HOST = "https://pg-essay-feeds.wyattowalsh.workers.dev/"
+_HOST = "https://wyattowalsh.github.io/paul-graham-essay-feeds/"
 _SIMPLE = ("rss.simple.xml", "atom.simple.xml", "feed.simple.json")
 _ENRICHED = ("rss.xml", "atom.xml", "feed.json")
 _GIT_MAIN = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main"
@@ -73,18 +73,13 @@ def test_readme_subscribe_simple_first_six_raw_feeds() -> None:
     assert simple_pos < enriched_pos
     subscribe_block = readme[readme.index("## Subscribe") : readme.index("## What you get")]
     assert "No Python required" in subscribe_block
-    assert "application/rss+xml" in subscribe_block or "workers.dev" in subscribe_block
+    assert "github.io" in subscribe_block
+    assert "workers.dev" not in subscribe_block
     assert "uvx" not in subscribe_block
     assert "pip install" not in subscribe_block.lower()
-    worker = _text("host/src/worker.js")
-    assert "application/rss+xml" in worker
-    assert "application/atom+xml" in worker
-    assert "application/feed+json" in worker
-    assert "/latest/rss.xml" in worker
-    assert "HEAD" in worker
-    wrangler = _text("host/wrangler.toml")
-    assert 'directory = "../feeds"' in wrangler
-    assert "run_worker_first = true" in wrangler
+    workflow = _text(".github/workflows/pages.yml")
+    assert "paul_graham_essay_feeds.pages" in workflow
+    assert "/latest/rss.xml" in subscribe_block
 
 
 def test_notice_does_not_relicense_essay_text() -> None:

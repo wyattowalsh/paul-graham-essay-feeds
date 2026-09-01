@@ -21,8 +21,9 @@ the supported line.
 In scope: the CLI, publication lock/staging, HTTP client, and the committed
 `catalog.json` / `feeds/` product.
 
-Out of scope: paulgraham.com, GitHub raw MIME (`text/plain` on hosted
-subscribe URLs), and third-party feed readers.
+Out of scope: paulgraham.com, GitHub raw MIME (`text/plain`), GitHub Pages
+generic `application/xml` / `application/json` types, and third-party feed
+readers.
 
 ## Verifying a GitHub Release
 

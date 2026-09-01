@@ -1397,11 +1397,11 @@ def test_settings_min_items_and_public_base_url() -> None:
     settings = _settings(
         repo_root=None,
         min_items=12,
-        public_base_url="https://pg-essay-feeds.wyattowalsh.workers.dev/",
+        public_base_url="https://wyattowalsh.github.io/paul-graham-essay-feeds/",
         allow_bootstrap_fallback=True,
     )
     assert settings.min_items == 12
-    assert settings.public_base_url == "https://pg-essay-feeds.wyattowalsh.workers.dev/"
+    assert settings.public_base_url == "https://wyattowalsh.github.io/paul-graham-essay-feeds/"
     assert settings.allow_bootstrap_fallback is True
 
 

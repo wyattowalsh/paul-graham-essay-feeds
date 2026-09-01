@@ -46,7 +46,7 @@ jobs:
           # Fair per-run caps so a full stale corpus is not re-fetched in one job.
           PG_ESSAY_FEEDS_MAX_PAGE_FETCHES: "40"
           PG_ESSAY_FEEDS_MAX_LINK_VALIDATIONS: "40"
-          PG_ESSAY_FEEDS_PUBLIC_BASE_URL: "https://raw.githubusercontent.com/wyattowalsh/paul-graham-essay-feeds/main/feeds"
+          PG_ESSAY_FEEDS_PUBLIC_BASE_URL: "https://wyattowalsh.github.io/paul-graham-essay-feeds/"
         run: uv run pg-essay-feeds update --quiet
 
       - name: Upload workspace when catalog or feeds changed

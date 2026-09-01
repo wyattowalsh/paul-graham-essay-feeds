@@ -9,10 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Typed Cloudflare Worker in `host/` serves committed feeds with
-  `application/rss+xml`, `application/atom+xml`, and `application/feed+json`,
-  plus `/latest/*` projections of the newest 20 items. GET/HEAD/OPTIONS,
-  CORS, and ETag/304 are supported. GitHub raw remains `text/plain` fallback.
+- GitHub Pages (`https://wyattowalsh.github.io/paul-graham-essay-feeds/`)
+  is the canonical subscribe origin: committed `feeds/` plus a `/latest/*`
+  projection of the newest 20 items. GitHub raw remains `text/plain` fallback.
 - `--debug` prints unexpected-error tracebacks; `--allow-bootstrap-fallback`
   is required for discovery fallback when no prior catalog exists.
 - Release artifacts include an sdist smoke test, `requirements.txt`, and a

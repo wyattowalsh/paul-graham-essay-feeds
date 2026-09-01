@@ -65,7 +65,7 @@ FEED_DESCRIPTION: Final = (
     "to oldest from the official index. Dates may be when this feed observed "
     "or detected a change, not the essay's original publication date."
 )
-HOST_PUBLIC_BASE_URL: Final = "https://pg-essay-feeds.wyattowalsh.workers.dev/"
+HOST_PUBLIC_BASE_URL: Final = "https://wyattowalsh.github.io/paul-graham-essay-feeds/"
 LATEST_FEED_ITEMS: Final = 20
 AUTHOR: Final = "Paul Graham"
 AUTHOR_URL: Final = "https://paulgraham.com/"
