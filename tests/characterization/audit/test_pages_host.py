@@ -14,6 +14,7 @@ def test_pages_workflow_deploys_assembled_artifact() -> None:
     assert "paul_graham_essay_feeds.pages" in text
     assert "actions/upload-pages-artifact@" in text
     assert "actions/deploy-pages@" in text
+    assert "include-hidden-files: true" in text
     assert "persist-credentials: false" in text
     assert "site/" not in text
     assert "host/" not in text
