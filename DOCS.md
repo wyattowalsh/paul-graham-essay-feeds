@@ -531,10 +531,7 @@ use the GitHub Pages subscribe URLs in README. Colab is for generating a private
 5. Troubleshooting cell (`#@title` + form-hidden HTML `<details>`)
 
 No package API imports in the kernel; CLI only via `uvx` from
-`git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main`.
-Intended release is **1.0.0**; until the `v1.0.0` tag exists, install from
-`main`. After the tag is published, flip that one sentence to `@v1.0.0`.
-Do not pin a tag that does not exist.
+`git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.0`.
 `notebook.ipynb` stays ruff/ty-excluded.
 
 ---
@@ -550,10 +547,7 @@ Do not pin a tag that does not exist.
    runs the same quality gates as CI, then builds wheel/sdist, creates a
    GitHub Release via softprops with **auto-generated release notes** (from
    commits/PRs since the previous tag), and attaches `dist/*`. No `uv publish`
-   on tag. **Do not cut the tag from this change.** Intended release is
-   **1.0.0**; until the `v1.0.0` tag exists, install from `main`. After the
-   tag exists, flip that one maintained sentence in README + notebook to
-   `@v1.0.0`. Do not pin a tag that does not exist.
+   on tag. User install pin is `@v1.0.0`.
 
 ```bash
 just build   # local: uv build --no-sources + wheel smoke
@@ -561,10 +555,9 @@ just build   # local: uv build --no-sources + wheel smoke
 
 > [!NOTE]
 > Hatch sdist excludes `/feeds`, `/.github`, `/.venv`, and `/dist`. That does
-> **not** break `uvx --from git+…@main` (or `@v1.0.0` after the tag exists):
-> git install still clones the full repo (committed feeds available locally);
-> installed wheels write `feeds/` at runtime. Until `v1.0.0` exists, user
-> docs install from `@main`.
+> **not** break `uvx --from git+…@v1.0.0`: git install still clones the full
+> repo (committed feeds available locally); installed wheels write `feeds/`
+> at runtime.
 
 ### Regenerating committed feeds
 
@@ -597,8 +590,7 @@ requires `content_text` without matching regenerated artifacts in the same chang
 
 Package `__version__` is `1.0.0`. Historical `[0.2.0]` in CHANGELOG is the
 prior advertised-but-untagged integrity work — do not revive `@v0.2.0` as a
-user pin. Intended release is **1.0.0**; until the `v1.0.0` tag exists,
-install from `main`. After the tag is published, flip that one sentence.
+user pin. User docs install from `@v1.0.0`.
 
 ### Branch protection (rulesets)
 
@@ -925,8 +917,7 @@ commits the catalog.
   third-party text.
 - Short source-derived summaries only; no full-body storage.
 - Release tags must match package version; user-facing CHANGELOG only.
-  Package version is `1.0.0`; do not pin a git tag that does not exist
-  (PGF-2026-004).
+  Package version is `1.0.0`; user docs pin `@v1.0.0` (PGF-2026-004).
 - Scheduled automation commits deterministic `catalog.json` + `feeds/` to `main`.
 - Signing of published product files uses **GitHub Actions artifact attestations**
   (`actions/attest-build-provenance` on the Update feeds publish job), not a

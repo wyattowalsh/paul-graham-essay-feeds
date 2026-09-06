@@ -89,13 +89,11 @@ serving the committed `feeds/` files. GitHub raw remains a `text/plain` fallback
 
 ```bash
 mkdir pg-feeds && cd pg-feeds
-uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main \
+uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.0 \
   pg-essay-feeds update
 ```
 
 Writes `feeds/` into the current directory. Point a feed reader at the local files.
-
-> Intended release is **1.0.0**; until the `v1.0.0` tag exists, install from `main`.
 
 > [!TIP]
 > Default `update` enriches due essays (~1 HTTP GET per due page, capped at 40
@@ -227,7 +225,7 @@ after zip). Zips all six `feeds/{rss,atom,feed}{,.simple}.*` files.
 Reachability issues show in a report-only status panel without blocking
 the zip. Output path is under Advanced (`/content/pg-feeds`).
 
-Intended release is **1.0.0**; until the `v1.0.0` tag exists, install from `main`.
+Install pin: `git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.0`.
 
 Local clone:
 

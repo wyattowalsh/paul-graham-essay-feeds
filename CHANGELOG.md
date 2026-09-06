@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-05
+
+First coherent major. Audit close 2026-08-31 (`PGF-2026-*`); Pages canonical
+origin and bot-cycle rebuild 2026-09-01…05 (PGF-2026-023–040). Historical
+`[0.2.0]` remains the prior advertised-but-untagged integrity work.
+
 ### Added
 
 - GitHub Pages (`https://wyattowalsh.github.io/paul-graham-essay-feeds/`)
@@ -18,32 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release artifacts include an sdist smoke test, `requirements.txt`, and a
   CycloneDX SBOM (`bom.cdx.json`).
 
-### Fixed
-
-- **PGF-2026-040:** GitHub Pages rebuilds after scheduled bot commits.
-  `pages.yml` listens for `workflow_run` on “Update feeds” and assembles from
-  the `product_sha` in the `product-identity` artifact, not
-  `workflow_run.head_sha` (the pre-push source). `GITHUB_TOKEN` pushes still
-  do not fire `on.push`.
-- Parse-failed page validators no longer authorize a later HTTP 304 success.
-- `check` treats the catalog as the feed oracle (title/URL/summary/id).
-- Gzip/deflate decode aborts at the decoded-size cap instead of inflating
-  first. HTTP 204/206 are not successful page/index bodies.
-- Missing catalog after recover with a planned revision is a stale finalize.
-- Staging manifest binds directory name, `gen_id`, and `last_generation_id`.
-
-
-- **PGF-2026-030:** Crash recovery no longer skips `state_revision`
-  compare-and-swap. Recover rematerializes first, then revision comparison
-  always runs; a stale candidate aborts and must re-run. (Unreleased CAS was
-  briefly labeled `PGF-2026-022`; that id remains the extraction-quality work
-  in `[1.0.0]`.)
-- **PGF-2026-039:** Missing `catalog.json` after materialize raises instead
-  of returning an in-memory stand-in. Hatch sdist excludes `.grok/`.
-- **PGF-2026-023:** Parse-failed HTTP 200 persists ETag, Last-Modified,
-  hashes, byte counts, and encoding; success TTL and prior-good stay put.
-- **PGF-2026-024:** Every previously present id needs two successful index
-  observations before hard-delete (5+ first-run mass-delete removed).
+- **PGF-2026-019:** Concise [SECURITY.md](SECURITY.md) and
+  [CONTRIBUTING.md](CONTRIBUTING.md) at the repo root (point at DOCS.md;
+  no `docs/` tree).
+- **PGF-2026-020:** [NOTICE](NOTICE) plus LICENSE-adjacent README scope:
+  software is MIT; essay titles, URLs, and derived summaries remain Paul
+  Graham's. MIT does not relicense third-party text.
+- **PGF-2026-021:** README leads with one-click Subscribe links for the six
+  raw GitHub feeds (simple first, enriched second). Colab moved under
+  maintainer / custom generation. A reader can subscribe without Python.
 
 ### Changed
 
@@ -63,30 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checksums plus a CycloneDX SBOM.
 - **PGF-2026-036:** Optional `brotli` extra; CI job runs the Brotli decode
   path. Missing-brotli fail-closed unit test is unchanged.
-
-## [1.0.0] - 2026-08-31
-
-Ready for `v1.0.0` (tag not cut in this change). First coherent major after
-the 2026-08-31 audit (`PGF-2026-*`). Historical `[0.2.0]` remains the prior
-advertised-but-untagged integrity work.
-
-### Added
-
-- **PGF-2026-019:** Concise [SECURITY.md](SECURITY.md) and
-  [CONTRIBUTING.md](CONTRIBUTING.md) at the repo root (point at DOCS.md;
-  no `docs/` tree).
-- **PGF-2026-020:** [NOTICE](NOTICE) plus LICENSE-adjacent README scope:
-  software is MIT; essay titles, URLs, and derived summaries remain Paul
-  Graham's. MIT does not relicense third-party text.
-- **PGF-2026-021:** README leads with one-click Subscribe links for the six
-  raw GitHub feeds (simple first, enriched second). Colab moved under
-  maintainer / custom generation. A reader can subscribe without Python.
-
-### Changed
-
-- **PGF-2026-004:** Package `__version__` is `1.0.0`. README and notebook
-  do not pin a git tag that does not exist. Intended release is **1.0.0**;
-  until the `v1.0.0` tag exists, install from `main`.
+- **PGF-2026-004:** Package `__version__` is `1.0.0`. README, DOCS, and
+  notebook pin `@v1.0.0`. Historical `[0.2.0]` remains advertised-but-untagged;
+  do not revive `@v0.2.0` as a user pin.
 - **PGF-2026-006:** Package classifiers are POSIX/macOS (not OS Independent).
   Writer lock is POSIX `fcntl.flock` only; no Windows lock.
 - **PGF-2026-014:** Default `max_page_fetches` / `max_link_validations` are
@@ -97,6 +65,27 @@ advertised-but-untagged integrity work.
 
 ### Fixed
 
+- **PGF-2026-040:** GitHub Pages rebuilds after scheduled bot commits.
+  `pages.yml` listens for `workflow_run` on “Update feeds” and assembles from
+  the `product_sha` in the `product-identity` artifact, not
+  `workflow_run.head_sha` (the pre-push source). `GITHUB_TOKEN` pushes still
+  do not fire `on.push`.
+- Parse-failed page validators no longer authorize a later HTTP 304 success.
+- `check` treats the catalog as the feed oracle (title/URL/summary/id).
+- Gzip/deflate decode aborts at the decoded-size cap instead of inflating
+  first. HTTP 204/206 are not successful page/index bodies.
+- Missing catalog after recover with a planned revision is a stale finalize.
+- Staging manifest binds directory name, `gen_id`, and `last_generation_id`.
+- **PGF-2026-030:** Crash recovery no longer skips `state_revision`
+  compare-and-swap. Recover rematerializes first, then revision comparison
+  always runs; a stale candidate aborts and must re-run. (CAS was briefly
+  labeled `PGF-2026-022`; that id remains the extraction-quality work.)
+- **PGF-2026-039:** Missing `catalog.json` after materialize raises instead
+  of returning an in-memory stand-in. Hatch sdist excludes `.grok/`.
+- **PGF-2026-023:** Parse-failed HTTP 200 persists ETag, Last-Modified,
+  hashes, byte counts, and encoding; success TTL and prior-good stay put.
+- **PGF-2026-024:** Every previously present id needs two successful index
+  observations before hard-delete (5+ first-run mass-delete removed).
 - **PGF-2026-001:** Writer lock release no longer unlinks `.cache/write.lock`.
   The inode stays stable so a waiter on the old fd cannot share exclusive
   ownership with a newly created path.
@@ -334,6 +323,6 @@ advertised-but-untagged integrity work.
 - New module `publication.py` for writer lock + staged materialize.
 
 [Unreleased]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v0.2.0...v1.0.0
+[1.0.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/releases/tag/v1.0.0
 [0.2.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/releases/tag/v0.1.0

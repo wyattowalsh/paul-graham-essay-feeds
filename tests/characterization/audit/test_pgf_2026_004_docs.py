@@ -16,7 +16,7 @@ _ENRICHED = ("rss.xml", "atom.xml", "feed.json")
 _GIT_MAIN = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main"
 _GIT_V020 = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v0.2.0"
 _GIT_V100 = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.0"
-_PIN_SENTENCE = "until the `v1.0.0` tag exists, install from `main`"
+_HEDGE_SENTENCE = "until the `v1.0.0` tag exists, install from `main`"
 
 
 def _text(name: str) -> str:
@@ -42,16 +42,17 @@ def test_changelog_1_0_0_lists_pgf_2026_001_through_022() -> None:
     assert changelog.index("## [Unreleased]") < start
 
 
-def test_readme_and_notebook_install_from_main_until_tag() -> None:
+def test_readme_and_notebook_pin_v1_0_0() -> None:
     readme = _text("README.md")
     notebook = _text("notebook.ipynb")
-    assert _GIT_MAIN in readme
+    assert _GIT_V100 in readme
     assert _GIT_V020 not in readme
-    assert _GIT_V100 not in readme
-    assert _PIN_SENTENCE in readme
-    assert _GIT_MAIN in notebook
+    assert _GIT_MAIN not in readme
+    assert _HEDGE_SENTENCE not in readme
+    assert _GIT_V100 in notebook
     assert _GIT_V020 not in notebook
-    assert _GIT_V100 not in notebook
+    assert _GIT_MAIN not in notebook
+    assert _HEDGE_SENTENCE not in notebook
     assert "v1.0.0" in notebook
     assert "1.0.0" in notebook
 
