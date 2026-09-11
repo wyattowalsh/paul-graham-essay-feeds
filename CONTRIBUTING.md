@@ -6,8 +6,8 @@ https://paulgraham.com/articles.html. The GitHub repo (`feeds/` +
 
 ## Before you start
 
-Architecture, CLI, CI, and decisions live in **[DOCS.md](./DOCS.md)** (single
-SSOT). There is no `docs/` tree. Agent instructions: [AGENTS.md](./AGENTS.md).
+Developer architecture SSOT is **[`.github/DOCS.md`](./.github/DOCS.md)**.
+There is no `docs/` tree. Agent instructions: [AGENTS.md](./AGENTS.md).
 User subscribe path: [README.md](./README.md).
 
 ## Develop

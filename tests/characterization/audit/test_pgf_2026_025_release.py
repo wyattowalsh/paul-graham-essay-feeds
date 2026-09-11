@@ -48,6 +48,12 @@ def test_release_mirrors_ci_feed_contracts_smoke_and_py_typed() -> None:
     assert "uv run pytest --cov-fail-under=0" in ci
 
 
+def test_release_does_not_force_uv_cache() -> None:
+    text = _RELEASE.read_text(encoding="utf-8")
+    assert "enable-cache: true" not in text
+    assert "enable-cache: false" in text
+
+
 def test_sdist_excludes_maintainer_grok_tree() -> None:
     """PGF-2026-039: Hatch sdist must not ship tracked .grok automation."""
     pyproject = (_REPO / "pyproject.toml").read_text(encoding="utf-8")

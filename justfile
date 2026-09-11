@@ -1,6 +1,6 @@
 # Paul Graham essay feeds — local tasks (requires `just` + `uv`)
 # Run `just` or `just help` for grouped recipes and aliases.
-# Docs: README.md (users), DOCS.md (developers), AGENTS.md (agents).
+# Docs: README.md (users), .github/DOCS.md (developers), AGENTS.md (agents).
 
 set minimum-version := '1.52.0'
 set shell := ["bash", "-euo", "pipefail", "-c"]

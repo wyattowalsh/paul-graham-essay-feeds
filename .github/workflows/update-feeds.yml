@@ -13,18 +13,56 @@ permissions:
   contents: read
 
 jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Reject non-main and untrusted repository
+        env:
+          REF: ${{ github.ref }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [[ "${REF}" != "refs/heads/main" ]]; then
+            echo "::error::Update feeds rejects non-main ref: ${REF}"
+            exit 1
+          fi
+          if [[ "${REPO}" != "wyattowalsh/paul-graham-essay-feeds" ]]; then
+            echo "::error::Update feeds rejects untrusted repository: ${REPO}"
+            exit 1
+          fi
+
   update:
+    needs: [guard]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       contents: read
     outputs:
       action: ${{ steps.update.outputs.action }}
+      source_sha: ${{ steps.source.outputs.source_sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Classify from fetched origin/main
+        id: source
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin refs/heads/main
+          source_sha="$(git rev-parse --verify FETCH_HEAD)"
+          kind="$(git cat-file -t "${source_sha}")"
+          if [[ "${kind}" != "commit" ]]; then
+            echo "::error::origin/main is not a commit: ${kind}"
+            exit 1
+          fi
+          git checkout "${source_sha}" -- catalog.json feeds
+          echo "source_sha=${source_sha}" >> "${GITHUB_OUTPUT}"
+          echo "Classified from origin/main ${source_sha}"
 
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
@@ -38,20 +76,15 @@ jobs:
       - name: Update feeds
         id: update
         env:
-          # Keep enrich on for quality snapshots; cap concurrency for host politeness.
           PG_ESSAY_FEEDS_ENRICH_WORKERS: "4"
           PG_ESSAY_FEEDS_LINK_WORKERS: "4"
-          # Daily no-op budget: avoid day-31 mass re-fetch when index is unchanged.
           PG_ESSAY_FEEDS_STALE_AFTER_DAYS: "90"
-          # Fair per-run caps so a full stale corpus is not re-fetched in one job.
           PG_ESSAY_FEEDS_MAX_PAGE_FETCHES: "40"
           PG_ESSAY_FEEDS_MAX_LINK_VALIDATIONS: "40"
           PG_ESSAY_FEEDS_PUBLIC_BASE_URL: "https://wyattowalsh.github.io/paul-graham-essay-feeds/"
         run: uv run pg-essay-feeds update --quiet
 
       - name: Upload workspace when catalog or feeds changed
-        # state_changed: catalog clocks/state only; updated: material feed rewrite.
-        # Both must be published so freshness advances survive the schedule.
         if: >-
           steps.update.outputs.action == 'updated' ||
           steps.update.outputs.action == 'state_changed'
@@ -67,62 +100,74 @@ jobs:
         if: >-
           steps.update.outputs.action != 'updated' &&
           steps.update.outputs.action != 'state_changed'
+        id: noop_identity
         env:
-          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
           set -euo pipefail
+          git fetch --no-tags origin refs/heads/main
+          ORIGIN_MAIN="$(git rev-parse --verify FETCH_HEAD)"
+          export ORIGIN_MAIN
           uv run python - <<'PY'
-          import hashlib
-          import json
+          import importlib.util
           import os
+          import sys
           from pathlib import Path
 
-          subjects = (
-              "catalog.json",
-              "feeds/rss.xml",
-              "feeds/atom.xml",
-              "feeds/feed.json",
-              "feeds/rss.simple.xml",
-              "feeds/atom.simple.xml",
-              "feeds/feed.simple.json",
+          spec = importlib.util.spec_from_file_location(
+              "product_identity", Path(".github/scripts/product_identity.py")
           )
-          root = Path(".")
-          digest = hashlib.sha256()
-          for rel in subjects:
-              path = root / rel
-              if not path.is_file():
-                  raise SystemExit(f"missing product file: {rel}")
-              data = path.read_bytes()
-              digest.update(rel.encode("utf-8"))
-              digest.update(b"\0")
-              digest.update(len(data).to_bytes(8, "little"))
-              digest.update(data)
+          pi = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(pi)
+          fmt = pi.git_object_format(Path("."))
           source_sha = os.environ["SOURCE_SHA"]
-          payload = {
-              "source_sha": source_sha,
-              "candidate_digest": "sha256:" + digest.hexdigest(),
-              "product_sha": source_sha,
-              "subjects": list(subjects),
-          }
-          Path("product-identity.json").write_text(
-              json.dumps(payload, indent=2, sort_keys=True) + "\n",
-              encoding="utf-8",
+          origin_main = os.environ["ORIGIN_MAIN"]
+          digest = pi.digest_commit_product(Path("."), source_sha)
+          data = pi.build_identity_document(
+              action="unchanged",
+              candidate_digest=digest,
+              committed=False,
+              product_sha=source_sha,
+              repository=pi.REPOSITORY,
+              source_sha=source_sha,
+              workflow_run_attempt=int(os.environ["RUN_ATTEMPT"]),
+              workflow_run_id=int(os.environ["RUN_ID"]),
+              origin_main=origin_main,
+              object_format=fmt,
           )
+          identity = pi.validate_identity_document(
+              data,
+              pi.RestMetadata(
+                  int(os.environ["RUN_ID"]),
+                  int(os.environ["RUN_ATTEMPT"]),
+                  pi.REPOSITORY,
+                  "unchanged",
+              ),
+              object_format=fmt,
+          )
+          if identity.published is not True:
+              print("no-op origin proof failed; no authorizing artifact", file=sys.stderr)
+              Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8").write(
+                  "upload=false\n"
+              )
+              sys.exit(0)
+          Path("product-identity.json").write_bytes(data)
+          Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8").write("upload=true\n")
           PY
 
       - name: Upload product identity (no-op)
         if: >-
           steps.update.outputs.action != 'updated' &&
-          steps.update.outputs.action != 'state_changed'
+          steps.update.outputs.action != 'state_changed' &&
+          steps.noop_identity.outputs.upload == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: product-identity
+          name: product-identity-${{ github.run_id }}-${{ github.run_attempt }}
           path: product-identity.json
           if-no-files-found: error
 
-  # AUD-001: on no-op runs, check the triggering commit's product.
-  # When catalog/feeds changed, `publish` gates the downloaded candidate instead
-  # — do not fail a repair publish by re-checking the stale source tree.
   verify:
     needs: update
     if: >-
@@ -187,132 +232,302 @@ jobs:
       - name: Gate publish on downloaded seven files
         id: candidate
         env:
-          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_SHA: ${{ needs.update.outputs.source_sha }}
+          ACTION: ${{ needs.update.outputs.action }}
         run: |
           set -euo pipefail
           uv run python - <<'PY'
-          import hashlib
+          import importlib.util
           import os
           from pathlib import Path
 
-          subjects = (
-              "catalog.json",
-              "feeds/rss.xml",
-              "feeds/atom.xml",
-              "feeds/feed.json",
-              "feeds/rss.simple.xml",
-              "feeds/atom.simple.xml",
-              "feeds/feed.simple.json",
+          spec = importlib.util.spec_from_file_location(
+              "product_identity", Path(".github/scripts/product_identity.py")
           )
+          pi = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(pi)
           cand = Path(os.environ["RUNNER_TEMP"]) / "candidate"
-          workspace = Path(".")
-          digest = hashlib.sha256()
-          for rel in subjects:
-              src = cand / rel
-              if not src.is_file():
-                  raise SystemExit(f"candidate missing {rel}")
-              data = src.read_bytes()
-              digest.update(rel.encode("utf-8"))
-              digest.update(b"\0")
-              digest.update(len(data).to_bytes(8, "little"))
-              digest.update(data)
-          (workspace / "catalog.json").unlink(missing_ok=True)
-          feeds = workspace / "feeds"
-          if feeds.is_dir():
-              for child in feeds.iterdir():
-                  if child.is_file():
-                      child.unlink()
-          feeds.mkdir(parents=True, exist_ok=True)
-          for rel in subjects:
-              dest = workspace / rel
-              dest.parent.mkdir(parents=True, exist_ok=True)
-              dest.write_bytes((cand / rel).read_bytes())
-          candidate_digest = "sha256:" + digest.hexdigest()
+          blobs = pi.validate_candidate_tree(cand)
+          digest = pi.candidate_digest(blobs)
           output = Path(os.environ["GITHUB_OUTPUT"])
           with output.open("a", encoding="utf-8") as fh:
-              fh.write(f"digest={candidate_digest}\n")
+              fh.write(f"digest={digest}\n")
               fh.write(f"source_sha={os.environ['SOURCE_SHA']}\n")
-          print(f"candidate_digest={candidate_digest}")
+          print(f"candidate_digest={digest}")
           PY
 
       - name: Validate downloaded feeds
-        run: uv run pg-essay-feeds check
+        run: |
+          set -euo pipefail
+          uv run pg-essay-feeds check --repo-root "${RUNNER_TEMP}/candidate"
 
       - name: Commit feeds to main
         id: commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_SHA: ${{ needs.update.outputs.source_sha }}
+          ACTION: ${{ needs.update.outputs.action }}
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
           set -euo pipefail
-          source_sha="${GITHUB_SHA}"
-          echo "source_sha=${source_sha}" >> "$GITHUB_OUTPUT"
-          if git diff --quiet -- feeds catalog.json; then
-            echo "No feed/catalog changes."
-            echo "committed=false" >> "$GITHUB_OUTPUT"
-            echo "product_sha=${source_sha}" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          expect="${GITHUB_SHA}"
-          git add feeds catalog.json
-          if git diff --cached --quiet; then
-            echo "Nothing staged."
-            echo "committed=false" >> "$GITHUB_OUTPUT"
-            echo "product_sha=${source_sha}" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          summary="$(git diff --cached --stat)"
-          git commit -m "chore: refresh Paul Graham essay feeds" -m "${summary}"
-          git push origin "HEAD:refs/heads/main" \
-            --force-with-lease="refs/heads/main:${expect}"
-          product_sha=$(git rev-parse HEAD)
-          echo "product_sha=${product_sha}" >> "$GITHUB_OUTPUT"
-          echo "committed=true" >> "$GITHUB_OUTPUT"
+          uv run python - <<'PY'
+          from __future__ import annotations
+
+          import importlib.util
+          import os
+          import shutil
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "product_identity", Path(".github/scripts/product_identity.py")
+          )
+          pi = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(pi)
+
+          repo = Path(".").resolve()
+          fmt = pi.git_object_format(repo)
+          source_sha = os.environ["SOURCE_SHA"]
+          action = os.environ["ACTION"]
+          digest = os.environ["CANDIDATE_DIGEST"]
+          run_id = int(os.environ["RUN_ID"])
+          run_attempt = int(os.environ["RUN_ATTEMPT"])
+          token = os.environ["GH_TOKEN"]
+          github_repo = os.environ["GITHUB_REPOSITORY"]
+          candidate = Path(os.environ["RUNNER_TEMP"]) / "candidate"
+          rest = pi.RestMetadata(run_id, run_attempt, pi.REPOSITORY, action)
+          output = Path(os.environ["GITHUB_OUTPUT"])
+
+          def write_out(**values: str) -> None:
+              with output.open("a", encoding="utf-8") as fh:
+                  for key, value in values.items():
+                      fh.write(f"{key}={value}\n")
+
+          def fetch_origin() -> str | None:
+              result = pi.run_git(
+                  repo, ["fetch", "--no-tags", "origin", "refs/heads/main"], check=False
+              )
+              if result.returncode != 0:
+                  return None
+              fetched = pi.run_git(repo, ["rev-parse", "--verify", "FETCH_HEAD"], check=False)
+              if fetched.returncode != 0:
+                  return None
+              oid = fetched.stdout.strip()
+              try:
+                  return pi.require_commit(repo, oid, object_format=fmt)
+              except pi.ProductIdentityError:
+                  return None
+
+          def set_push_remote(worktree: Path) -> None:
+              url = f"https://x-access-token:{token}@github.com/{github_repo}.git"
+              subprocess.run(
+                  ["git", "-C", str(worktree), "remote", "set-url", "origin", url],
+                  check=True,
+                  capture_output=True,
+              )
+
+          pi.fetch_exact_commit(repo, source_sha)
+          origin = fetch_origin()
+          if origin is None:
+              print("origin fetch unresolved before commit; no authorizing artifact", file=sys.stderr)
+              write_out(committed="false", product_sha=source_sha, published="false")
+              sys.exit(0)
+
+          if origin != source_sha:
+              try:
+                  pi.fetch_exact_commit(repo, origin)
+                  pi.validate_preexisting_child(
+                      repo,
+                      child_oid=origin,
+                      source_oid=source_sha,
+                      action=action,
+                      candidate_digest=pi.digest_commit_product(repo, origin),
+                      rest=rest,
+                      origin_main=origin,
+                      object_format=fmt,
+                  )
+              except pi.ProductIdentityError as exc:
+                  print(f"pre-existing child not adopted: {exc}", file=sys.stderr)
+                  write_out(committed="false", product_sha=source_sha, published="false")
+                  sys.exit(0)
+              write_out(committed="true", product_sha=origin, published="true")
+              print(f"adopted pre-existing child {origin}")
+              sys.exit(0)
+
+          worktree = Path(os.environ["RUNNER_TEMP"]) / "product-commit"
+          if worktree.exists():
+              shutil.rmtree(worktree)
+          subprocess.run(
+              ["git", "worktree", "add", "--detach", str(worktree), source_sha],
+              check=True,
+          )
+          subprocess.run(
+              ["git", "-C", str(worktree), "config", "user.name", "github-actions[bot]"],
+              check=True,
+          )
+          subprocess.run(
+              [
+                  "git",
+                  "-C",
+                  str(worktree),
+                  "config",
+                  "user.email",
+                  "41898282+github-actions[bot]@users.noreply.github.com",
+              ],
+              check=True,
+          )
+          blobs = pi.validate_candidate_tree(candidate)
+          for rel, data in blobs.items():
+              dest = worktree / rel
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              dest.write_bytes(data)
+          subprocess.run(
+              ["git", "-C", str(worktree), "add", "--", *pi.PRODUCT_SUBJECTS],
+              check=True,
+          )
+          status = subprocess.run(
+              ["git", "-C", str(worktree), "diff", "--cached", "--stat"],
+              check=True,
+              capture_output=True,
+              text=True,
+          )
+          summary = status.stdout.strip() or "product refresh"
+          message = (
+              "chore: refresh Paul Graham essay feeds\n\n"
+              f"{summary}\n\n"
+              f"Update-Run-Id: {run_id}\n"
+              f"Update-Run-Attempt: {run_attempt}\n"
+          )
+          subprocess.run(
+              ["git", "-C", str(worktree), "commit", "-m", message],
+              check=True,
+          )
+          product_sha = pi.require_commit(
+              worktree,
+              subprocess.check_output(
+                  ["git", "-C", str(worktree), "rev-parse", "HEAD"],
+                  text=True,
+              ).strip(),
+              object_format=fmt,
+          )
+          pi.validate_action(
+              worktree,
+              action=action,
+              source_oid=source_sha,
+              product_oid=product_sha,
+              candidate_digest=digest,
+              object_format=fmt,
+          )
+          argv = pi.build_push_argv(product_sha)
+          pi.validate_push_argv(argv)
+          if "--no-follow-tags" not in argv:
+              raise SystemExit("push argv missing --no-follow-tags")
+          set_push_remote(worktree)
+          published = False
+          last_outcome = "command_error"
+          for attempt in range(pi.MAX_PUSH_RETRIES + 1):
+              origin = fetch_origin()
+              if origin is None:
+                  last_outcome = "command_timeout"
+                  classification = pi.classify_publication(
+                      "command_timeout", None, source_sha, product_sha
+                  )
+              elif origin != source_sha:
+                  classification = pi.classify_publication(
+                      "command_ok", origin, source_sha, product_sha
+                  )
+              else:
+                  pushed = subprocess.run(argv, cwd=worktree, capture_output=True, text=True)
+                  last_outcome = "command_ok" if pushed.returncode == 0 else "command_error"
+                  origin = fetch_origin()
+                  classification = pi.classify_publication(
+                      last_outcome, origin, source_sha, product_sha
+                  )
+              if classification == "published":
+                  published = True
+                  break
+              if classification == "not_published_retryable" and attempt < pi.MAX_PUSH_RETRIES:
+                  continue
+              print(f"publication {classification}; no authorizing artifact", file=sys.stderr)
+              write_out(
+                  committed="true",
+                  product_sha=product_sha,
+                  published="false",
+              )
+              sys.exit(0)
+          write_out(
+              committed="true",
+              product_sha=product_sha,
+              published="true" if published else "false",
+          )
+          PY
 
       - name: Re-check product tree
+        if: steps.commit.outputs.published == 'true'
         run: |
           set -euo pipefail
-          product_sha=$(git rev-parse HEAD)
-          echo "product_sha=${product_sha}"
-          test "${product_sha}" = "${{ steps.commit.outputs.product_sha }}"
+          product_sha="${{ steps.commit.outputs.product_sha }}"
+          git fetch --no-tags origin "${product_sha}"
+          git cat-file -t "${product_sha}" | grep -qx commit
+          git checkout "${product_sha}" -- catalog.json feeds
           uv run pg-essay-feeds check --quiet
 
       - name: Write provenance context
+        if: steps.commit.outputs.published == 'true'
         env:
           SOURCE_SHA: ${{ steps.candidate.outputs.source_sha }}
           CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
           PRODUCT_SHA: ${{ steps.commit.outputs.product_sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          ACTION: ${{ needs.update.outputs.action }}
         run: |
           set -euo pipefail
+          git fetch --no-tags origin refs/heads/main
+          origin_main="$(git rev-parse --verify FETCH_HEAD)"
+          export ORIGIN_MAIN="${origin_main}"
           uv run python - <<'PY'
+          import importlib.util
           import json
           import os
           from pathlib import Path
 
-          subjects = [
-              "catalog.json",
-              "feeds/rss.xml",
-              "feeds/atom.xml",
-              "feeds/feed.json",
-              "feeds/rss.simple.xml",
-              "feeds/atom.simple.xml",
-              "feeds/feed.simple.json",
-          ]
+          spec = importlib.util.spec_from_file_location(
+              "product_identity", Path(".github/scripts/product_identity.py")
+          )
+          pi = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(pi)
+          fmt = pi.git_object_format(Path("."))
+          identity = pi.build_identity_document(
+              action=os.environ["ACTION"],
+              candidate_digest=os.environ["CANDIDATE_DIGEST"],
+              committed=True,
+              product_sha=os.environ["PRODUCT_SHA"],
+              repository=pi.REPOSITORY,
+              source_sha=os.environ["SOURCE_SHA"],
+              workflow_run_attempt=int(os.environ["RUN_ATTEMPT"]),
+              workflow_run_id=int(os.environ["RUN_ID"]),
+              origin_main=os.environ["ORIGIN_MAIN"],
+              object_format=fmt,
+          )
+          Path("product-identity.json").write_bytes(identity)
           payload = {
               "source_sha": os.environ["SOURCE_SHA"],
               "candidate_digest": os.environ["CANDIDATE_DIGEST"],
               "product_sha": os.environ["PRODUCT_SHA"],
-              "subjects": subjects,
+              "subjects": list(pi.PRODUCT_SUBJECTS),
           }
-          text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-          Path("product-provenance.json").write_text(text, encoding="utf-8")
-          Path("product-identity.json").write_text(text, encoding="utf-8")
+          Path("product-provenance.json").write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
           PY
 
       - name: Attest published catalog and feeds
-        if: steps.commit.outputs.committed == 'true'
+        if: steps.commit.outputs.published == 'true'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
@@ -326,8 +541,9 @@ jobs:
             product-provenance.json
 
       - name: Upload product identity
+        if: steps.commit.outputs.published == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: product-identity
+          name: product-identity-${{ github.run_id }}-${{ github.run_attempt }}
           path: product-identity.json
           if-no-files-found: error

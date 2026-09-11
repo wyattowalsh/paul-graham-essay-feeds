@@ -1,7 +1,6 @@
-"""PGF-2026-012: bind one candidate workspace to one product SHA.
+"""WF-UPD owner: Update feeds producer + Verify product trust/recovery.
 
-Also locks setup-uv cache off on privileged publish / verify-product / release
-jobs (audit item 19).
+Pages and CI assertions live in test_pages_host.py and test_ci_trust.py.
 """
 
 from __future__ import annotations
@@ -11,6 +10,7 @@ from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[3]
 _WORKFLOWS = _REPO / ".github" / "workflows"
+_HELPER = _REPO / ".github" / "scripts" / "product_identity.py"
 
 _SEVEN = (
     "catalog.json",
@@ -34,6 +34,14 @@ def _job_block(text: str, job: str) -> str:
     return rest[: match.start()] if match else rest
 
 
+def test_helper_is_stdlib_product_identity() -> None:
+    text = _HELPER.read_text(encoding="utf-8")
+    assert "SCHEMA_VERSION" in text
+    assert "expected_artifact_name" in text
+    assert "build_push_argv" in text
+    assert "shell=True" not in text.replace("never shell=True", "")
+
+
 def test_publish_gates_downloaded_candidate_not_source_checkout() -> None:
     text = (_WORKFLOWS / "update-feeds.yml").read_text(encoding="utf-8")
     publish = _job_block(text, "publish")
@@ -45,16 +53,34 @@ def test_publish_gates_downloaded_candidate_not_source_checkout() -> None:
     gate = publish.split("Gate publish on downloaded seven files", 1)[1]
     for rel in _SEVEN:
         assert rel in gate
+    assert "validate_candidate_tree" in publish
     assert "Validate downloaded feeds" in publish
     assert "uv run pg-essay-feeds check" in publish
 
 
-def test_publish_emits_product_sha_and_force_with_lease() -> None:
+def test_publish_uses_helper_identity_and_forbids_force() -> None:
     text = (_WORKFLOWS / "update-feeds.yml").read_text(encoding="utf-8")
     publish = _job_block(text, "publish")
-    assert "product_sha=$(git rev-parse HEAD)" in publish
-    assert '--force-with-lease="refs/heads/main:${expect}"' in publish
-    assert "Re-check product tree" in publish
+    assert "product_identity.py" in publish
+    assert "build_push_argv" in publish
+    assert "validate_push_argv" in publish
+    assert "--no-follow-tags" in publish
+    assert "Update-Run-Id" in publish
+    assert "Update-Run-Attempt" in publish
+    assert "force-with-lease" not in text
+    assert "--force" not in text
+    assert "classify_publication" in publish
+    assert "product-identity-${{ github.run_id }}-${{ github.run_attempt }}" in text
+    assert "name: product-identity\n" not in text
+
+
+def test_update_rejects_non_main_and_classifies_from_origin() -> None:
+    text = (_WORKFLOWS / "update-feeds.yml").read_text(encoding="utf-8")
+    assert "Reject non-main" in text
+    assert "refs/heads/main" in text
+    assert "git fetch --no-tags origin" in text
+    assert 'PG_ESSAY_FEEDS_MAX_PAGE_FETCHES: "40"' in text
+    assert 'PG_ESSAY_FEEDS_MAX_LINK_VALIDATIONS: "40"' in text
 
 
 def test_attest_names_provenance_context() -> None:
@@ -72,23 +98,25 @@ def test_attest_names_provenance_context() -> None:
     assert "product-provenance.json" in attest
 
 
-def test_verify_product_checks_product_sha_not_mutable_main() -> None:
+def test_verify_product_trust_sequence() -> None:
     text = (_WORKFLOWS / "verify-product.yml").read_text(encoding="utf-8")
+    assert "branches: [main]" in text
+    assert "Event-only gate" in text
+    assert "github.workflow_sha" in text
+    assert "persist-credentials: false" in text
+    assert "artifact-ids:" in text
+    assert "name: product-identity\n" not in text
     assert "ref: main" not in text
     assert "ref: ${{ steps.identity.outputs.product_sha }}" in text
-    assert "name: product-identity" in text
-    assert "run-id: ${{ github.event.workflow_run.id }}" in text
     assert "workflow_dispatch:" in text
     assert "product_sha:" in text
-
-
-def test_pages_checks_out_product_sha_on_update_feeds_workflow_run() -> None:
-    text = (_WORKFLOWS / "pages.yml").read_text(encoding="utf-8")
-    assert "workflow_run:" in text
-    assert 'workflows: ["Update feeds"]' in text
-    assert "ref: ${{ steps.identity.outputs.product_sha }}" in text
-    assert "ref: ${{ github.event.workflow_run.head_sha }}" not in text
-    assert "name: product-identity" in text
+    assert "resolve_active_workflow_id" in text
+    assert "fetch_exact_commit" in text
+    # Event-only gate must appear before the first checkout/download.
+    gate_at = text.index("Event-only gate")
+    checkout_at = text.index("uses: actions/checkout@")
+    download_at = text.index("uses: actions/download-artifact@")
+    assert gate_at < checkout_at < download_at
 
 
 def test_source_verify_skips_when_publish_gates_candidate() -> None:
@@ -102,7 +130,7 @@ def test_source_verify_skips_when_publish_gates_candidate() -> None:
     assert "Gate publish on downloaded seven files" in publish
 
 
-def test_privileged_jobs_do_not_force_uv_cache() -> None:
+def test_privileged_update_jobs_do_not_force_uv_cache() -> None:
     publish = _job_block((_WORKFLOWS / "update-feeds.yml").read_text(encoding="utf-8"), "publish")
     assert "enable-cache: true" not in publish
     assert "enable-cache: false" in publish
@@ -110,10 +138,3 @@ def test_privileged_jobs_do_not_force_uv_cache() -> None:
     verify_product = (_WORKFLOWS / "verify-product.yml").read_text(encoding="utf-8")
     assert "enable-cache: true" not in verify_product
     assert "enable-cache: false" in verify_product
-
-    release = (_WORKFLOWS / "release.yml").read_text(encoding="utf-8")
-    assert "enable-cache: true" not in release
-    assert "enable-cache: false" in release
-
-    ci = (_WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
-    assert "enable-cache: true" in ci

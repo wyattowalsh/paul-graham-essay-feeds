@@ -97,7 +97,7 @@ fn verify_schema() {
 
 fn standing() {
     let s = "Repo: /Users/ww/dev/projects/paul-graham-essay-feeds. ";
-    s += "Read Agents.md, DOCS.md architecture decisions, and the current files you will change before editing. ";
+    s += "Read Agents.md, .github/DOCS.md architecture decisions, and the current files you will change before editing. ";
     s += "Product: metadata-only RSS/Atom/JSON Feed; catalog.json is SSOT; six flat feeds/ files; no site/, no OPML, no full essay bodies, no invented day-1 dates, no LLM summaries, no docs/ tree. ";
     s += "Python 3.12+ / uv. Absolute imports. Pydantic extra=forbid on durable models; every Field has a description; aware UTC. ";
     s += "CLI remains update + check only. Quiet success is zero stdout+stderr. ";
@@ -112,7 +112,7 @@ fn standing() {
 fn audit_context() {
     let s = "Audit 2026-08-31 (PGF-2026-*) at implementation SHA c136c4976c42616946a5a5e156d86042ea4a52ec. ";
     s += "Skip code changes for accepted-risk PGF-2026-015 (raw GitHub MIME) and accepted-design-risk PGF-2026-018 (per-file materialize); document them only. ";
-    s += "PGF-2026-016 is a GitHub ruleset: document operator steps in DOCS.md; do not apply rulesets. ";
+    s += "PGF-2026-016 is a GitHub ruleset: document operator steps in .github/DOCS.md; do not apply rulesets. ";
     s += "Do not rewrite the project.\n";
     s
 }
@@ -179,7 +179,7 @@ pub_prompt += audit_context();
 pub_prompt += "Implement PGF-2026-001, PGF-2026-003, PGF-2026-006 in this repo.\n";
 pub_prompt += "PGF-2026-001: Never unlink .cache/write.lock during normal release. Keep one stable inode; only unlock and close the fd. Token payload may still be rewritten by the new owner. Add a deterministic three-actor multiprocess regression: B opens inode X; A unlinks-or-would-unlink and unlocks X; C creates/locks inode Y; B locks X — two exclusive owners must be impossible. Put it in tests/characterization/audit/test_aud_002_lock.py and/or tests/unit/test_publication_lock.py. Update tests that currently expect unlink-on-release.\n";
 pub_prompt += "PGF-2026-003: In write_staging_generation allocate gen_id first, stamp catalog.last_generation_id, then catalog_to_json, then write artifacts + MANIFEST. Manifest, pointer, and public catalog must agree. Newly published schema-v2/v3 bundles must have a non-null last_generation_id. Update unit tests around staging.\n";
-pub_prompt += "PGF-2026-006: Do not invent a Windows lock. Narrow pyproject classifiers from OS Independent to POSIX (MacOS/POSIX). Document POSIX-only flock in DOCS.md briefly. Wheel/import contract must match advertised OS.\n";
+pub_prompt += "PGF-2026-006: Do not invent a Windows lock. Narrow pyproject classifiers from OS Independent to POSIX (MacOS/POSIX). Document POSIX-only flock in .github/DOCS.md briefly. Wheel/import contract must match advertised OS.\n";
 pub_prompt += "Do not change HTTP, enrich, or pipeline CAS here except catalog stamp inside write_staging_generation. Run the publication/lock tests when done.";
 let pub = agent(pub_prompt, #{
     label: "fix:publication",
@@ -285,8 +285,8 @@ docs_prompt += "Set package version to " + target_version + " in src/paul_graham
 docs_prompt += "PGF-2026-021: Lead README with one-click Subscribe links for the six raw GitHub feeds. Recommend simple feeds first; enriched second now that semantic gating exists. Move Colab under maintainer/custom-generation. A reader must subscribe without Python.\n";
 docs_prompt += "PGF-2026-020: Add NOTICE (or LICENSE-adjacent scope in README+NOTICE): software MIT; upstream essay text and derived titles/summaries remain Paul Graham's / original rights. Do not relicense third-party text.\n";
 docs_prompt += "PGF-2026-019: Add concise SECURITY.md and CONTRIBUTING.md at repo root. Optional CODEOWNERS for Wyatt if it matches repo practice.\n";
-docs_prompt += "DOCS.md: document lock (stable inode), generation id stamp, CAS, coverage precision, candidate→product SHA chain, local seven-file visibility (018), raw GitHub MIME (015), and the exact gh ruleset steps for requiring CI/PRs with a bot path bypass (016) — do not apply them.\n";
-docs_prompt += "Fold maintainer guidance into DOCS.md only. Run no live network.";
+docs_prompt += ".github/DOCS.md: document lock (stable inode), generation id stamp, CAS, coverage precision, candidate→product SHA chain, local seven-file visibility (018), raw GitHub MIME (015), and the exact gh ruleset steps for requiring CI/PRs with a bot path bypass (016) — do not apply them.\n";
+docs_prompt += "Fold maintainer guidance into .github/DOCS.md only. Run no live network.";
 let docs_fix = agent(docs_prompt, #{
     label: "fix:docs",
     capability_mode: "all",

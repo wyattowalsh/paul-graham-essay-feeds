@@ -124,7 +124,8 @@ target-version = "py313"
 line-length = 100
 # Notebook cells re-import stdlib on purpose; skip lint/format noise on notebook.ipynb
 extend-exclude = ["notebook.ipynb"]
-src = ["src", "tests"]
+src = ["src", "tests", ".github/scripts"]
+extend-include = [".github/scripts/**/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

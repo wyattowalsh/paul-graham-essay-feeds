@@ -4,16 +4,261 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_run:
+    workflows: ["Update feeds"]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{
+      github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number)
+      || github.event_name == 'push' && format('ci-push-{0}', github.sha)
+      || github.event_name == 'workflow_run' && format('ci-update-{0}', github.event.workflow_run.id)
+      || format('ci-other-{0}-{1}', github.run_id, github.run_attempt)
+    }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  gate:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      selected_sha: ${{ steps.select.outputs.selected_sha }}
+      source_sha: ${{ steps.select.outputs.source_sha }}
+      action: ${{ steps.select.outputs.action }}
+      run_quality: ${{ steps.select.outputs.run_quality }}
+      identity_artifact_id: ${{ steps.artifact.outputs.identity_artifact_id }}
+      identity_archive_digest: ${{ steps.artifact.outputs.identity_archive_digest }}
+      product_digest: ${{ steps.select.outputs.product_digest }}
+    steps:
+      - name: Event-only gate
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
+          STATUS: ${{ github.event.workflow_run.status }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          REPO_ID: ${{ github.event.workflow_run.repository.id }}
+          REPO_NAME: ${{ github.event.workflow_run.repository.full_name }}
+          HEAD_REPO_ID: ${{ github.event.workflow_run.head_repository.id }}
+          HEAD_REPO_NAME: ${{ github.event.workflow_run.head_repository.full_name }}
+          WF_NAME: ${{ github.event.workflow.name }}
+          WF_PATH: ${{ github.event.workflow.path }}
+          SELF_REPO: ${{ github.repository }}
+          SELF_REPO_ID: ${{ github.repository_id }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+
+          def fail(message: str) -> None:
+              print(f"::error::{message}", file=sys.stderr)
+              raise SystemExit(1)
+
+          def require_positive(name: str) -> int:
+              raw = os.environ.get(name, "")
+              if not raw.isdigit() or int(raw) <= 0:
+                  fail(f"{name} must be a positive integer")
+              return int(raw)
+
+          require_positive("RUN_ID")
+          require_positive("WORKFLOW_ID")
+          require_positive("RUN_ATTEMPT")
+          if os.environ.get("STATUS") != "completed":
+              fail("upstream status must be completed")
+          if os.environ.get("CONCLUSION") != "success":
+              fail("authorizing continuation requires conclusion=success")
+          if os.environ.get("HEAD_BRANCH") != "main":
+              fail("upstream branch must be main")
+          if os.environ.get("EVENT") not in {"schedule", "workflow_dispatch"}:
+              fail("upstream event is not an allowed Update feeds event")
+          sha = os.environ.get("HEAD_SHA", "")
+          if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", sha):
+              fail("head SHA is not a canonical git object id")
+          if os.environ.get("REPO_NAME") != os.environ["SELF_REPO"]:
+              fail("repository full name mismatch")
+          if os.environ.get("HEAD_REPO_NAME") != os.environ["SELF_REPO"]:
+              fail("head repository full name mismatch")
+          if os.environ.get("REPO_ID") != os.environ["SELF_REPO_ID"]:
+              fail("repository id mismatch")
+          if os.environ.get("HEAD_REPO_ID") != os.environ["SELF_REPO_ID"]:
+              fail("head repository id mismatch")
+          if os.environ.get("WF_NAME") != "Update feeds":
+              fail("workflow.name is not Update feeds")
+          if os.environ.get("WF_PATH") != ".github/workflows/update-feeds.yml":
+              fail("workflow.path is not the Update feeds workflow")
+          PY
+
+      - name: Checkout workflow revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Prove HEAD is workflow_sha
+        env:
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          test "$(git cat-file -t "${head}")" = "commit"
+          test "${head}" = "${WORKFLOW_SHA}"
+
+      - name: Select ProductIdentity
+        id: artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          STATUS: ${{ github.event.workflow_run.status }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "product_identity", Path(".github/scripts/product_identity.py")
+          )
+          pi = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(pi)
+          repo = os.environ["GITHUB_REPOSITORY"]
+          run_id = int(os.environ["RUN_ID"])
+          run_attempt = int(os.environ["RUN_ATTEMPT"])
+
+          def gh_json(path: str) -> object:
+              proc = subprocess.run(
+                  ["gh", "api", path], check=True, capture_output=True, text=True
+              )
+              return json.loads(proc.stdout)
+
+          workflows = gh_json(f"repos/{repo}/actions/workflows")["workflows"]
+          update_id = pi.resolve_active_workflow_id(
+              workflows, path=pi.UPDATE_WORKFLOW_PATH, name=pi.UPDATE_WORKFLOW_NAME
+          )
+          run = gh_json(f"repos/{repo}/actions/runs/{run_id}")
+          if int(run["workflow_id"]) != update_id:
+              raise SystemExit("REST workflow id is not Update feeds")
+          if int(run["run_attempt"]) != run_attempt:
+              raise SystemExit("REST run_attempt mismatch")
+          if run["event"] != os.environ["EVENT"]:
+              raise SystemExit("REST event mismatch")
+          if run["head_branch"] != os.environ["HEAD_BRANCH"]:
+              raise SystemExit("REST branch mismatch")
+          if run["head_sha"] != os.environ["HEAD_SHA"]:
+              raise SystemExit("REST head_sha mismatch")
+          if run["status"] != os.environ["STATUS"] or run["conclusion"] != os.environ["CONCLUSION"]:
+              raise SystemExit("REST status/conclusion mismatch")
+          artifacts = gh_json(f"repos/{repo}/actions/runs/{run_id}/artifacts")["artifacts"]
+          records = [
+              pi.ArtifactRecord(
+                  artifact_id=int(item["id"]),
+                  name=item["name"],
+                  expired=bool(item["expired"]),
+                  archive_digest=item.get("digest") or "",
+              )
+              for item in artifacts
+          ]
+          selected = pi.select_identity_artifact(
+              records, run_id=run_id, run_attempt=run_attempt
+          )
+          Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8").write(
+              f"identity_artifact_id={selected.artifact_id}\n"
+              f"identity_archive_digest={selected.archive_digest}\n"
+          )
+          PY
+
+      - name: Download product identity by artifact ID
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ steps.artifact.outputs.identity_artifact_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          path: ${{ runner.temp }}/product-identity
+
+      - name: Validate identity and select product SHA
+        id: select
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "product_identity", Path(".github/scripts/product_identity.py")
+          )
+          pi = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(pi)
+          fmt = pi.git_object_format(Path("."))
+          download = Path(os.environ["RUNNER_TEMP"]) / "product-identity"
+          matches = [p for p in download.rglob("product-identity.json") if p.is_file()]
+          if len(matches) != 1:
+              raise SystemExit(f"expected one product-identity.json, found {len(matches)}")
+          data = pi.validate_artifact_file(matches[0])
+          action = json.loads(data.decode("utf-8"))["action"]
+          rest = pi.RestMetadata(
+              int(os.environ["RUN_ID"]),
+              int(os.environ["RUN_ATTEMPT"]),
+              pi.REPOSITORY,
+              action,
+          )
+          identity = pi.validate_identity_document(data, rest, object_format=fmt)
+          run_quality = "false" if identity.action == "unchanged" else "true"
+          if run_quality == "true":
+              pi.require_published(identity)
+              pi.fetch_exact_commit(Path("."), identity.product_sha)
+              if identity.source_sha != identity.product_sha:
+                  pi.fetch_exact_commit(Path("."), identity.source_sha)
+              pi.validate_action(
+                  Path("."),
+                  action=identity.action,
+                  source_oid=identity.source_sha,
+                  product_oid=identity.product_sha,
+                  candidate_digest=identity.candidate_digest,
+                  object_format=fmt,
+              )
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          with output.open("a", encoding="utf-8") as fh:
+              fh.write(f"selected_sha={identity.product_sha}\n")
+              fh.write(f"source_sha={identity.source_sha}\n")
+              fh.write(f"action={identity.action}\n")
+              fh.write(f"run_quality={run_quality}\n")
+              fh.write(f"product_digest={identity.candidate_digest}\n")
+          PY
+
   quality:
+    needs: [gate]
+    if: >-
+      always() &&
+      (
+        (github.event_name != 'workflow_run' && needs.gate.result == 'skipped') ||
+        (github.event_name == 'workflow_run' && needs.gate.result == 'success' && needs.gate.outputs.run_quality == 'true')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -21,9 +266,10 @@ jobs:
       matrix:
         python-version: ["3.12", "3.13", "3.14"]
     steps:
-      - name: Checkout
+      - name: Check out selected product
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event_name == 'workflow_run' && needs.gate.outputs.selected_sha || github.sha }}
           persist-credentials: false
 
       - name: Install uv
@@ -173,12 +419,20 @@ jobs:
           test ! -d "$ROOT/site"
 
   dist:
+    needs: [gate]
+    if: >-
+      always() &&
+      (
+        (github.event_name != 'workflow_run' && needs.gate.result == 'skipped') ||
+        (github.event_name == 'workflow_run' && needs.gate.result == 'success' && needs.gate.outputs.run_quality == 'true')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout
+      - name: Check out selected product
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event_name == 'workflow_run' && needs.gate.outputs.selected_sha || github.sha }}
           persist-credentials: false
 
       - name: Install uv
@@ -210,12 +464,20 @@ jobs:
           uv run --isolated --no-project --with "$wheel" pg-essay-feeds --help
 
   brotli:
+    needs: [gate]
+    if: >-
+      always() &&
+      (
+        (github.event_name != 'workflow_run' && needs.gate.result == 'skipped') ||
+        (github.event_name == 'workflow_run' && needs.gate.result == 'success' && needs.gate.outputs.run_quality == 'true')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout
+      - name: Check out selected product
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event_name == 'workflow_run' && needs.gate.outputs.selected_sha || github.sha }}
           persist-credentials: false
 
       - name: Install uv
@@ -233,3 +495,168 @@ jobs:
           set -euo pipefail
           uv run pytest --cov-fail-under=0 \
             tests/characterization/audit/test_aud_007_raw_bytes.py::test_brotli_wire_vs_decoded_when_available
+
+  authorize:
+    needs: [gate, quality, dist, brotli]
+    if: >-
+      always() &&
+      needs.quality.result == 'success' &&
+      needs.dist.result == 'success' &&
+      needs.brotli.result == 'success' &&
+      (
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_run' && needs.gate.outputs.run_quality == 'true')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout workflow revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Write ci-authorization.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ROUTE: ${{ github.event_name == 'workflow_run' && 'update_continuation' || 'push' }}
+          SELECTED_SHA: ${{ github.event_name == 'workflow_run' && needs.gate.outputs.selected_sha || github.sha }}
+          SOURCE_SHA: ${{ needs.gate.outputs.source_sha }}
+          ACTION: ${{ needs.gate.outputs.action }}
+          PRODUCT_DIGEST: ${{ needs.gate.outputs.product_digest }}
+          IDENTITY_ID: ${{ needs.gate.outputs.identity_artifact_id }}
+          IDENTITY_DIGEST: ${{ needs.gate.outputs.identity_archive_digest }}
+          CI_HEAD_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          CI_WORKFLOW_SHA: ${{ github.workflow_sha }}
+          CI_RUN_ID: ${{ github.run_id }}
+          CI_RUN_ATTEMPT: ${{ github.run_attempt }}
+          UPDATE_RUN_ID: ${{ github.event.workflow_run.id }}
+          UPDATE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "product_identity", Path(".github/scripts/product_identity.py")
+          )
+          pi = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(pi)
+          fmt = pi.git_object_format(Path("."))
+          route = os.environ["ROUTE"]
+          selected = os.environ["SELECTED_SHA"]
+          pi.fetch_exact_commit(Path("."), selected)
+          digest = os.environ.get("PRODUCT_DIGEST") or pi.digest_commit_product(Path("."), selected)
+          repo = os.environ["GITHUB_REPOSITORY"]
+          proc = subprocess.run(
+              ["gh", "api", f"repos/{repo}/actions/workflows"],
+              check=True,
+              capture_output=True,
+              text=True,
+          )
+          workflows = json.loads(proc.stdout)["workflows"]
+          ci_id = pi.resolve_active_workflow_id(
+              workflows, path=pi.CI_WORKFLOW_PATH, name=pi.CI_WORKFLOW_NAME
+          )
+          if route == "push":
+              data = pi.build_ci_authorization_document(
+                  ci_event="push",
+                  ci_head_sha=os.environ["CI_HEAD_SHA"],
+                  ci_run_attempt=int(os.environ["CI_RUN_ATTEMPT"]),
+                  ci_run_id=int(os.environ["CI_RUN_ID"]),
+                  ci_workflow_id=ci_id,
+                  ci_workflow_sha=os.environ["CI_WORKFLOW_SHA"],
+                  product_digest=digest,
+                  product_identity_artifact_digest=None,
+                  product_identity_artifact_id=None,
+                  route="push",
+                  selected_product_sha=selected,
+                  update_action=None,
+                  update_run_attempt=None,
+                  update_run_id=None,
+                  update_source_sha=None,
+                  object_format=fmt,
+              )
+          else:
+              data = pi.build_ci_authorization_document(
+                  ci_event="workflow_run",
+                  ci_head_sha=os.environ["CI_HEAD_SHA"],
+                  ci_run_attempt=int(os.environ["CI_RUN_ATTEMPT"]),
+                  ci_run_id=int(os.environ["CI_RUN_ID"]),
+                  ci_workflow_id=ci_id,
+                  ci_workflow_sha=os.environ["CI_WORKFLOW_SHA"],
+                  product_digest=digest,
+                  product_identity_artifact_digest=os.environ["IDENTITY_DIGEST"],
+                  product_identity_artifact_id=int(os.environ["IDENTITY_ID"]),
+                  route="update_continuation",
+                  selected_product_sha=selected,
+                  update_action=os.environ["ACTION"],
+                  update_run_attempt=int(os.environ["UPDATE_RUN_ATTEMPT"]),
+                  update_run_id=int(os.environ["UPDATE_RUN_ID"]),
+                  update_source_sha=os.environ["SOURCE_SHA"],
+                  object_format=fmt,
+              )
+          Path("ci-authorization.json").write_bytes(data)
+          name = pi.expected_ci_authorization_artifact_name(
+              int(os.environ["CI_RUN_ID"]),
+              int(os.environ["CI_RUN_ATTEMPT"]),
+              route,
+              selected,
+          )
+          Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8").write(
+              f"artifact_name={name}\n"
+          )
+          PY
+        id: auth
+
+      - name: Upload CI authorization
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-authorization-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.event_name == 'workflow_run' && 'update_continuation' || 'push' }}-${{ github.event_name == 'workflow_run' && needs.gate.outputs.selected_sha || github.sha }}
+          path: ci-authorization.json
+          if-no-files-found: error
+
+  noop:
+    needs: [gate]
+    if: github.event_name == 'workflow_run' && needs.gate.outputs.run_quality == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Write non-authorizing noop evidence
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          SELECTED_SHA: ${{ needs.gate.outputs.selected_sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = {
+              "gate_result": "unchanged",
+              "ci_run_id": int(os.environ["RUN_ID"]),
+              "ci_run_attempt": int(os.environ["RUN_ATTEMPT"]),
+              "selected_product_sha": os.environ["SELECTED_SHA"],
+          }
+          Path("ci-noop.json").write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+          )
+          PY
+
+      - name: Upload noop evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-noop-${{ github.run_id }}-${{ github.run_attempt }}.json
+          path: ci-noop.json
+          if-no-files-found: error

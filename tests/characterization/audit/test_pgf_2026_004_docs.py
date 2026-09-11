@@ -102,12 +102,13 @@ def test_security_and_contributing_exist() -> None:
     assert "security/advisories" in security
     assert "Do not open a public issue" in security
     assert "DOCS.md" in contributing
+    assert ".github/DOCS.md" in contributing
     assert "no `docs/` tree" in contributing
     assert "`update` + `check`" in contributing
 
 
 def test_docs_record_lock_generation_cas_coverage_sha_and_accepted_risks() -> None:
-    docs = _text("DOCS.md")
+    docs = _text(".github/DOCS.md")
     assert "inode is never unlinked" in docs
     assert "PGF-2026-001" in docs
     assert "last_generation_id" in docs

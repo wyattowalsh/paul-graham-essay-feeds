@@ -134,7 +134,7 @@ pg-essay-feeds update --abandon-recovery
 
 > [!NOTE]
 > CLI flags override env Settings **only when explicitly passed**. Full
-> precedence and flag tables: [DOCS.md → CLI reference](./DOCS.md#cli-reference).
+> precedence and flag tables: [`.github/DOCS.md` → CLI reference](./.github/DOCS.md#cli-reference).
 
 <details>
 <summary><strong>Extended CLI examples</strong></summary>
@@ -205,7 +205,7 @@ export PG_ESSAY_FEEDS_ENRICH=false   # optional: skip per-page scrapes
 | `PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS` | `0.25` | Min seconds between requests to the same host |
 | `PG_ESSAY_FEEDS_QUIET` / `PG_ESSAY_FEEDS_VERBOSE` | `false` | Log levels |
 
-See also: [DOCS.md → Configuration](./DOCS.md#configuration).
+See also: [`.github/DOCS.md` → Configuration](./.github/DOCS.md#configuration).
 
 </details>
 
@@ -238,7 +238,7 @@ uv run pg-essay-feeds update
 
 ## Develop
 
-Contributor docs (architecture, tests, CI): **[DOCS.md](./DOCS.md)**
+Contributor docs (architecture, tests, CI): **[`.github/DOCS.md`](./.github/DOCS.md)**
 
 ```bash
 uv sync --all-groups
@@ -248,7 +248,7 @@ just all    # lint + types + tests (≥90% cov) + check
 | Doc | Audience |
 | :--- | :--- |
 | [README.md](./README.md) | Users — hosted subscribe + local CLI |
-| [DOCS.md](./DOCS.md) | Developers |
+| [`.github/DOCS.md`](./.github/DOCS.md) | Developers |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors |
 | [SECURITY.md](./SECURITY.md) | Vulnerability reports |
 | [NOTICE](./NOTICE) | Software MIT; essay text remains Paul Graham's |

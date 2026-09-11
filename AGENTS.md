@@ -15,14 +15,14 @@ is the published product. GitHub Pages is a deploy projection of those files
 | Doc | Audience |
 | :--- | :--- |
 | [README.md](./README.md) | Users — hosted subscribe (simple first) + local CLI |
-| [DOCS.md](./DOCS.md) | Developers — **single SSOT** (architecture, CLI, CI, decisions) |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors (points at DOCS.md) |
+| [`.github/DOCS.md`](./.github/DOCS.md) | Developers — **single SSOT** (architecture, CLI, CI, decisions) |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors (points at `.github/DOCS.md`) |
 | [SECURITY.md](./SECURITY.md) | Vulnerability reports |
 | [NOTICE](./NOTICE) | Software MIT; essay text remains Paul Graham's |
 | [notebook.ipynb](./notebook.ipynb) | Maintainer / custom generation — Run all → `feeds.zip` |
 
 There is **no** `docs/` tree. Normative architecture decisions live in
-[DOCS.md § Architecture decisions](./DOCS.md#architecture-decisions-normative).
+[`.github/DOCS.md` § Architecture decisions](./.github/DOCS.md#architecture-decisions-normative).
 
 ---
 
@@ -51,7 +51,7 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 | :--- | :--- |
 | `src/paul_graham_essay_feeds/` | Domain package (~12 modules: cli, settings, pipeline, http, discover, enrich, catalog, feeds, verify, models, publication, pages) |
 | `tests/` | unit / integration / e2e / smoke / live / characterization |
-| `DOCS.md` | Developer + architecture decision SSOT |
+| `.github/DOCS.md` | Developer + architecture decision SSOT |
 
 **Schema SSOT:** Pydantic models in `models.py`. No parallel JSON Schema tree. HTML via **selectolax**.
 
@@ -70,7 +70,7 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 | Product | Repo `feeds/` + `catalog.json` — no `publish.py`, no `site/` |
 | CLI | `update` + `check` only; `update --abandon-recovery` repairs irrecoverable `.cache/materialize.json` (not a third command); flags override Settings only when explicit; quiet success → zero stdout+stderr; success-only side-channels (--result-file, $GITHUB_OUTPUT) allowed |
 | Models | Every Field has a description; `extra="forbid"` where durable; aware UTC |
-| Docs | Fold maintainer guidance into `DOCS.md` only — do not recreate `docs/` |
+| Docs | Fold maintainer guidance into `.github/DOCS.md` only — do not recreate `docs/` |
 
 ### Authorized
 
@@ -100,4 +100,4 @@ uv run pg-essay-feeds check --quiet
 uv build --no-sources
 ```
 
-Prefer `just all` / `just ci-local`. See [DOCS.md](./DOCS.md).
+Prefer `just all` / `just ci-local`. See [`.github/DOCS.md`](./.github/DOCS.md).

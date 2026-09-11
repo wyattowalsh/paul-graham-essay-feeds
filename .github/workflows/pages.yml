@@ -1,80 +1,464 @@
 name: Pages
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-  # GITHUB_TOKEN bot pushes from Update feeds do not fire on.push.
-  # Follow the product SHA from product-identity, never workflow_run.head_sha
-  # (that is the pre-push source commit).
   workflow_run:
-    workflows: ["Update feeds"]
+    workflows: [CI, Update feeds]
     types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
   actions: read
 
 concurrency:
-  group: pages
+  group: ${{ (github.event.workflow.name == 'CI' && github.event.workflow.path == '.github/workflows/ci.yml' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.repository.full_name == github.repository && github.event.workflow_run.head_repository.full_name == github.repository) && 'pages-current-main-v1' || format('pages-observer-{0}-{1}-{2}', github.event.workflow_run.id, github.run_id, github.run_attempt) }}
   cancel-in-progress: false
 
 jobs:
-  build:
-    if: >-
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
+  observe_update:
+    if: github.event.workflow.name == 'Update feeds' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
-      pages: write
-      id-token: write
       actions: read
     steps:
-      - name: Download product identity
-        if: github.event_name == 'workflow_run'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: product-identity
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ runner.temp }}/product-identity
-
-      - name: Resolve checkout SHA
-        id: identity
+      - name: Event-only gate
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          PUSH_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
+          STATUS: ${{ github.event.workflow_run.status }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          REPO_ID: ${{ github.event.workflow_run.repository.id }}
+          REPO_NAME: ${{ github.event.workflow_run.repository.full_name }}
+          HEAD_REPO_ID: ${{ github.event.workflow_run.head_repository.id }}
+          HEAD_REPO_NAME: ${{ github.event.workflow_run.head_repository.full_name }}
+          WF_NAME: ${{ github.event.workflow.name }}
+          WF_PATH: ${{ github.event.workflow.path }}
+          SELF_REPO: ${{ github.repository }}
+          SELF_REPO_ID: ${{ github.repository_id }}
         run: |
           set -euo pipefail
-          if [[ "${EVENT_NAME}" == "workflow_run" ]]; then
-            product_sha="$(python3 -c 'import json, os; from pathlib import Path; p = Path(os.environ["RUNNER_TEMP"]) / "product-identity" / "product-identity.json"; print(json.loads(p.read_text(encoding="utf-8"))["product_sha"])')"
-          else
-            product_sha="${PUSH_SHA}"
-          fi
-          case "${product_sha}" in
-            main|HEAD|refs/heads/main|refs/heads/master)
-              echo "::error::product_sha must not be a mutable branch name: ${product_sha}"
-              exit 1
-              ;;
-          esac
-          if [[ ! "${product_sha}" =~ ^[0-9a-f]{40,64}$ ]]; then
-            echo "::error::product_sha is not a git object id: ${product_sha}"
-            exit 1
-          fi
-          echo "product_sha=${product_sha}" >> "$GITHUB_OUTPUT"
-          echo "Assembling Pages from ${product_sha}"
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
 
-      - name: Checkout
+          def fail(message: str) -> None:
+              print(f"::error::{message}", file=sys.stderr)
+              raise SystemExit(1)
+
+          def require_positive(name: str) -> int:
+              raw = os.environ.get(name, "")
+              if not raw.isdigit() or int(raw) <= 0:
+                  fail(f"{name} must be a positive integer")
+              return int(raw)
+
+          require_positive("RUN_ID")
+          require_positive("WORKFLOW_ID")
+          require_positive("RUN_ATTEMPT")
+          if os.environ.get("STATUS") != "completed":
+              fail("upstream status must be completed")
+          if os.environ.get("HEAD_BRANCH") != "main":
+              fail("upstream branch must be main")
+          sha = os.environ.get("HEAD_SHA", "")
+          if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", sha):
+              fail("head SHA is not a canonical git object id")
+          if os.environ.get("REPO_NAME") != os.environ["SELF_REPO"]:
+              fail("repository mismatch")
+          if os.environ.get("HEAD_REPO_NAME") != os.environ["SELF_REPO"]:
+              fail("head repository mismatch")
+          if os.environ.get("WF_NAME") != "Update feeds":
+              fail("workflow.name is not Update feeds")
+          if os.environ.get("WF_PATH") != ".github/workflows/update-feeds.yml":
+              fail("workflow.path is not Update feeds")
+          PY
+
+      - name: Checkout workflow revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ steps.identity.outputs.product_sha }}
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Prove HEAD is workflow_sha
+        env:
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          test "$(git cat-file -t "${head}")" = "commit"
+          test "${head}" = "${WORKFLOW_SHA}"
+
+      - name: Observer ProductIdentity
+        id: observe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          STATUS: ${{ github.event.workflow_run.status }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "product_identity", Path(".github/scripts/product_identity.py")
+          )
+          pi = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(pi)
+          repo = os.environ["GITHUB_REPOSITORY"]
+          run_id = int(os.environ["RUN_ID"])
+          run_attempt = int(os.environ["RUN_ATTEMPT"])
+
+          def gh_json(path: str) -> object:
+              proc = subprocess.run(
+                  ["gh", "api", path], check=True, capture_output=True, text=True
+              )
+              return json.loads(proc.stdout)
+
+          workflows = gh_json(f"repos/{repo}/actions/workflows")["workflows"]
+          update_id = pi.resolve_active_workflow_id(
+              workflows, path=pi.UPDATE_WORKFLOW_PATH, name=pi.UPDATE_WORKFLOW_NAME
+          )
+          run = gh_json(f"repos/{repo}/actions/runs/{run_id}")
+          if int(run["workflow_id"]) != update_id:
+              raise SystemExit("REST workflow id is not Update feeds")
+          if int(run["run_attempt"]) != run_attempt:
+              raise SystemExit("REST run_attempt mismatch")
+          if run["event"] != os.environ["EVENT"]:
+              raise SystemExit("REST event mismatch")
+          if run["head_branch"] != os.environ["HEAD_BRANCH"]:
+              raise SystemExit("REST branch mismatch")
+          if run["head_sha"] != os.environ["HEAD_SHA"]:
+              raise SystemExit("REST head_sha mismatch")
+          if run["status"] != os.environ["STATUS"] or run["conclusion"] != os.environ["CONCLUSION"]:
+              raise SystemExit("REST status/conclusion mismatch")
+          artifacts = gh_json(f"repos/{repo}/actions/runs/{run_id}/artifacts")["artifacts"]
+          records = [
+              pi.ArtifactRecord(
+                  artifact_id=int(item["id"]),
+                  name=item["name"],
+                  expired=bool(item["expired"]),
+                  archive_digest=item.get("digest") or "",
+              )
+              for item in artifacts
+          ]
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          try:
+              selected = pi.select_identity_artifact(
+                  records, run_id=run_id, run_attempt=run_attempt
+              )
+          except pi.ProductIdentityError:
+              print("update observer: no identity artifact; no-deploy")
+              output.open("a", encoding="utf-8").write("artifact_id=\n")
+              raise SystemExit(0)
+          output.open("a", encoding="utf-8").write(f"artifact_id={selected.artifact_id}\n")
+          print("update observer: identity selected; no-deploy")
+          PY
+
+      - name: Download product identity by artifact ID
+        if: steps.observe.outputs.artifact_id != ''
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ steps.observe.outputs.artifact_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          path: ${{ runner.temp }}/product-identity
+
+      - name: Validate observer identity
+        if: steps.observe.outputs.artifact_id != ''
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "product_identity", Path(".github/scripts/product_identity.py")
+          )
+          pi = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(pi)
+          fmt = pi.git_object_format(Path("."))
+          download = Path(os.environ["RUNNER_TEMP"]) / "product-identity"
+          matches = [p for p in download.rglob("product-identity.json") if p.is_file()]
+          if len(matches) != 1:
+              raise SystemExit(f"expected one product-identity.json, found {len(matches)}")
+          data = pi.validate_artifact_file(matches[0])
+          action = json.loads(data.decode("utf-8"))["action"]
+          rest = pi.RestMetadata(
+              int(os.environ["RUN_ID"]),
+              int(os.environ["RUN_ATTEMPT"]),
+              pi.REPOSITORY,
+              action,
+          )
+          pi.validate_identity_document(data, rest, object_format=fmt)
+          print("update observer: identity validated; no-deploy")
+          PY
+
+  reconcile:
+    if: github.event.workflow.name == 'CI' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    outputs:
+      deploy: ${{ steps.resolve.outputs.deploy }}
+      selected_sha: ${{ steps.resolve.outputs.selected_sha }}
+      pages_name: ${{ steps.resolve.outputs.pages_name }}
+    steps:
+      - name: Event-only gate
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
+          STATUS: ${{ github.event.workflow_run.status }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          REPO_ID: ${{ github.event.workflow_run.repository.id }}
+          REPO_NAME: ${{ github.event.workflow_run.repository.full_name }}
+          HEAD_REPO_ID: ${{ github.event.workflow_run.head_repository.id }}
+          HEAD_REPO_NAME: ${{ github.event.workflow_run.head_repository.full_name }}
+          WF_NAME: ${{ github.event.workflow.name }}
+          WF_PATH: ${{ github.event.workflow.path }}
+          SELF_REPO: ${{ github.repository }}
+          SELF_REPO_ID: ${{ github.repository_id }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+
+          def fail(message: str) -> None:
+              print(f"::error::{message}", file=sys.stderr)
+              raise SystemExit(1)
+
+          def require_positive(name: str) -> int:
+              raw = os.environ.get(name, "")
+              if not raw.isdigit() or int(raw) <= 0:
+                  fail(f"{name} must be a positive integer")
+              return int(raw)
+
+          require_positive("RUN_ID")
+          require_positive("WORKFLOW_ID")
+          require_positive("RUN_ATTEMPT")
+          if os.environ.get("STATUS") != "completed":
+              fail("upstream status must be completed")
+          if os.environ.get("CONCLUSION") != "success":
+              fail("CI route requires conclusion=success")
+          if os.environ.get("HEAD_BRANCH") != "main":
+              fail("upstream branch must be main")
+          if os.environ.get("EVENT") not in {"push", "workflow_run"}:
+              fail("CI event is not an allowed authorizing event")
+          sha = os.environ.get("HEAD_SHA", "")
+          if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", sha):
+              fail("head SHA is not a canonical git object id")
+          if os.environ.get("REPO_NAME") != os.environ["SELF_REPO"]:
+              fail("repository mismatch")
+          if os.environ.get("HEAD_REPO_NAME") != os.environ["SELF_REPO"]:
+              fail("head repository mismatch")
+          if os.environ.get("WF_NAME") != "CI":
+              fail("workflow.name is not CI")
+          if os.environ.get("WF_PATH") != ".github/workflows/ci.yml":
+              fail("workflow.path is not CI")
+          PY
+
+      - name: Checkout workflow revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Resolve current tip authorization
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+          TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
+          TRIGGER_EVENT: ${{ github.event.workflow_run.event }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin refs/heads/main
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import os
+          import subprocess
+          import time
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "product_identity", Path(".github/scripts/product_identity.py")
+          )
+          pi = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(pi)
+          repo_path = Path(".")
+          fmt = pi.git_object_format(repo_path)
+          origin = subprocess.check_output(
+              ["git", "rev-parse", "--verify", "FETCH_HEAD"], text=True
+          ).strip()
+          C = pi.require_commit(repo_path, origin, object_format=fmt)
+          github_sha = os.environ["GITHUB_SHA_VALUE"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          trigger_id = int(os.environ["TRIGGER_RUN_ID"])
+
+          def gh_json(path: str) -> object:
+              last = None
+              for attempt in range(3):
+                  proc = subprocess.run(
+                      ["gh", "api", path], capture_output=True, text=True
+                  )
+                  if proc.returncode == 0:
+                      return json.loads(proc.stdout)
+                  last = proc.stderr
+                  time.sleep(2 ** attempt)
+              raise SystemExit(f"gh api failed: {last}")
+
+          workflows = gh_json(f"repos/{repo}/actions/workflows")["workflows"]
+          ci_id = pi.resolve_active_workflow_id(
+              workflows, path=pi.CI_WORKFLOW_PATH, name=pi.CI_WORKFLOW_NAME
+          )
+
+          def list_runs(event: str) -> list[dict]:
+              out: list[dict] = []
+              page = 1
+              while page <= 3:
+                  payload = gh_json(
+                      f"repos/{repo}/actions/runs?status=success&branch=main"
+                      f"&head_sha={C}&event={event}&per_page=100&page={page}"
+                  )
+                  runs = payload.get("workflow_runs") or payload.get("runs") or []
+                  if isinstance(payload, dict) and "workflow_runs" not in payload:
+                      # GET /actions/runs returns workflow_runs
+                      runs = payload.get("workflow_runs", [])
+                  out.extend(runs)
+                  if len(runs) < 100:
+                      break
+                  page += 1
+              return out
+
+          trigger = gh_json(f"repos/{repo}/actions/runs/{trigger_id}")
+          candidates = []
+          if int(trigger.get("workflow_id", 0)) == ci_id:
+              candidates.append(trigger)
+          seen = {int(trigger_id)}
+          for event in ("push", "workflow_run"):
+              for run in list_runs(event):
+                  rid = int(run["id"])
+                  if rid in seen:
+                      continue
+                  if int(run.get("workflow_id", 0)) != ci_id:
+                      continue
+                  candidates.append(run)
+                  seen.add(rid)
+
+          auth = None
+          selected_sha = None
+          for run in candidates:
+              run_id = int(run["id"])
+              attempt = int(run["run_attempt"])
+              event = run["event"]
+              route = "push" if event == "push" else "update_continuation"
+              artifacts = gh_json(f"repos/{repo}/actions/runs/{run_id}/artifacts")["artifacts"]
+              name = pi.expected_ci_authorization_artifact_name(
+                  run_id, attempt, route, C
+              )
+              if not name.startswith("ci-authorization-"):
+                  raise SystemExit("authorization artifact name is not run-scoped")
+              records = [
+                  pi.ArtifactRecord(
+                      artifact_id=int(item["id"]),
+                      name=item["name"],
+                      expired=bool(item["expired"]),
+                      archive_digest=item.get("digest") or "",
+                  )
+                  for item in artifacts
+              ]
+              try:
+                  record = pi.select_ci_authorization_artifact(
+                      records,
+                      ci_run_id=run_id,
+                      ci_run_attempt=attempt,
+                      route=route,
+                      selected_sha=C,
+                  )
+              except pi.ProductIdentityError:
+                  continue
+              dest = Path(os.environ["RUNNER_TEMP"]) / f"ci-auth-{run_id}"
+              dest.mkdir(parents=True)
+              subprocess.run(
+                  [
+                      "gh",
+                      "api",
+                      f"repos/{repo}/actions/artifacts/{record.artifact_id}/zip",
+                      "--output",
+                      str(dest / "a.zip"),
+                  ],
+                  check=True,
+              )
+              subprocess.run(["unzip", "-q", str(dest / "a.zip"), "-d", str(dest)], check=True)
+              matches = list(dest.rglob("ci-authorization.json"))
+              if len(matches) != 1:
+                  continue
+              try:
+                  parsed = pi.validate_ci_authorization_file(matches[0], object_format=fmt)
+              except pi.ProductIdentityError:
+                  continue
+              if parsed.selected_product_sha != C or parsed.gate_result != "passed":
+                  continue
+              auth = parsed
+              selected_sha = parsed.selected_product_sha
+              break
+
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          if auth is None or selected_sha != C or C != github_sha:
+              print("stale-wakeup/no-deploy")
+              with output.open("a", encoding="utf-8") as fh:
+                  fh.write("deploy=false\n")
+                  fh.write(f"selected_sha={C}\n")
+                  fh.write("pages_name=\n")
+              raise SystemExit(0)
+          pages_name = (
+              f"pages-{os.environ['GITHUB_RUN_ID']}-"
+              f"{os.environ['GITHUB_RUN_ATTEMPT']}-{C}"
+          )
+          with output.open("a", encoding="utf-8") as fh:
+              fh.write("deploy=true\n")
+              fh.write(f"selected_sha={selected_sha}\n")
+              fh.write(f"pages_name={pages_name}\n")
+          PY
+
+      - name: Checkout current main tip
+        if: steps.resolve.outputs.deploy == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.resolve.outputs.selected_sha }}
           persist-credentials: false
 
       - name: Install uv
+        if: steps.resolve.outputs.deploy == 'true'
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.12.0"
@@ -82,31 +466,103 @@ jobs:
           python-version: "3.13"
 
       - name: Sync
+        if: steps.resolve.outputs.deploy == 'true'
         run: uv sync --locked --all-groups
 
+      - name: Check committed feeds
+        if: steps.resolve.outputs.deploy == 'true'
+        run: uv run pg-essay-feeds check --quiet
+
       - name: Assemble Pages artifact
+        if: steps.resolve.outputs.deploy == 'true'
         run: uv run python -m paul_graham_essay_feeds.pages --out _site
 
       - name: Configure Pages
+        if: steps.resolve.outputs.deploy == 'true'
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: Upload artifact
+        if: steps.resolve.outputs.deploy == 'true'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
+          name: ${{ steps.resolve.outputs.pages_name }}
           path: _site
           include-hidden-files: true
+          retention-days: 3
 
   deploy:
-    needs: build
-    if: >-
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
+    needs: [reconcile]
+    if: needs.reconcile.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+      actions: read
+      contents: read
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Recheck current tip before deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SELECTED: ${{ needs.reconcile.outputs.selected_sha }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import subprocess
+          import sys
+
+          selected = os.environ["SELECTED"]
+          github_sha = os.environ["GITHUB_SHA_VALUE"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          subprocess.run(
+              ["git", "init", "-q"],
+              check=True,
+              cwd=os.environ["RUNNER_TEMP"],
+          )
+          subprocess.run(
+              [
+                  "git",
+                  "-C",
+                  os.environ["RUNNER_TEMP"],
+                  "remote",
+                  "add",
+                  "origin",
+                  f"https://github.com/{repo}.git",
+              ],
+              check=True,
+          )
+          subprocess.run(
+              [
+                  "git",
+                  "-C",
+                  os.environ["RUNNER_TEMP"],
+                  "fetch",
+                  "--no-tags",
+                  "origin",
+                  "refs/heads/main",
+              ],
+              check=True,
+          )
+          origin = subprocess.check_output(
+              ["git", "-C", os.environ["RUNNER_TEMP"], "rev-parse", "FETCH_HEAD"],
+              text=True,
+          ).strip()
+          if not (selected == origin == github_sha):
+              print("stale-wakeup/no-deploy on recheck", file=sys.stderr)
+              raise SystemExit(0)
+          Path = __import__("pathlib").Path
+          Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8").write("ok=true\n")
+          PY
+        id: recheck
+
       - name: Deploy
+        if: steps.recheck.outputs.ok == 'true'
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: ${{ needs.reconcile.outputs.pages_name }}
