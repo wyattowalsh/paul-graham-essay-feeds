@@ -24,7 +24,7 @@ import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final
+from typing import Final, NoReturn, cast
 
 # --- Frozen contract constants ------------------------------------------------
 
@@ -313,13 +313,13 @@ def parse_strict_json(data: bytes) -> object:
 # --- Identity document validation and construction ---------------------------
 
 
-def _require_exact_type(value: object, expected: type, name: str) -> object:
+def _require_exact_type[T](value: object, expected: type[T], name: str) -> T:
     # ``type(...) is`` (not isinstance) so bool never substitutes for int and
     # float never substitutes for int.
     if type(value) is not expected:
         msg = f"{name} must be exactly {expected.__name__}, got {type(value).__name__}"
         raise ProductIdentityError(msg, code="wrong_type")
-    return value
+    return cast(T, value)
 
 
 def _require_positive_int(value: object, name: str) -> int:
@@ -414,7 +414,7 @@ def validate_identity_document(
         raise ProductIdentityError(msg, code="rest_metadata_mismatch")
 
     repository = obj["repository"]
-    if repository != REPOSITORY or repository != rest.repository:
+    if not isinstance(repository, str) or repository != REPOSITORY or repository != rest.repository:
         msg = f"repository {repository!r} does not match trusted context"
         raise ProductIdentityError(msg, code="rest_metadata_mismatch")
 
@@ -436,14 +436,17 @@ def validate_identity_document(
     committed = _require_exact_type(obj["committed"], bool, "committed")
     published = _require_exact_type(obj["published"], bool, "published")
 
-    product_sha = obj["product_sha"]
-    source_sha = obj["source_sha"]
+    raw_product_sha = obj["product_sha"]
+    raw_source_sha = obj["source_sha"]
     if object_format is not None:
-        validate_oid_text(product_sha, object_format)
-        validate_oid_text(source_sha, object_format)
-    elif not isinstance(product_sha, str) or not isinstance(source_sha, str):
+        product_sha = validate_oid_text(raw_product_sha, object_format)
+        source_sha = validate_oid_text(raw_source_sha, object_format)
+    elif not isinstance(raw_product_sha, str) or not isinstance(raw_source_sha, str):
         msg = "product_sha and source_sha must be strings"
         raise ProductIdentityError(msg, code="invalid_oid")
+    else:
+        product_sha = raw_product_sha
+        source_sha = raw_source_sha
 
     if action == "unchanged":
         if committed:
@@ -481,7 +484,7 @@ def validate_identity_document(
         repository=repository,
         schema_version=schema_version,
         source_sha=source_sha,
-        subjects=tuple(subjects),
+        subjects=PRODUCT_SUBJECTS,
         workflow_run_attempt=run_attempt,
         workflow_run_id=run_id,
     )
@@ -676,40 +679,83 @@ def _require_valid_oids(repo: Path, *oids: str) -> None:
         validate_oid_text(oid, fmt)
 
 
+def _git_path(repo: Path, name: str) -> Path:
+    """Resolve a path inside ``GIT_DIR`` (works for worktrees)."""
+    result = run_git(repo, ["rev-parse", "--git-path", name], check=False)
+    if result.returncode != 0 or not result.stdout.strip():
+        return repo / ".git" / name
+    path = Path(result.stdout.strip())
+    return path if path.is_absolute() else repo / path
+
+
+def _shallow_boundary_oids(repo: Path) -> frozenset[str]:
+    """Return commit OIDs listed in the repository shallow file, if any."""
+    shallow_path = _git_path(repo, "shallow")
+    if not shallow_path.is_file():
+        return frozenset()
+    try:
+        text = shallow_path.read_text(encoding="utf-8")
+    except OSError:
+        return frozenset()
+    return frozenset(line.strip() for line in text.splitlines() if line.strip())
+
+
+def _is_shallow_repository(repo: Path) -> bool:
+    result = run_git(repo, ["rev-parse", "--is-shallow-repository"], check=False)
+    return result.returncode == 0 and result.stdout.strip() == "true"
+
+
+def _raise_insufficient_history(detail: str) -> NoReturn:
+    msg = f"{INSUFFICIENT_HISTORY_MESSAGE}: {detail}"
+    raise ProductIdentityError(msg, code="insufficient_history")
+
+
+def _read_parent_oids(repo: Path, oid: str) -> list[str]:
+    """Return parent OIDs only when each parent object is a present commit.
+
+    A commit listed as a shallow boundary cannot be used for parent-relation
+    checks: git may omit or graft parents. Missing parent objects also fail
+    closed. Genuine roots (empty parent list, not a shallow boundary) are
+    allowed.
+    """
+    if oid in _shallow_boundary_oids(repo):
+        _raise_insufficient_history(f"{oid} is a shallow boundary")
+    result = run_git(repo, ["rev-list", "--parents", "-n", "1", oid], check=False)
+    if result.returncode != 0:
+        extra = " (shallow repository)" if _is_shallow_repository(repo) else ""
+        _raise_insufficient_history(f"cannot resolve parents of {oid}{extra}")
+    tokens = result.stdout.split()
+    if not tokens or tokens[0] != oid:
+        _raise_insufficient_history(f"cannot resolve parents of {oid}")
+    parents = tokens[1:]
+    if not parents:
+        if _is_shallow_repository(repo):
+            _raise_insufficient_history(f"{oid} has no resolvable parents")
+        return []
+    for parent in parents:
+        kind = run_git(repo, ["cat-file", "-t", parent], check=False)
+        if kind.returncode != 0 or kind.stdout.strip() != "commit":
+            _raise_insufficient_history(f"parent {parent} of {oid} is not present")
+    return parents
+
+
 def require_sufficient_history(repo: Path, *oids: str) -> None:
     """Fail closed when needed commits sit behind a shallow-history boundary.
 
-    A commit listed in ``.git/shallow`` (or whose parents cannot be resolved)
-    means the depth-limited checkout never has the ancestry required for
-    relation or diff validation.
+    A commit listed in the shallow file, a commit whose ``rev-list --parents``
+    cannot be read, or a commit whose parent objects are absent means the
+    depth-limited checkout never has the ancestry required for relation or
+    diff validation.
     """
     _require_valid_oids(repo, *oids)
-    shallow_path = repo / ".git" / "shallow"
-    if shallow_path.is_file() and oids:
-        boundaries = {
-            line.strip()
-            for line in shallow_path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        }
-        for oid in oids:
-            if oid in boundaries:
-                msg = f"{INSUFFICIENT_HISTORY_MESSAGE}: {oid} is a shallow boundary"
-                raise ProductIdentityError(msg, code="insufficient_history")
     for oid in oids:
-        result = run_git(repo, ["rev-list", "--parents", "-n", "1", oid], check=False)
-        if result.returncode != 0:
-            msg = f"{INSUFFICIENT_HISTORY_MESSAGE}: cannot resolve parents of {oid}"
-            raise ProductIdentityError(msg, code="insufficient_history")
+        _read_parent_oids(repo, oid)
 
 
 def parent_oids(repo: Path, oid: str) -> list[str]:
     """Return the full parent OID list of a commit (requires full history)."""
     _require_valid_oids(repo, oid)
-    result = run_git(repo, ["rev-list", "--parents", "-n", "1", oid], check=False)
-    if result.returncode != 0:
-        msg = f"{INSUFFICIENT_HISTORY_MESSAGE}: cannot resolve parents of {oid}"
-        raise ProductIdentityError(msg, code="insufficient_history")
-    return result.stdout.split()[1:]
+    return _read_parent_oids(repo, oid)
 
 
 def _parse_ls_tree(raw: bytes) -> list[TreeEntry]:
@@ -885,10 +931,10 @@ def validate_action(
         raise ProductIdentityError(msg, code="invalid_action")
     validate_digest_text(candidate_digest)
     fmt = object_format or git_object_format(repo)
-    require_commit(repo, source_oid, object_format=fmt)
     require_commit(repo, product_oid, object_format=fmt)
 
     if action == "unchanged":
+        require_commit(repo, source_oid, object_format=fmt)
         if source_oid != product_oid:
             msg = "unchanged requires product_sha == source_sha"
             raise ProductIdentityError(msg, code="action_inconsistent")
@@ -899,6 +945,7 @@ def validate_action(
         return
 
     require_sufficient_history(repo, product_oid)
+    require_commit(repo, source_oid, object_format=fmt)
     parents = parent_oids(repo, product_oid)
     if parents != [source_oid]:
         msg = (
@@ -1417,15 +1464,15 @@ def validate_ci_authorization_document(
         msg = f"ci_event must be one of {ALLOWED_CI_EVENTS}"
         raise ProductIdentityError(msg, code="invalid_ci_event")
     gate_result = obj["gate_result"]
-    if gate_result != GATE_RESULT_PASSED:
+    if not isinstance(gate_result, str) or gate_result != GATE_RESULT_PASSED:
         msg = f"gate_result must be {GATE_RESULT_PASSED!r}"
         raise ProductIdentityError(msg, code="invalid_gate_result")
     repository = obj["repository"]
-    if repository != REPOSITORY:
+    if not isinstance(repository, str) or repository != REPOSITORY:
         msg = f"repository must be {REPOSITORY!r}"
         raise ProductIdentityError(msg, code="rest_metadata_mismatch")
     workflow_path = obj["ci_workflow_path"]
-    if workflow_path != CI_WORKFLOW_PATH:
+    if not isinstance(workflow_path, str) or workflow_path != CI_WORKFLOW_PATH:
         msg = f"ci_workflow_path must be {CI_WORKFLOW_PATH!r}"
         raise ProductIdentityError(msg, code="invalid_ci_workflow_path")
 

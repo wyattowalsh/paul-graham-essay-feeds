@@ -12,12 +12,15 @@ import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 
 _HELPER = Path(__file__).resolve().parents[2] / ".github" / "scripts" / "product_identity.py"
 _spec = importlib.util.spec_from_file_location("product_identity_under_test", _HELPER)
+if _spec is None or _spec.loader is None:
+    msg = f"unable to load product identity helper from {_HELPER}"
+    raise RuntimeError(msg)
 pi = importlib.util.module_from_spec(_spec)
 sys.modules[_spec.name] = pi
 _spec.loader.exec_module(pi)
@@ -986,7 +989,7 @@ class TestCandidateDigest:
         mapping: dict[str, bytes],
         *,
         nul: bool = True,
-        endian: str = "little",
+        endian: Literal["little", "big"] = "little",
         char_length: bool = False,
     ) -> str:
         hasher = hashlib.sha256()
@@ -1568,18 +1571,32 @@ class TestSufficientHistory:
         )
         shallow = tmp_path / "shallow"
         subprocess.run(
-            ["git", "clone", "-q", "--depth", "1", f"file://{bare}", str(shallow)],
+            [
+                "git",
+                "-c",
+                "protocol.file.allow=always",
+                "clone",
+                "-q",
+                "--depth",
+                "1",
+                "--no-local",
+                "--no-hardlinks",
+                f"file://{bare}",
+                str(shallow),
+            ],
             check=True,
             capture_output=True,
         )
-        # The consumer fetches the exact source OID; the shallow boundary at
-        # the depth-1 tip must still fail closed for relation validation.
-        pi.fetch_exact_commit(shallow, source)
+        # Do not fetch the parent OID: that can unshallow or drop `.git/shallow`
+        # on some git versions and is not required to prove fail-closed ancestry.
         return shallow, source, child
 
     def test_shallow_clone_detects_boundary(self, tmp_path: Path) -> None:
         shallow, _source, child = self._shallow_consumer(tmp_path)
-        assert (shallow / ".git" / "shallow").is_file()
+        is_shallow = _git(shallow, "rev-parse", "--is-shallow-repository").stdout.strip() == "true"
+        git_path = Path(_git(shallow, "rev-parse", "--git-path", "shallow").stdout.strip())
+        shallow_file = git_path if git_path.is_absolute() else shallow / git_path
+        assert is_shallow or shallow_file.is_file()
         with pytest.raises(pi.ProductIdentityError) as excinfo:
             pi.require_sufficient_history(shallow, child)
         assert excinfo.value.code == "insufficient_history"
@@ -1587,7 +1604,10 @@ class TestSufficientHistory:
 
     def test_shallow_clone_parents_are_grafted(self, tmp_path: Path) -> None:
         shallow, _, child = self._shallow_consumer(tmp_path)
-        assert pi.parent_oids(shallow, child) == []
+        with pytest.raises(pi.ProductIdentityError) as excinfo:
+            pi.parent_oids(shallow, child)
+        assert excinfo.value.code == "insufficient_history"
+        assert pi.INSUFFICIENT_HISTORY_MESSAGE in str(excinfo.value)
 
     def test_validate_action_fails_closed_on_shallow(self, tmp_path: Path) -> None:
         shallow, source, child = self._shallow_consumer(tmp_path)
