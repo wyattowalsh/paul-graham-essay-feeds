@@ -71,6 +71,13 @@ def test_pages_production_group_is_current_tip_only() -> None:
     assert "ci-authorization-" in text
 
 
+def test_pages_downloads_authorization_zip_via_gh_api_stdout() -> None:
+    text = _WORKFLOW.read_text(encoding="utf-8")
+    assert "--output" not in text
+    assert 'f"repos/{repo}/actions/artifacts/{record.artifact_id}/zip"' in text
+    assert "stdout=fh" in text
+
+
 def test_host_worker_is_gone() -> None:
     assert not (_REPO / "host").exists()
     readme = (_REPO / "README.md").read_text(encoding="utf-8")

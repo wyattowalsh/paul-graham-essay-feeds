@@ -410,18 +410,25 @@ jobs:
               except pi.ProductIdentityError:
                   continue
               dest = Path(os.environ["RUNNER_TEMP"]) / f"ci-auth-{run_id}"
-              dest.mkdir(parents=True)
-              subprocess.run(
-                  [
-                      "gh",
-                      "api",
-                      f"repos/{repo}/actions/artifacts/{record.artifact_id}/zip",
-                      "--output",
-                      str(dest / "a.zip"),
-                  ],
-                  check=True,
-              )
-              subprocess.run(["unzip", "-q", str(dest / "a.zip"), "-d", str(dest)], check=True)
+              dest.mkdir(parents=True, exist_ok=True)
+              zip_path = dest / "a.zip"
+              try:
+                  with zip_path.open("wb") as fh:
+                      subprocess.run(
+                          [
+                              "gh",
+                              "api",
+                              f"repos/{repo}/actions/artifacts/{record.artifact_id}/zip",
+                          ],
+                          check=True,
+                          stdout=fh,
+                      )
+                  subprocess.run(
+                      ["unzip", "-q", str(zip_path), "-d", str(dest)],
+                      check=True,
+                  )
+              except (OSError, subprocess.CalledProcessError):
+                  continue
               matches = list(dest.rglob("ci-authorization.json"))
               if len(matches) != 1:
                   continue
