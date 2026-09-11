@@ -124,7 +124,7 @@ skip_empty = true
 target-version = "py313"
 line-length = 100
 # Notebook cells re-import stdlib on purpose; skip lint/format noise on notebook.ipynb
-extend-exclude = ["notebook.ipynb"]
+extend-exclude = ["notebook.ipynb", "tools/branding/**"]
 src = ["src", "tests", ".github/scripts"]
 extend-include = [".github/scripts/**/*.py"]
 
@@ -141,4 +141,4 @@ python-version = "3.13"
 
 # Notebook cells re-import / use Colab; skip type-check noise (mirrors ruff exclude).
 [tool.ty.src]
-exclude = ["notebook.ipynb"]
+exclude = ["notebook.ipynb", "tools/branding/**"]

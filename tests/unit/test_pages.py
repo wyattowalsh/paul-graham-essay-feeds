@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -121,7 +122,11 @@ def _json_feed(n: int, *, simple: bool = False) -> str:
     return json.dumps(payload, indent=2) + "\n"
 
 
-def _populate_feeds(feeds: Path, n: int) -> None:
+def _populate_brand(repo: Path) -> None:
+    shutil.copytree(_REPO / "assets" / "brand" / "site", repo / "assets" / "brand" / "site")
+
+
+def _populate_feeds(feeds: Path, n: int, *, brand: bool = True) -> None:
     feeds.mkdir(parents=True, exist_ok=True)
     (feeds / "rss.xml").write_text(_rss_xml(n), encoding="utf-8")
     (feeds / "rss.simple.xml").write_text(_rss_xml(n, simple=True), encoding="utf-8")
@@ -129,6 +134,8 @@ def _populate_feeds(feeds: Path, n: int) -> None:
     (feeds / "atom.simple.xml").write_text(_atom_xml(n, simple=True), encoding="utf-8")
     (feeds / "feed.json").write_text(_json_feed(n), encoding="utf-8")
     (feeds / "feed.simple.json").write_text(_json_feed(n, simple=True), encoding="utf-8")
+    if brand:
+        _populate_brand(feeds.parent)
 
 
 def _rss_self(path: Path) -> str | None:
@@ -275,7 +282,11 @@ def test_assemble_pages_writes_feeds_latest_and_index(tmp_path: Path) -> None:
     assert (dest / ".nojekyll").is_file()
     html = (dest / "index.html").read_text(encoding="utf-8")
     assert "Paul Graham essay feeds" in html
-    assert "latest/rss.simple.xml" in html
+    assert "href='latest/" not in html
+    assert (dest / "favicon.ico").is_file()
+    assert (dest / "favicon.svg").is_file()
+    assert (dest / "site.webmanifest").is_file()
+    assert (dest / "open-graph-1200x630.jpg").is_file()
     assert (dest / "rss.xml").read_bytes() == (repo / "feeds" / "rss.xml").read_bytes()
     assert (dest / "feeds" / "rss.xml").read_bytes() == (repo / "feeds" / "rss.xml").read_bytes()
     latest_rss = ET.parse(dest / "latest" / "rss.xml")
@@ -287,6 +298,33 @@ def test_assemble_pages_writes_feeds_latest_and_index(tmp_path: Path) -> None:
 def test_assemble_pages_missing_feeds(tmp_path: Path) -> None:
     with pytest.raises(FeedError, match="Missing feeds"):
         assemble_pages(tmp_path, tmp_path / "out")
+
+
+def test_assemble_pages_missing_brand_assets(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _populate_feeds(repo / "feeds", 1, brand=False)
+    with pytest.raises(FeedError, match="Missing Pages brand assets"):
+        assemble_pages(repo, tmp_path / "out")
+
+
+def test_assemble_pages_rejects_extra_brand_file(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _populate_feeds(repo / "feeds", 1)
+    (repo / "assets" / "brand" / "site" / "extra.txt").write_text("nope", encoding="utf-8")
+    with pytest.raises(FeedError, match="brand asset set mismatch"):
+        assemble_pages(repo, tmp_path / "out")
+
+
+def test_verify_rejects_latest_subscribe_links(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _populate_feeds(repo / "feeds", 1)
+    dest = tmp_path / "_site"
+    assemble_pages(repo, dest)
+    html = (dest / "index.html").read_text(encoding="utf-8")
+    html = html.replace("</footer>", "<a href='latest/rss.xml'>x</a></footer>")
+    (dest / "index.html").write_text(html, encoding="utf-8")
+    with pytest.raises(FeedError, match="must not present"):
+        verify_pages_artifact(dest, repo_root=repo)
 
 
 def test_assemble_pages_refuses_repo_root(tmp_path: Path) -> None:
@@ -459,13 +497,33 @@ def test_assemble_pages_missing_artifact(tmp_path: Path) -> None:
 def test_index_html_uses_relative_links() -> None:
     html = index_html()
     assert "href='rss.simple.xml'" in html or 'href="rss.simple.xml"' in html
-    assert "latest/rss.xml" in html
-    assert "latest/rss.simple.xml" in html
-    assert "latest/atom.simple.xml" in html
-    assert "latest/feed.simple.json" in html
+    assert "href='latest/" not in html
+    assert 'href="latest/' not in html
+    assert 'rel="icon"' in html
+    assert 'rel="apple-touch-icon"' in html
+    assert 'rel="manifest"' in html
+    assert 'property="og:image"' in html
     assert "<head>" in html
     assert "<body>" in html
     assert "site/" not in html
+
+
+def test_index_html_subscribe_landing_simple_first() -> None:
+    html = index_html()
+    assert "<main>" in html
+    assert 'href="#feeds"' in html or "href='#feeds'" in html
+    assert 'id="feeds"' in html or "id='feeds'" in html
+    assert "Subscribe to Simple RSS" in html
+    assert html.index("Subscribe to Simple RSS") < html.index("Full catalog")
+    assert html.index("rss.simple.xml") < html.index("rss.xml")
+    assert "Latest 20" not in html
+    assert "--pg-feeds-night" in html
+    assert "<table" not in html
+    assert "prefers-reduced-motion" in html
+    assert ":focus-visible" in html
+    assert "container-type: inline-size" in html
+    assert "aria-label=" in html
+    assert "Skip to feeds" in html
 
 
 def test_assemble_pages_replaces_file_dest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

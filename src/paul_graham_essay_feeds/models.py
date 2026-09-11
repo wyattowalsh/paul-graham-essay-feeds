@@ -69,6 +69,15 @@ FEED_DESCRIPTION: Final = (
     "or detected a change, not the essay's original publication date."
 )
 HOST_PUBLIC_BASE_URL: Final = "https://wyattowalsh.github.io/paul-graham-essay-feeds/"
+BRAND_IMAGE_ALT: Final = (
+    "A green dot-matrix pedestrian signal broadcasts a dotted RSS symbol "
+    "and three floating essay pages toward a seated classical statue at night."
+)
+BRAND_RSS_CHANNEL_IMAGE: Final = "rss-channel-image-144x144.png"
+BRAND_ATOM_ICON: Final = "atom-icon-144x144.png"
+BRAND_ATOM_LOGO: Final = "atom-logo-512x256.png"
+BRAND_JSON_FEED_ICON: Final = "feed-icon-512x512.png"
+BRAND_JSON_FEED_FAVICON: Final = "feed-favicon-64x64.png"
 LATEST_FEED_ITEMS: Final = 20
 FEED_TITLE_LATEST: Final = f"Paul Graham Essays — Latest {LATEST_FEED_ITEMS}, Enriched (Unofficial)"
 FEED_TITLE_SIMPLE_LATEST: Final = (

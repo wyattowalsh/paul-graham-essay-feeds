@@ -24,6 +24,11 @@ from paul_graham_essay_feeds.models import (
     ATOM_NS,
     AUTHOR,
     AUTHOR_URL,
+    BRAND_ATOM_ICON,
+    BRAND_ATOM_LOGO,
+    BRAND_JSON_FEED_FAVICON,
+    BRAND_JSON_FEED_ICON,
+    BRAND_RSS_CHANNEL_IMAGE,
     DC_NS,
     FEED_DESCRIPTION,
     FEED_ID,
@@ -91,6 +96,14 @@ def _directory_base_url(base: str) -> str:
 def _join_public_artifact(base: str, name: str) -> str:
     """Join a public directory base to an artifact filename via ``urljoin``."""
     return urljoin(_directory_base_url(base), name)
+
+
+def _brand_asset_url(snapshot: FeedSnapshot, name: str) -> str | None:
+    """Public Pages URL for a brand file; ``None`` when no public base is set."""
+    base = snapshot.public_base_url
+    if not base:
+        return None
+    return _join_public_artifact(base, name)
 
 
 def feed_self_url(json_feed_url: str, *, kind: Literal["rss", "atom", "json"]) -> str:
@@ -237,6 +250,15 @@ def render_rss(snapshot: FeedSnapshot) -> bytes:
             },
         )
 
+    image_url = _brand_asset_url(snapshot, BRAND_RSS_CHANNEL_IMAGE)
+    if image_url is not None:
+        image = ET.SubElement(ch, "image")
+        ET.SubElement(image, "url").text = image_url
+        ET.SubElement(image, "title").text = snapshot.title
+        ET.SubElement(image, "link").text = SOURCE_URL
+        ET.SubElement(image, "width").text = "144"
+        ET.SubElement(image, "height").text = "144"
+
     for entry in snapshot.items:
         item = ET.SubElement(ch, "item")
         ET.SubElement(item, "title").text = entry.title
@@ -296,6 +318,13 @@ def render_atom(snapshot: FeedSnapshot) -> bytes:
             },
         )
 
+    icon_url = _brand_asset_url(snapshot, BRAND_ATOM_ICON)
+    logo_url = _brand_asset_url(snapshot, BRAND_ATOM_LOGO)
+    if icon_url is not None:
+        ET.SubElement(feed, "icon").text = icon_url
+    if logo_url is not None:
+        ET.SubElement(feed, "logo").text = logo_url
+
     for entry in snapshot.items:
         el = ET.SubElement(feed, "entry")
         ET.SubElement(el, "title").text = entry.title
@@ -338,6 +367,12 @@ def render_json(snapshot: FeedSnapshot) -> bytes:
     }
     if snapshot.feed_url is not None:
         payload["feed_url"] = snapshot.feed_url
+    icon_url = _brand_asset_url(snapshot, BRAND_JSON_FEED_ICON)
+    favicon_url = _brand_asset_url(snapshot, BRAND_JSON_FEED_FAVICON)
+    if icon_url is not None:
+        payload["icon"] = icon_url
+    if favicon_url is not None:
+        payload["favicon"] = favicon_url
 
     meta: dict = {
         "generator": snapshot.generator,

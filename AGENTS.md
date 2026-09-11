@@ -15,6 +15,7 @@ is the published product. GitHub Pages is a deploy projection of those files
 | Doc | Audience |
 | :--- | :--- |
 | [README.md](./README.md) | Users — hosted subscribe (simple first) + local CLI |
+| [DESIGN.md](./DESIGN.md) | Visual / brand spec (landing, tokens, assets) |
 | [`.github/DOCS.md`](./.github/DOCS.md) | Developers — **single SSOT** (architecture, CLI, CI, decisions) |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors (points at `.github/DOCS.md`) |
 | [SECURITY.md](./SECURITY.md) | Vulnerability reports |
@@ -51,8 +52,10 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 | Area | Responsibility |
 | :--- | :--- |
 | `src/paul_graham_essay_feeds/` | Domain package (~12 modules: cli, settings, pipeline, http, discover, enrich, catalog, feeds, verify, models, publication, pages) |
+| `assets/brand/` | Brand source; `site/` is the Pages overlay |
 | `tests/` | unit / integration / e2e / smoke / live / characterization |
 | `.github/DOCS.md` | Developer + architecture decision SSOT |
+| `DESIGN.md` | Visual / brand spec |
 
 **Schema SSOT:** Pydantic models in `models.py`. No parallel JSON Schema tree. HTML via **selectolax**.
 

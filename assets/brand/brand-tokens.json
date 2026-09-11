@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "project": "wyattowalsh/paul-graham-essay-feeds",
+  "colors": {
+    "night": "#061827",
+    "night_border": "#173A49",
+    "emitter_green": "#39FF70",
+    "micro_emitter_green": "#52FF7F",
+    "warm_paper": "#F4EFE4"
+  },
+  "alt_text": "A green dot-matrix pedestrian signal broadcasts a dotted RSS symbol and three floating essay pages toward a seated classical statue at night.",
+  "favicon_breakpoint_css_px": 24,
+  "favicon_policy": {
+    "below_breakpoint": "dedicated micro pedestrian geometry",
+    "at_or_above_breakpoint": "canonical pedestrian plus RSS geometry"
+  }
+}

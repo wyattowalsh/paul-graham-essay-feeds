@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **PGF-FINAL-006:** GitHub Pages `index.html` is a subscribe landing: Simple
+  RSS is the primary action; remaining formats are Simple vs Enriched of the
+  full catalog. Layout reflows on small screens.
+- **PGF-FINAL-007:** Brand assets live under `assets/brand/`. Pages overlays
+  `assets/brand/site/` onto `_site/` (favicons, manifest, Open Graph, feed
+  graphics). RSS/Atom/JSON Feed emit icon fields when `public_base_url` is
+  set. Visual spec: [DESIGN.md](DESIGN.md). `/latest/*` is still generated but
+  is not a landing subscribe group.
+
 ### Fixed
 
 - **PGF-FINAL-001:** GitHub Pages `/latest/*` feeds rewrite channel identity.
@@ -15,8 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `FEED_ID_SIMPLE:latest`. Item ids remain the ordered prefix of the full
   feeds. Previously colliding `/latest/atom*.xml` feed ids may cause a
   one-time reader reset for those latest Atom URLs only. Full-feed Atom ids
-  are unchanged. `index.html` now links the latest simple artifacts.
-  `verify_pages_artifact` runs on the exact upload tree.
+  are unchanged. `verify_pages_artifact` runs on the exact upload tree.
 - **PGF-FINAL-002:** `update-feeds.yml` generates from the immutable event
   `github.sha` (HEAD is proven equal to `GITHUB_SHA`). It no longer overlays
   `catalog.json` / `feeds/` from a later `origin/main` tip onto that checkout.

@@ -105,6 +105,9 @@ def test_security_and_contributing_exist() -> None:
     assert ".github/DOCS.md" in contributing
     assert "no `docs/` tree" in contributing
     assert "`update` + `check`" in contributing
+    assert "DESIGN.md" in contributing
+    assert (_REPO / "DESIGN.md").is_file()
+    assert not (_REPO / "docs").exists()
 
 
 def test_docs_record_lock_generation_cas_coverage_sha_and_accepted_risks() -> None:
@@ -146,6 +149,9 @@ def test_docs_match_current_pages_publication_and_sbom_contracts() -> None:
     assert "on.push` still covers human commits" not in docs
     assert "selectolax" in docs
     assert "verify_pages_artifact" in docs
+    assert "static subscribe landing" in docs
+    assert "assets/brand/site" in docs
+    assert "DESIGN.md" in docs
     assert "current_user_can_bypass: never" in docs
     security = _text("SECURITY.md")
     assert "Until the `v1.0.0` tag exists" not in security

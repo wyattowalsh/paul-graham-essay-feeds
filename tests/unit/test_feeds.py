@@ -26,6 +26,11 @@ from paul_graham_essay_feeds.feeds import (
 )
 from paul_graham_essay_feeds.models import (
     ATOM_NS,
+    BRAND_ATOM_ICON,
+    BRAND_ATOM_LOGO,
+    BRAND_JSON_FEED_FAVICON,
+    BRAND_JSON_FEED_ICON,
+    BRAND_RSS_CHANNEL_IMAGE,
     FEED_ID_SIMPLE,
     FEED_SUMMARY_CHARS,
     FEED_TITLE_SIMPLE,
@@ -648,6 +653,48 @@ def test_rss_atom_link_self_from_public_base() -> None:
     assert b"xmlns:atom=" in rss
 
 
+def test_feed_brand_assets_when_public_base_url_set() -> None:
+    entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    snap = catalog_to_feed_snapshot(
+        _catalog([entry]),
+        generator=GENERATOR,
+        public_base_url="https://example.com/pg-feeds/",
+    )
+    rss_root = ET.fromstring(render_rss(snap))
+    image = rss_root.find("channel/image")
+    assert image is not None
+    assert image.findtext("url") == f"https://example.com/pg-feeds/{BRAND_RSS_CHANNEL_IMAGE}"
+    assert image.findtext("title") == snap.title
+    assert image.findtext("link") == "https://paulgraham.com/articles.html"
+    assert image.findtext("width") == "144"
+    assert image.findtext("height") == "144"
+
+    atom_root = ET.fromstring(render_atom(snap))
+    assert atom_root.findtext(f"{{{ATOM_NS}}}icon") == (
+        f"https://example.com/pg-feeds/{BRAND_ATOM_ICON}"
+    )
+    assert atom_root.findtext(f"{{{ATOM_NS}}}logo") == (
+        f"https://example.com/pg-feeds/{BRAND_ATOM_LOGO}"
+    )
+
+    data = json.loads(render_json(snap))
+    assert data["icon"] == f"https://example.com/pg-feeds/{BRAND_JSON_FEED_ICON}"
+    assert data["favicon"] == f"https://example.com/pg-feeds/{BRAND_JSON_FEED_FAVICON}"
+
+
+def test_feed_brand_assets_absent_without_public_base() -> None:
+    entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
+    snap = catalog_to_feed_snapshot(_catalog([entry]), generator=GENERATOR)
+    rss_root = ET.fromstring(render_rss(snap))
+    assert rss_root.find("channel/image") is None
+    atom_root = ET.fromstring(render_atom(snap))
+    assert atom_root.find(f"{{{ATOM_NS}}}icon") is None
+    assert atom_root.find(f"{{{ATOM_NS}}}logo") is None
+    data = json.loads(render_json(snap))
+    assert "icon" not in data
+    assert "favicon" not in data
+
+
 def test_rss_no_atom_link_when_feed_url_none() -> None:
     entry = _catalog_entry(sid="https://paulgraham.com/a.html", title="A", position=0)
     snap = catalog_to_feed_snapshot(_catalog([entry]), generator=GENERATOR)
@@ -735,6 +782,9 @@ def test_public_base_unicode_host_idna_self_urls() -> None:
     assert _rss_self_href(snap) == "https://xn--mnchen-3ya.example.com/feeds/rss.xml"
     assert _atom_self_href(snap) == "https://xn--mnchen-3ya.example.com/feeds/atom.xml"
     assert json.loads(render_json(snap))["feed_url"] == snap.feed_url
+    assert json.loads(render_json(snap))["icon"] == (
+        f"https://xn--mnchen-3ya.example.com/feeds/{BRAND_JSON_FEED_ICON}"
+    )
     assert "münchen" not in (snap.feed_url or "")
     assert feed_self_url("https://münchen.example.com/feeds/feed.json", kind="atom") == (
         "https://xn--mnchen-3ya.example.com/feeds/atom.xml"

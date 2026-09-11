@@ -7,6 +7,7 @@ https://paulgraham.com/articles.html. The GitHub repo (`feeds/` +
 ## Before you start
 
 Developer architecture SSOT is **[`.github/DOCS.md`](./.github/DOCS.md)**.
+Visual / brand spec: [DESIGN.md](./DESIGN.md).
 There is no `docs/` tree. Agent instructions: [AGENTS.md](./AGENTS.md).
 User subscribe path: [README.md](./README.md).
 

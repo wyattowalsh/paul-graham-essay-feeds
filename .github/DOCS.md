@@ -5,6 +5,7 @@ Maintainer reference for **paul-graham-essay-feeds**.
 | Doc | Role |
 | :--- | :--- |
 | [README.md](./README.md) | Users — hosted subscribe (simple first) + local CLI |
+| [DESIGN.md](../DESIGN.md) | Visual / brand spec (landing, tokens, Pages overlay) |
 | [DOCS.md](./DOCS.md) | Developers (this file — architecture, CLI, CI, decisions) |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors (points at this file) |
 | [SECURITY.md](./SECURITY.md) | Vulnerability reports |
@@ -146,7 +147,7 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 | `pipeline.py` | orchestrate + verify-then-publish root catalog + feeds |
 | `publication.py` | writer lock, staged `.cache/generations`, materialize/recover |
 | `cli.py` | Typer: `update` / `check` only |
-| `pages.py` | Assemble GitHub Pages from committed `feeds/`; rewrite `/latest/*` identity; `verify_pages_artifact` |
+| `pages.py` | Assemble GitHub Pages from committed `feeds/` + `assets/brand/site/`; rewrite `/latest/*` identity; `verify_pages_artifact` |
 
 Entry points: `cli:main` / `__main__.py`. Schema SSOT is Pydantic `models.py` (no parallel JSON Schema tree).
 
@@ -405,6 +406,12 @@ Turbify query strings are stripped for stable identity.
 > same committed bytes as `application/xml` / `application/json` (Pages cannot
 > set `application/rss+xml` or `application/feed+json`). Raw GitHub remains
 > fallback. Pages is a deploy projection, not `site/` and not a second publisher.
+>
+> `index.html` is a static subscribe landing (Simple RSS first; full catalog
+> Simple vs Enriched). `/latest/*` is generated with its own identity but is
+> not a landing subscribe group. The Pages artifact overlays
+> `assets/brand/site/` (favicons, manifest, Open Graph, feed graphics) onto
+> `_site/` in addition to the HTML file. Visual spec: [DESIGN.md](../DESIGN.md).
 >
 > `/latest/*` is a parser-backed newest-first projection (default 20 items), not
 > a byte copy of the full feeds. Titles identify latest + limit + enriched/simple.
@@ -1028,6 +1035,7 @@ their paragraph text already passes the gate.
 | Path | Role |
 | :--- | :--- |
 | [README.md](./README.md) | Users — hosted subscribe (simple first) + local CLI |
+| [DESIGN.md](../DESIGN.md) | Visual / brand spec (landing, tokens, Pages overlay) |
 | [DOCS.md](./DOCS.md) | Developers (this file; single SSOT including architecture decisions) |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors (points at this file; no `docs/` tree) |
 | [SECURITY.md](./SECURITY.md) | Vulnerability reports (private advisories) |

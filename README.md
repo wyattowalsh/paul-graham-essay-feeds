@@ -15,6 +15,14 @@ correct `https` links, short descriptions, guids, and clean Turbify chapter URLs
 
 <!-- BADGES:END -->
 
+<picture>
+  <source srcset="assets/brand/web/readme-hero-1536x768.avif" type="image/avif">
+  <source srcset="assets/brand/web/readme-hero-1536x768.webp" type="image/webp">
+  <img src="assets/brand/social/github-social-preview-1536x768.jpg"
+       alt="A green dot-matrix pedestrian signal broadcasts a dotted RSS symbol and three floating essay pages toward a seated classical statue at night."
+       width="1536" height="768">
+</picture>
+
 </div>
 
 ---
@@ -41,8 +49,8 @@ serving the committed `feeds/` files. GitHub raw remains a `text/plain` fallback
 | Atom 1.0 | [Subscribe](https://wyattowalsh.github.io/paul-graham-essay-feeds/atom.xml) |
 | JSON Feed 1.1 | [Subscribe](https://wyattowalsh.github.io/paul-graham-essay-feeds/feed.json) |
 
-**Latest 20** — bounded newest-first projections, not byte copies of the full
-feeds. Titles name the latest window and variant; self/feed URLs live under
+Also generated: a `/latest/` window of the newest 20 items — not a third
+catalog. Titles name the latest window and variant; self/feed URLs live under
 `/latest/…`; Atom feed ids use a `:latest` suffix. Item ids match the first
 twenty items of the corresponding full feed:
 [`/latest/rss.xml`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/rss.xml),
@@ -254,6 +262,7 @@ just all    # lint + types + tests (≥90% cov) + check
 | Doc | Audience |
 | :--- | :--- |
 | [README.md](./README.md) | Users — hosted subscribe + local CLI |
+| [DESIGN.md](./DESIGN.md) | Visual / brand spec |
 | [`.github/DOCS.md`](./.github/DOCS.md) | Developers |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors |
 | [SECURITY.md](./SECURITY.md) | Vulnerability reports |

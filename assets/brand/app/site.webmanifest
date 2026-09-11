@@ -1,0 +1,37 @@
+{
+  "id": "./",
+  "name": "Paul Graham Essay Feeds",
+  "short_name": "PG Feeds",
+  "description": "Unofficial metadata-only RSS, Atom, and JSON Feed for Paul Graham essays.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#061827",
+  "theme_color": "#061827",
+  "icons": [
+    {
+      "src": "app-icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "app-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "app-icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "app-icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
