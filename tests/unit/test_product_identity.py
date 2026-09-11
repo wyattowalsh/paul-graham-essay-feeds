@@ -1564,39 +1564,20 @@ class TestSufficientHistory:
             "Update feeds",
             changes={"catalog.json": b'{"n":1}', "feeds/rss.xml": b"<rss v2/>"},
         )
-        bare = tmp_path / "origin.git"
-        subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True, capture_output=True)
-        _git(
-            repo, "push", "-q", str(bare), f"{child}:refs/heads/main", f"{source}:refs/heads/source"
-        )
-        shallow = tmp_path / "shallow"
-        subprocess.run(
-            [
-                "git",
-                "-c",
-                "protocol.file.allow=always",
-                "clone",
-                "-q",
-                "--depth",
-                "1",
-                "--no-local",
-                "--no-hardlinks",
-                f"file://{bare}",
-                str(shallow),
-            ],
-            check=True,
-            capture_output=True,
-        )
-        # Do not fetch the parent OID: that can unshallow or drop `.git/shallow`
-        # on some git versions and is not required to prove fail-closed ancestry.
-        return shallow, source, child
+        _, consumer = make_origin(tmp_path, repo, {"main": child, "source": source})
+        pi.fetch_exact_commit(consumer, child)
+        pi.fetch_exact_commit(consumer, source)
+        # file:// / local clones do not reliably honor --depth 1. Pin the product
+        # commit as a shallow boundary after both OIDs are present so relation
+        # validation must fail closed even when the parent object exists.
+        git_path = Path(_git(consumer, "rev-parse", "--git-path", "shallow").stdout.strip())
+        shallow_file = git_path if git_path.is_absolute() else consumer / git_path
+        shallow_file.parent.mkdir(parents=True, exist_ok=True)
+        shallow_file.write_text(f"{child}\n", encoding="utf-8")
+        return consumer, source, child
 
     def test_shallow_clone_detects_boundary(self, tmp_path: Path) -> None:
         shallow, _source, child = self._shallow_consumer(tmp_path)
-        is_shallow = _git(shallow, "rev-parse", "--is-shallow-repository").stdout.strip() == "true"
-        git_path = Path(_git(shallow, "rev-parse", "--git-path", "shallow").stdout.strip())
-        shallow_file = git_path if git_path.is_absolute() else shallow / git_path
-        assert is_shallow or shallow_file.is_file()
         with pytest.raises(pi.ProductIdentityError) as excinfo:
             pi.require_sufficient_history(shallow, child)
         assert excinfo.value.code == "insufficient_history"
