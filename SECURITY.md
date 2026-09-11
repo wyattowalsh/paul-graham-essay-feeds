@@ -13,8 +13,14 @@ SHA), impact, and a reproducer if you have one.
 
 ## Supported versions
 
-The intended release is **1.0.0**. Until the `v1.0.0` tag exists, `main` is
-the supported line.
+The current supported release is **1.0.0** (annotated tag `v1.0.0`). `main`
+may contain unpublished patches until the next tag.
+
+Future `v*` tags are an operator-blocked action while the live
+`protect-version-tags` ruleset restricts `refs/tags/v*` with an empty bypass
+list (`current_user_can_bypass: never`, including repository administrators). Do
+not treat a GitHub Release as a substitute for an annotated tag. Do not move or
+overwrite `v1.0.0`.
 
 ## Scope
 
@@ -27,12 +33,18 @@ readers.
 
 ## Verifying a GitHub Release
 
-After `v1.0.0` exists, consumers can check wheel/sdist integrity:
+Release assets include wheel, sdist, frozen `requirements.txt`, CycloneDX 1.5
+`bom.cdx.json` (default runtime graph; no `brotli` extra, no dev tools), and
+`SHA256SUMS.txt` covering those four classes of file. Attestations are issued
+for the same subjects.
 
 ```bash
 sha256sum -c SHA256SUMS.txt
 gh attestation verify dist/*.whl --repo wyattowalsh/paul-graham-essay-feeds
 gh attestation verify dist/*.tar.gz --repo wyattowalsh/paul-graham-essay-feeds
+gh attestation verify dist/requirements.txt --repo wyattowalsh/paul-graham-essay-feeds
+gh attestation verify dist/bom.cdx.json --repo wyattowalsh/paul-graham-essay-feeds
+gh attestation verify dist/SHA256SUMS.txt --repo wyattowalsh/paul-graham-essay-feeds
 ```
 
 Expect repository `wyattowalsh/paul-graham-essay-feeds` and workflow

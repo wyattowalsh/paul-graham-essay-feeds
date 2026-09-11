@@ -48,6 +48,7 @@ workflows, `justfile`, and `AGENTS.md`).
 | [tqdm](https://github.com/tqdm/tqdm) | Progress bars (enrich / render / stage) | [tqdm.github.io](https://tqdm.github.io/) |
 | [loguru](https://github.com/Delgan/loguru) | Structured logging | [loguru.readthedocs.io](https://loguru.readthedocs.io/) |
 | [rich](https://github.com/Textualize/rich) | CLI console + log handler | [rich.readthedocs.io](https://rich.readthedocs.io/) |
+| [selectolax](https://github.com/rushter/selectolax) | HTML parse (index + page metadata) | [selectolax.readthedocs.io](https://selectolax.readthedocs.io/) |
 
 ### Dev / CI
 
@@ -58,6 +59,7 @@ workflows, `justfile`, and `AGENTS.md`).
 | [respx](https://github.com/lundberg/respx) | httpx mock transport | [lundberg.github.io/respx](https://lundberg.github.io/respx/) |
 | [ruff](https://github.com/astral-sh/ruff) | Lint + format | [docs.astral.sh/ruff](https://docs.astral.sh/ruff/) |
 | [ty](https://github.com/astral-sh/ty) | Type checker | [docs.astral.sh/ty](https://docs.astral.sh/ty/) |
+| [cyclonedx-bom](https://github.com/CycloneDX/cyclonedx-python) | Release SBOM schema validation | [cyclonedx.org](https://cyclonedx.org/) |
 | [just](https://github.com/casey/just) | Task runner (`justfile`) | [just.systems](https://just.systems/) |
 | [GitHub Actions](https://github.com/features/actions) | CI + scheduled feed refresh | [docs.github.com/actions](https://docs.github.com/en/actions) |
 
@@ -144,7 +146,7 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 | `pipeline.py` | orchestrate + verify-then-publish root catalog + feeds |
 | `publication.py` | writer lock, staged `.cache/generations`, materialize/recover |
 | `cli.py` | Typer: `update` / `check` only |
-| `pages.py` | Assemble GitHub Pages artifact from committed `feeds/` |
+| `pages.py` | Assemble GitHub Pages from committed `feeds/`; rewrite `/latest/*` identity; `verify_pages_artifact` |
 
 Entry points: `cli:main` / `__main__.py`. Schema SSOT is Pydantic `models.py` (no parallel JSON Schema tree).
 
@@ -403,6 +405,16 @@ Turbify query strings are stripped for stable identity.
 > same committed bytes as `application/xml` / `application/json` (Pages cannot
 > set `application/rss+xml` or `application/feed+json`). Raw GitHub remains
 > fallback. Pages is a deploy projection, not `site/` and not a second publisher.
+>
+> `/latest/*` is a parser-backed newest-first projection (default 20 items), not
+> a byte copy of the full feeds. Titles identify latest + limit + enriched/simple.
+> Self URLs and JSON `feed_url` live under `/latest/…`. Atom feed ids are
+> `tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds:latest` and
+> `…:simple:latest`. Item GUIDs/ids are the ordered prefix of the corresponding
+> full feed (unchanged). `pages.yml` has **no** `on: push`; human pushes reach
+> Pages through successful CI `workflow_run` reconciliation. Update-feeds
+> wakeups are observer-only. `verify_pages_artifact` runs on the exact `_site`
+> tree before `upload-pages-artifact`.
 
 ---
 
@@ -443,10 +455,10 @@ just cov
 | Workflow | Role |
 | :--- | :--- |
 | `ci.yml` | matrix 3.12–3.14; lint/types (3.13); pytest + cov ≥90% (report precision 2) then raw `coverage.xml` lines+branches `covered/valid ≥ 0.90`; committed-feed `check` on `feeds/`; offline catalog smoke (`--no-enrich --no-validate-links`; `feeds/` + `catalog.json`); assert no `feeds/validated/`; dist job |
-| `release.yml` | on tag `v*`: version match, quality gates, `uv build --no-sources`, wheel smoke, GitHub Release. Privileged `setup-uv` does not force `enable-cache: true` |
-| `update-feeds.yml` | scheduled live refresh → upload seven-file workspace → publish gates the **downloaded** candidate (not a sibling source checkout) → commit `feeds/` + `catalog.json` to `main` → `product_sha=$(git rev-parse HEAD)` → re-check that tree → attest seven subjects plus provenance context (source SHA, candidate digest, subjects, product SHA). Bot push still `--force-with-lease`. Publish `setup-uv` sets `enable-cache: false` |
+| `release.yml` | on tag `v*`: version match, quality gates, `uv build --no-sources`, wheel/sdist smoke, CycloneDX 1.5 SBOM from `uv export`, checksums + attestations for wheel, sdist, `requirements.txt`, `bom.cdx.json`, and `SHA256SUMS.txt`, GitHub Release. Privileged `setup-uv` does not force `enable-cache: true` |
+| `update-feeds.yml` | scheduled live refresh bound to immutable `github.sha` (HEAD proven equal to `GITHUB_SHA`) → upload seven-file workspace → publish gates the **downloaded** candidate (not a sibling source checkout) → exact-OID push of `feeds/` + `catalog.json` to `main` → `product_sha` is the new commit OID → re-check that tree → attest seven subjects plus `product-provenance.json` (also uploaded with `product-identity-*`, retention 90 days). Publish `setup-uv` sets `enable-cache: false` |
 | `verify-product.yml` | `workflow_run` after “Update feeds” (or `workflow_dispatch` with an explicit SHA): check + audit slice on the **product SHA** from the `product-identity` artifact or the explicit ref — never mutable `main` HEAD. `GITHUB_TOKEN` push does not retrigger `ci.yml`. `setup-uv` does not force cache |
-| `pages.yml` | assemble `_site` from committed `feeds/` and deploy GitHub Pages. `on.push` still covers human commits. Scheduled bot commits use `workflow_run` after “Update feeds” and check out the **product SHA** from `product-identity` — never `workflow_run.head_sha` (the pre-push source). Failed Update-feeds runs do not deploy (PGF-2026-040) |
+| `pages.yml` | **no** `on: push`. Assemble `_site` from committed `feeds/` after successful CI `workflow_run` (authorization required) and deploy GitHub Pages. Update-feeds `workflow_run` is observer-only. Checkout uses the **product SHA** from `product-identity` — never `workflow_run.head_sha`. `verify_pages_artifact` runs on `_site` before upload. Failed Update-feeds runs do not deploy (PGF-2026-040) |
 | Dependabot | weekly `uv` + `github-actions` |
 
 CI policy: exit 0 on matrix; full-SHA action pins; least privilege on generation jobs;
@@ -485,13 +497,14 @@ covers due pages; those IDs are not skipped-probe counts).
 | `lint` | ruff format check + ruff check |
 | `type` | `ty check` |
 | `test` | pytest + **cov ≥ 90%** |
-| `ci-local` | locked sync + lint + type + test + quiet check + build |
+| `ci-local` | locked sync + lint + type + test + quiet check + pages assemble/verify + build |
 | `check` | `pg-essay-feeds check` |
+| `pages` | assemble + verify GitHub Pages artifact into `_site/` |
 | `update` | live `pg-essay-feeds update` |
 | `build` | `uv build --no-sources` + wheel smoke |
-| `all` | lint + type + test + check |
+| `all` | lint + type + test + check + pages |
 
-Quality order: **format → lint → types → tests → check**.
+Quality order: **format → lint → types → tests → check → pages**.
 
 ```bash
 uv sync --locked --all-groups
@@ -500,6 +513,7 @@ uv run ruff check .
 uv run ty check
 uv run pytest --cov-fail-under=90
 uv run pg-essay-feeds check --quiet
+uv run python -m paul_graham_essay_feeds.pages --out _site
 uv build --no-sources
 ```
 
@@ -606,15 +620,20 @@ for Team-plan private/internal repositories and their fork networks — not
 this public user-owned repo. There is no `conditions.file_path` include/exclude
 on a branch ruleset, and the Settings UI is not a fallback for that design.
 
-`update-feeds.yml` still stages only those seven product paths, force-with-lease
-pushes them, records `product_sha=$(git rev-parse HEAD)`, re-checks that tree,
+`update-feeds.yml` still stages only those seven product paths, exact-OID
+pushes them (`git push origin <oid>:refs/heads/main`; `--force-with-lease` is
+forbidden), records the new commit as `product_sha`, re-checks that tree,
 and attests the seven files plus a provenance document naming source SHA,
-candidate digest, subjects, and product SHA. A `GITHUB_TOKEN` push does **not**
+candidate digest, subjects, and product SHA. `product-provenance.json` is
+uploaded with the `product-identity-*` artifact (`retention-days: 90`) and is
+**not** one of the seven public product files. A `GITHUB_TOKEN` push does **not**
 retrigger `on: push` CI or `pages.yml`. `verify-product.yml` and `pages.yml`
 both use `workflow_run` after “Update feeds” and check out that product SHA
 from the `product-identity` artifact — not mutable `main` HEAD and not
 `workflow_run.head_sha` (PGF-2026-040). Signing is the Actions artifact
-attestation, not a repo GPG key.
+attestation, not a repo GPG key. Generation itself is bound to the workflow
+event SHA (`HEAD == GITHUB_SHA`); it does not overlay `origin/main` product
+files onto that checkout (PGF-FINAL-002).
 
 Operator options (neither is applied by documentation):
 
@@ -686,9 +705,20 @@ EOF
 Tag protection (separate ruleset; restrict creation of `v*` to a human who
 verified CI on that exact SHA — GitHub cannot bind “CI passed” into tag
 create; `release.yml` also requires the tagged SHA to be an ancestor of
-`origin/main`). Restricting `creation` with empty `bypass_actors` relies on
-repository-admin bypass to cut tags; add a named bypass actor if you want a
-non-admin release role:
+`origin/main`).
+
+> [!IMPORTANT]
+> Live `protect-version-tags` (id `22371020`) is active on `refs/tags/v*`
+> with `creation`, `update`, `deletion`, and `non_fast_forward`, and
+> `bypass_actors: []`. GitHub reports `current_user_can_bypass: never` even
+> for the repository owner. Empty bypass does **not** fall back to
+> repository-admin bypass for tag creation. The next `v*` tag is therefore an
+> **operator-only blocker**: add a named bypass actor, or temporarily relax
+> the ruleset, then restore it. Do not overwrite `v1.0.0`.
+
+Maintainer-apply snippet (do not run from an agent session unless asked).
+If recreating the ruleset, include an explicit bypass actor for the intended
+release operator — an empty list will block everyone, including admins:
 
 ```bash
 gh api --method POST repos/wyattowalsh/paul-graham-essay-feeds/rulesets \
@@ -855,8 +885,9 @@ Private gitignored `.cache/generations` + `.cache/materialize.json` + writer loc
 remain the recovery implementation.
 
 `atomic_write_bytes` writes a same-directory temp file, `fsync`s that file,
-then `os.replace`. It does **not** `fsync` the parent directory afterward.
-That is process-crash safe on normal filesystems, not power-loss-proof.
+`os.replace`s it, then `fsync`s the parent directory. That is process-crash
+safe on normal filesystems; power-loss durability still depends on the
+filesystem and disk.
 
 Every durable decision (including the planner **skip** / no-op path) runs
 **under the writer lock**: `acquire_write_lock` → `recover_materialize` → verify
@@ -924,16 +955,20 @@ commits the catalog.
   repo GPG key. Candidate→product SHA chain (PGF-2026-012): one candidate
   workspace binds to one `product_sha`; the attestation subjects include
   provenance context naming source SHA, candidate digest, the seven product
-  paths, and product SHA. `verify-product.yml` checks that SHA, not mutable
-  `main` HEAD. `pages.yml` uses the same product SHA so hosted subscribe
-  URLs track bot commits (PGF-2026-040). Release tags additionally run
-  `git merge-base --is-ancestor` against `origin/main` (PGF-2026-033).
-  Wheel/sdist checksums live in
+  paths, and product SHA. `product-provenance.json` is also uploaded with the
+  `product-identity-*` artifact for 90 days; after retention expires, reconstruct
+  those fields from commit trailers (`Update-Run-Id` / `Update-Run-Attempt`),
+  the ProductIdentity document, and git objects. `verify-product.yml` checks
+  that SHA, not mutable `main` HEAD. `pages.yml` uses the same product SHA so
+  hosted subscribe URLs track bot commits (PGF-2026-040). Release tags
+  additionally run `git merge-base --is-ancestor` against `origin/main`
+  (PGF-2026-033). Wheel/sdist/`requirements.txt`/`bom.cdx.json` checksums live in
   `SHA256SUMS.txt` on the GitHub Release. Consumers verify with
   `sha256sum -c SHA256SUMS.txt` and
-  `gh attestation verify dist/*.whl --repo wyattowalsh/paul-graham-essay-feeds`
+  `gh attestation verify dist/<asset> --repo wyattowalsh/paul-graham-essay-feeds`
   (expected workflow: `.github/workflows/release.yml`). Attestations are not
-  useful unless verified.
+  useful unless verified. The next `v*` tag is operator-blocked while
+  `protect-version-tags` has an empty bypass list.
 
 ### AD-008 — CI clean
 

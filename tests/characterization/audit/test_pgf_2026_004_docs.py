@@ -135,3 +135,21 @@ def test_docs_record_lock_generation_cas_coverage_sha_and_accepted_risks() -> No
     assert "local seven-file visibility" in docs
     notebook = json.loads(_text("notebook.ipynb"))
     assert isinstance(notebook["cells"], list)
+
+
+def test_docs_match_current_pages_publication_and_sbom_contracts() -> None:
+    """PGF-FINAL-004: stale historical claims must not remain as current contract."""
+    docs = _text(".github/DOCS.md")
+    assert "does **not** `fsync` the parent directory" not in docs
+    assert "fsync`s the parent directory" in docs
+    assert "Bot push still `--force-with-lease`" not in docs
+    assert "on.push` still covers human commits" not in docs
+    assert "selectolax" in docs
+    assert "verify_pages_artifact" in docs
+    assert "current_user_can_bypass: never" in docs
+    security = _text("SECURITY.md")
+    assert "Until the `v1.0.0` tag exists" not in security
+    assert "v1.0.0" in security
+    readme = _text("README.md")
+    assert "same files, first twenty items" not in readme
+    assert "/latest/rss.simple.xml" in readme

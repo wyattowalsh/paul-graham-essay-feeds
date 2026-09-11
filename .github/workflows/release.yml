@@ -169,6 +169,9 @@ jobs:
           enable-cache: false
           python-version: "3.13"
 
+      - name: Sync
+        run: uv sync --locked --all-groups
+
       - name: Build
         run: uv build --no-sources
 
@@ -198,38 +201,10 @@ jobs:
           test -f "$sdist"
           uv run --isolated --no-project --with "$sdist" pg-essay-feeds --help
 
-      - name: CycloneDX SBOM from lock
+      - name: Runtime SBOM and requirements export
         run: |
           set -euo pipefail
-          uv export --frozen --no-dev --no-hashes --no-annotate -o dist/requirements.txt
-          uv run python - <<'PY'
-          import json
-          from pathlib import Path
-          reqs = []
-          for line in Path("dist/requirements.txt").read_text(encoding="utf-8").splitlines():
-              text = line.strip()
-              if not text or text.startswith("#") or text.startswith("-"):
-                  continue
-              reqs.append(text)
-          bom = {
-              "bomFormat": "CycloneDX",
-              "specVersion": "1.5",
-              "version": 1,
-              "metadata": {
-                  "component": {
-                      "type": "library",
-                      "name": "paul-graham-essay-feeds",
-                      "version": "1.0.0",
-                  }
-              },
-              "components": [
-                  {"type": "library", "name": row.split("==")[0], "version": row}
-                  for row in reqs
-              ],
-          }
-          Path("dist/bom.cdx.json").write_text(json.dumps(bom, indent=2) + "\n", encoding="utf-8")
-          print("wrote dist/bom.cdx.json", len(reqs), "components")
-          PY
+          uv run python .github/scripts/release_sbom.py --repo-root . --dist dist
 
       - name: Upload dist
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -256,8 +231,9 @@ jobs:
       - name: Checksums
         run: |
           set -euo pipefail
-          (cd dist && sha256sum *.whl *.tar.gz > SHA256SUMS.txt)
+          (cd dist && sha256sum -- *.whl *.tar.gz requirements.txt bom.cdx.json > SHA256SUMS.txt)
           cat dist/SHA256SUMS.txt
+          (cd dist && sha256sum -c SHA256SUMS.txt)
 
       - name: Attest release artifacts
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
@@ -265,6 +241,9 @@ jobs:
           subject-path: |
             dist/*.whl
             dist/*.tar.gz
+            dist/requirements.txt
+            dist/bom.cdx.json
+            dist/SHA256SUMS.txt
 
       - name: GitHub Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3

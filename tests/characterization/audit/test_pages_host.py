@@ -23,6 +23,27 @@ def _job_block(text: str, job: str) -> str:
     return rest[: match.start()] if match else rest
 
 
+def test_pages_verifies_upload_tree_before_upload() -> None:
+    """PGF-FINAL-001/005: the bytes verified are the bytes uploaded."""
+    text = _WORKFLOW.read_text(encoding="utf-8")
+    verify_at = text.index("verify_pages_artifact")
+    upload_at = text.index("actions/upload-pages-artifact@")
+    assert verify_at < upload_at
+    assemble_at = text.index("paul_graham_essay_feeds.pages")
+    assert assemble_at < verify_at
+    reconcile = _job_block(text, "reconcile")
+    assert "enable-cache: true" not in reconcile
+    assert "enable-cache: false" in reconcile
+    assert "Verify Pages artifact" in reconcile
+    assert "path: _site" in reconcile
+
+
+def test_ci_pages_smoke_verifies_assembled_tree() -> None:
+    ci = (_REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "verify_pages_artifact" in ci
+    assert "paul_graham_essay_feeds.pages" in ci
+
+
 def test_pages_workflow_deploys_assembled_artifact() -> None:
     text = _WORKFLOW.read_text(encoding="utf-8")
     assert "paul_graham_essay_feeds.pages" in text

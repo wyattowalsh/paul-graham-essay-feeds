@@ -41,10 +41,16 @@ serving the committed `feeds/` files. GitHub raw remains a `text/plain` fallback
 | Atom 1.0 | [Subscribe](https://wyattowalsh.github.io/paul-graham-essay-feeds/atom.xml) |
 | JSON Feed 1.1 | [Subscribe](https://wyattowalsh.github.io/paul-graham-essay-feeds/feed.json) |
 
-**Latest 20** — same files, first twenty items: [`/latest/rss.xml`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/rss.xml),
+**Latest 20** — bounded newest-first projections, not byte copies of the full
+feeds. Titles name the latest window and variant; self/feed URLs live under
+`/latest/…`; Atom feed ids use a `:latest` suffix. Item ids match the first
+twenty items of the corresponding full feed:
+[`/latest/rss.xml`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/rss.xml),
 [`/latest/atom.xml`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/atom.xml),
-[`/latest/feed.json`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/feed.json)
-(and the `.simple` siblings).
+[`/latest/feed.json`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/feed.json),
+[`/latest/rss.simple.xml`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/rss.simple.xml),
+[`/latest/atom.simple.xml`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/atom.simple.xml),
+[`/latest/feed.simple.json`](https://wyattowalsh.github.io/paul-graham-essay-feeds/latest/feed.simple.json).
 
 > [!NOTE]
 > Pages serves `.xml` as `application/xml` and `.json` as `application/json`.

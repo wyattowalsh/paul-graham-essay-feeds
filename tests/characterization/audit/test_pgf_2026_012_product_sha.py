@@ -34,6 +34,17 @@ def _job_block(text: str, job: str) -> str:
     return rest[: match.start()] if match else rest
 
 
+def test_update_source_sha_is_proven_event_head() -> None:
+    """PGF-FINAL-002: source_sha is HEAD after proving it equals GITHUB_SHA."""
+    text = (_WORKFLOWS / "update-feeds.yml").read_text(encoding="utf-8")
+    update = _job_block(text, "update")
+    assert "ref: ${{ github.sha }}" in update
+    assert "source_sha=${head}" in update
+    assert "FETCH_HEAD" not in update.split("Write product identity (no-op)", 1)[0]
+    overlays = re.findall(r"git checkout[^\n]+catalog\.json feeds", text)
+    assert overlays == ['git checkout "${product_sha}" -- catalog.json feeds']
+
+
 def test_helper_is_stdlib_product_identity() -> None:
     text = _HELPER.read_text(encoding="utf-8")
     assert "SCHEMA_VERSION" in text
@@ -96,6 +107,9 @@ def test_attest_names_provenance_context() -> None:
     for rel in _SEVEN:
         assert rel in attest
     assert "product-provenance.json" in attest
+    assert "retention-days: 90" in text
+    assert "product-identity.json" in text
+    assert "product-provenance.json" in text
 
 
 def test_verify_product_trust_sequence() -> None:

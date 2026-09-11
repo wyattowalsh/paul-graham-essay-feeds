@@ -69,6 +69,24 @@ def test_cross_run_downloads_bind_source_run_id() -> None:
         assert "run-id: ${{ github.event.workflow_run.id }}" in text
 
 
+def test_update_binds_generation_to_event_sha() -> None:
+    """PGF-FINAL-002: code, lockfile, and catalog come from one immutable SHA."""
+    assert "ref: ${{ github.sha }}" in _UPDATE
+    assert "Prove HEAD is the event revision" in _UPDATE
+    assert "HEAD ${head} != GITHUB_SHA" in _UPDATE
+    assert "source_sha=${head}" in _UPDATE
+    assert 'git checkout "${source_sha}" -- catalog.json feeds' not in _UPDATE
+    assert "git checkout FETCH_HEAD -- catalog.json" not in _UPDATE
+    assert "git checkout origin/main -- catalog.json" not in _UPDATE
+    assert 'git checkout "${product_sha}" -- catalog.json feeds' in _UPDATE
+    for job_label in ("\n  update:", "\n  verify:", "\n  publish:"):
+        assert job_label in _UPDATE
+        start = _UPDATE.index(job_label)
+        chunk = _UPDATE[start : start + 2500]
+        assert "ref: ${{ github.sha }}" in chunk
+        assert "Prove HEAD is the event revision" in chunk
+
+
 def test_helper_importlib_loaders_register_sys_modules() -> None:
     """Dataclass annotation resolution requires the module in sys.modules."""
     needle = '__import__("sys").modules[spec.name] = pi'

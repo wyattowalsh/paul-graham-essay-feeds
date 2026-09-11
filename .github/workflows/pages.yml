@@ -472,7 +472,7 @@ jobs:
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.12.0"
-          enable-cache: true
+          enable-cache: false
           python-version: "3.13"
 
       - name: Sync
@@ -486,6 +486,18 @@ jobs:
       - name: Assemble Pages artifact
         if: steps.resolve.outputs.deploy == 'true'
         run: uv run python -m paul_graham_essay_feeds.pages --out _site
+
+      - name: Verify Pages artifact
+        if: steps.resolve.outputs.deploy == 'true'
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          from pathlib import Path
+
+          from paul_graham_essay_feeds.pages import verify_pages_artifact
+
+          verify_pages_artifact(Path("_site"), repo_root=Path("."))
+          PY
 
       - name: Configure Pages
         if: steps.resolve.outputs.deploy == 'true'

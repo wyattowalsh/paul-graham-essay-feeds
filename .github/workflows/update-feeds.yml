@@ -47,22 +47,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
-      - name: Classify from fetched origin/main
+      - name: Prove HEAD is the event revision
         id: source
+        env:
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          git fetch --no-tags origin refs/heads/main
-          source_sha="$(git rev-parse --verify FETCH_HEAD)"
-          kind="$(git cat-file -t "${source_sha}")"
-          if [[ "${kind}" != "commit" ]]; then
-            echo "::error::origin/main is not a commit: ${kind}"
+          case "${EVENT_NAME}" in
+            schedule|workflow_dispatch) ;;
+            *)
+              echo "::error::Update feeds supports schedule and workflow_dispatch only: ${EVENT_NAME}"
+              exit 1
+              ;;
+          esac
+          head="$(git rev-parse HEAD)"
+          test "$(git cat-file -t "${head}")" = "commit"
+          if [[ "${head}" != "${GITHUB_SHA_VALUE}" ]]; then
+            echo "::error::HEAD ${head} != GITHUB_SHA ${GITHUB_SHA_VALUE}"
             exit 1
           fi
-          git checkout "${source_sha}" -- catalog.json feeds
-          echo "source_sha=${source_sha}" >> "${GITHUB_OUTPUT}"
-          echo "Classified from origin/main ${source_sha}"
+          echo "source_sha=${head}" >> "${GITHUB_OUTPUT}"
+          echo "Frozen source revision ${head}"
 
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
@@ -184,7 +193,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
+
+      - name: Prove HEAD is the event revision
+        env:
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          test "$(git cat-file -t "${head}")" = "commit"
+          if [[ "${head}" != "${GITHUB_SHA_VALUE}" ]]; then
+            echo "::error::HEAD ${head} != GITHUB_SHA ${GITHUB_SHA_VALUE}"
+            exit 1
+          fi
 
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
@@ -213,7 +235,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
+
+      - name: Prove HEAD is the event revision
+        env:
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          test "$(git cat-file -t "${head}")" = "commit"
+          if [[ "${head}" != "${GITHUB_SHA_VALUE}" ]]; then
+            echo "::error::HEAD ${head} != GITHUB_SHA ${GITHUB_SHA_VALUE}"
+            exit 1
+          fi
 
       - name: Download updated workspace
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -549,5 +584,8 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: product-identity-${{ github.run_id }}-${{ github.run_attempt }}
-          path: product-identity.json
+          path: |
+            product-identity.json
+            product-provenance.json
           if-no-files-found: error
+          retention-days: 90

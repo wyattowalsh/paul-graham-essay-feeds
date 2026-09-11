@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **PGF-FINAL-001:** GitHub Pages `/latest/*` feeds rewrite channel identity.
+  Titles name the latest window and variant, self/feed URLs live under
+  `/latest/…`, and Atom feed ids are `FEED_ID:latest` /
+  `FEED_ID_SIMPLE:latest`. Item ids remain the ordered prefix of the full
+  feeds. Previously colliding `/latest/atom*.xml` feed ids may cause a
+  one-time reader reset for those latest Atom URLs only. Full-feed Atom ids
+  are unchanged. `index.html` now links the latest simple artifacts.
+  `verify_pages_artifact` runs on the exact upload tree.
+- **PGF-FINAL-002:** `update-feeds.yml` generates from the immutable event
+  `github.sha` (HEAD is proven equal to `GITHUB_SHA`). It no longer overlays
+  `catalog.json` / `feeds/` from a later `origin/main` tip onto that checkout.
+- **PGF-FINAL-003:** Release `bom.cdx.json` is a schema-validated CycloneDX 1.5
+  document from `uv export` (default runtime graph). Checksums and
+  attestations cover wheel, sdist, `requirements.txt`, `bom.cdx.json`, and
+  `SHA256SUMS.txt`.
+- **PGF-FINAL-004:** Documentation matches implementation: `atomic_write_bytes`
+  fsyncs the parent directory; product push is exact-OID (not
+  `--force-with-lease`); Pages has no `on: push`; `SECURITY.md` records that
+  `v1.0.0` exists; live `protect-version-tags` has no admin bypass.
+- **PGF-FINAL-005:** `product-provenance.json` is uploaded with the
+  `product-identity-*` artifact (`retention-days: 90`) in addition to being
+  attested. It is not part of the seven-file public product.
+
 ## [1.0.0] - 2026-09-05
 
 First coherent major. Audit close 2026-08-31 (`PGF-2026-*`); Pages canonical

@@ -57,6 +57,9 @@ EXCLUDED_PATHS: Final = frozenset({"/", "/index.html", "/articles.html", "/rss.h
 PROTECTED_PATHS: Final = frozenset({"/ty/cdn/paulgraham/acl1.txt", "/ty/cdn/paulgraham/acl2.txt"})
 FEED_ID: Final = "tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds"
 FEED_ID_SIMPLE: Final = "tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds:simple"
+# Pages /latest/* Atom identities. Distinct from full-feed IDs (PGF-FINAL-001).
+FEED_ID_LATEST: Final = f"{FEED_ID}:latest"
+FEED_ID_SIMPLE_LATEST: Final = f"{FEED_ID_SIMPLE}:latest"
 FEED_TITLE: Final = "Paul Graham Essays — Enriched (Unofficial)"
 FEED_TITLE_SIMPLE: Final = "Paul Graham Essays — Simple (Unofficial)"
 FEED_DESCRIPTION: Final = (
@@ -67,6 +70,10 @@ FEED_DESCRIPTION: Final = (
 )
 HOST_PUBLIC_BASE_URL: Final = "https://wyattowalsh.github.io/paul-graham-essay-feeds/"
 LATEST_FEED_ITEMS: Final = 20
+FEED_TITLE_LATEST: Final = f"Paul Graham Essays — Latest {LATEST_FEED_ITEMS}, Enriched (Unofficial)"
+FEED_TITLE_SIMPLE_LATEST: Final = (
+    f"Paul Graham Essays — Latest {LATEST_FEED_ITEMS}, Simple (Unofficial)"
+)
 AUTHOR: Final = "Paul Graham"
 AUTHOR_URL: Final = "https://paulgraham.com/"
 # Single source of truth: ``__version__`` in ``__init__.py``.

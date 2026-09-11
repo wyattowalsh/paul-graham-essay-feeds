@@ -40,6 +40,7 @@ catalog.json              # durable SSOT (repo root) — mirrors current index
 feeds/rss.xml|atom.xml|feed.json                 # enriched
 feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 # GitHub Pages projection of feeds/ + /latest/* (not committed)
+# /latest/* rewrites feed identity; item ids stay the ordered prefix
 # no site/*
 ```
 
@@ -97,6 +98,7 @@ uv run ruff check .
 uv run ty check
 uv run pytest --cov-fail-under=90
 uv run pg-essay-feeds check --quiet
+uv run python -m paul_graham_essay_feeds.pages --out _site
 uv build --no-sources
 ```
 
