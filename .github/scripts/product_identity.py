@@ -12,8 +12,6 @@ Only the Python standard library is ever imported here; privileged workflow
 steps load this file directly from a validated checkout.
 """
 
-from __future__ import annotations
-
 import hashlib
 import json
 import os

@@ -67,3 +67,11 @@ def test_update_never_force_pushes_and_release_is_not_identity_consumer() -> Non
 def test_cross_run_downloads_bind_source_run_id() -> None:
     for text in (_VERIFY, _CI, _PAGES):
         assert "run-id: ${{ github.event.workflow_run.id }}" in text
+
+
+def test_helper_importlib_loaders_register_sys_modules() -> None:
+    """Dataclass annotation resolution requires the module in sys.modules."""
+    needle = '__import__("sys").modules[spec.name] = pi'
+    for text in (_UPDATE, _VERIFY, _CI, _PAGES):
+        assert needle in text
+        assert text.count("spec.loader.exec_module(pi)") == text.count(needle)

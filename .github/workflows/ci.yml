@@ -141,6 +141,7 @@ jobs:
               "product_identity", Path(".github/scripts/product_identity.py")
           )
           pi = importlib.util.module_from_spec(spec)
+          __import__("sys").modules[spec.name] = pi
           spec.loader.exec_module(pi)
           repo = os.environ["GITHUB_REPOSITORY"]
           run_id = int(os.environ["RUN_ID"])
@@ -213,6 +214,7 @@ jobs:
               "product_identity", Path(".github/scripts/product_identity.py")
           )
           pi = importlib.util.module_from_spec(spec)
+          __import__("sys").modules[spec.name] = pi
           spec.loader.exec_module(pi)
           fmt = pi.git_object_format(Path("."))
           download = Path(os.environ["RUNNER_TEMP"]) / "product-identity"
@@ -548,6 +550,7 @@ jobs:
               "product_identity", Path(".github/scripts/product_identity.py")
           )
           pi = importlib.util.module_from_spec(spec)
+          __import__("sys").modules[spec.name] = pi
           spec.loader.exec_module(pi)
           fmt = pi.git_object_format(Path("."))
           route = os.environ["ROUTE"]

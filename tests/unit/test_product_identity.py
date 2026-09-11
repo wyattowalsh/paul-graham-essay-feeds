@@ -175,6 +175,19 @@ def tree_root(tmp_path: Path) -> Path:
     return make_tree(tmp_path, dict(BASE_FILES))
 
 
+class TestImportlibWorkflowLoad:
+    def test_unregistered_load_constructs_dataclasses(self) -> None:
+        name = "product_identity_unregistered_load"
+        sys.modules.pop(name, None)
+        spec = importlib.util.spec_from_file_location(name, _HELPER)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        record = module.RestMetadata(RUN_ID, RUN_ATTEMPT, module.REPOSITORY, "updated")
+        assert record.run_id == RUN_ID
+        sys.modules.pop(name, None)
+
+
 # --- A. canonical JSON and identity document -----------------------------------
 
 

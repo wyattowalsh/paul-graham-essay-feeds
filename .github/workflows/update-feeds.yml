@@ -120,6 +120,7 @@ jobs:
               "product_identity", Path(".github/scripts/product_identity.py")
           )
           pi = importlib.util.module_from_spec(spec)
+          __import__("sys").modules[spec.name] = pi
           spec.loader.exec_module(pi)
           fmt = pi.git_object_format(Path("."))
           source_sha = os.environ["SOURCE_SHA"]
@@ -245,6 +246,7 @@ jobs:
               "product_identity", Path(".github/scripts/product_identity.py")
           )
           pi = importlib.util.module_from_spec(spec)
+          __import__("sys").modules[spec.name] = pi
           spec.loader.exec_module(pi)
           cand = Path(os.environ["RUNNER_TEMP"]) / "candidate"
           blobs = pi.validate_candidate_tree(cand)
@@ -286,6 +288,7 @@ jobs:
               "product_identity", Path(".github/scripts/product_identity.py")
           )
           pi = importlib.util.module_from_spec(spec)
+          __import__("sys").modules[spec.name] = pi
           spec.loader.exec_module(pi)
 
           repo = Path(".").resolve()
@@ -499,6 +502,7 @@ jobs:
               "product_identity", Path(".github/scripts/product_identity.py")
           )
           pi = importlib.util.module_from_spec(spec)
+          __import__("sys").modules[spec.name] = pi
           spec.loader.exec_module(pi)
           fmt = pi.git_object_format(Path("."))
           identity = pi.build_identity_document(
