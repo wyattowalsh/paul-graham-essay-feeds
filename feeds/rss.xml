@@ -11,6 +11,13 @@
     <docs>https://www.rssboard.org/rss-specification</docs>
     <ttl>1440</ttl>
     <atom:link rel="self" type="application/rss+xml" href="https://wyattowalsh.github.io/paul-graham-essay-feeds/rss.xml" />
+    <image>
+      <url>https://wyattowalsh.github.io/paul-graham-essay-feeds/rss-channel-image-144x144.png</url>
+      <title>Paul Graham Essays — Enriched (Unofficial)</title>
+      <link>https://paulgraham.com/articles.html</link>
+      <width>144</width>
+      <height>144</height>
+    </image>
     <item>
       <title>How Universities Should Prepare Founders</title>
       <link>https://paulgraham.com/prepare.html</link>
