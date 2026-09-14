@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
   <title>Paul Graham Essays — Simple (Unofficial)</title>
   <id>tag:wyattowalsh.github.io,2026:paul-graham-essay-feeds:simple</id>
-  <updated>2026-08-31T17:52:38Z</updated>
+  <updated>2026-09-14T06:53:14Z</updated>
   <subtitle>Unofficial titles, links, page metadata, and short source excerpts for Paul Graham's essays — never complete essay bodies. Ordered newest to oldest from the official index. Dates may be when this feed observed or detected a change, not the essay's original publication date.</subtitle>
   <author>
     <name>Paul Graham</name>
@@ -13,6 +13,13 @@
   <link rel="self" type="application/atom+xml" href="https://wyattowalsh.github.io/paul-graham-essay-feeds/atom.simple.xml" />
   <icon>https://wyattowalsh.github.io/paul-graham-essay-feeds/atom-icon-144x144.png</icon>
   <logo>https://wyattowalsh.github.io/paul-graham-essay-feeds/atom-logo-512x256.png</logo>
+  <entry>
+    <title>Making Startups Powerful</title>
+    <id>https://paulgraham.com/powerful.html</id>
+    <updated>2026-09-14T06:53:14Z</updated>
+    <summary type="text">Read “Making Startups Powerful” by Paul Graham.</summary>
+    <link rel="alternate" href="https://paulgraham.com/powerful.html" />
+  </entry>
   <entry>
     <title>How Universities Should Prepare Founders</title>
     <id>https://paulgraham.com/prepare.html</id>

@@ -5,7 +5,7 @@
     <link>https://paulgraham.com/articles.html</link>
     <description>Unofficial titles, links, page metadata, and short source excerpts for Paul Graham's essays — never complete essay bodies. Ordered newest to oldest from the official index. Dates may be when this feed observed or detected a change, not the essay's original publication date.</description>
     <language>en-US</language>
-    <lastBuildDate>Mon, 31 Aug 2026 17:52:38 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 14 Sep 2026 06:53:14 GMT</lastBuildDate>
     <category>Essays</category>
     <generator>pg-essay-feeds/1.0.0</generator>
     <docs>https://www.rssboard.org/rss-specification</docs>
@@ -18,6 +18,14 @@
       <width>144</width>
       <height>144</height>
     </image>
+    <item>
+      <title>Making Startups Powerful</title>
+      <link>https://paulgraham.com/powerful.html</link>
+      <description>Read “Making Startups Powerful” by Paul Graham.</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/powerful.html</guid>
+    </item>
     <item>
       <title>How Universities Should Prepare Founders</title>
       <link>https://paulgraham.com/prepare.html</link>
