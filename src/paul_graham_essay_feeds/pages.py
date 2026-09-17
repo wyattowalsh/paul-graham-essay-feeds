@@ -444,6 +444,9 @@ def _project_json(text: str, *, simple: bool, limit: int) -> str:
     meta = data.get("_pg_essay_feeds")
     if isinstance(meta, dict):
         meta["item_count"] = len(data["items"])
+        fingerprint = meta.get("index_fingerprint")
+        if isinstance(fingerprint, str):
+            meta["index_fingerprint"] = "\n".join(fingerprint.splitlines()[:limit])
     return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
 
 
@@ -877,9 +880,25 @@ def _verify_latest_json(full: bytes, latest: bytes, *, simple: bool) -> None:
         raise FeedError(f"latest JSON title {latest_data.get('title')!r} is incorrect")
     if latest_data.get("description") != latest_description():
         raise FeedError("latest JSON description must identify a bounded projection")
-    meta = latest_data.get("_pg_essay_feeds")
-    if isinstance(meta, dict) and meta.get("item_count") != expected:
-        raise FeedError("latest JSON _pg_essay_feeds.item_count must match items")
+    latest_meta = latest_data.get("_pg_essay_feeds")
+    latest_fingerprint: str | None = None
+    if isinstance(latest_meta, dict):
+        if latest_meta.get("item_count") != expected:
+            raise FeedError("latest JSON _pg_essay_feeds.item_count must match items")
+        fingerprint = latest_meta.get("index_fingerprint")
+        if isinstance(fingerprint, str):
+            if len(fingerprint.splitlines()) != len(latest_items):
+                raise FeedError("latest JSON index_fingerprint line count must match items")
+            latest_fingerprint = fingerprint
+    full_meta = full_data.get("_pg_essay_feeds")
+    if isinstance(full_meta, dict):
+        full_fingerprint = full_meta.get("index_fingerprint")
+        if isinstance(full_fingerprint, str):
+            expected_fingerprint = "\n".join(full_fingerprint.splitlines()[:expected])
+            if latest_fingerprint != expected_fingerprint:
+                raise FeedError(
+                    "latest JSON index_fingerprint must be an ordered prefix of the full feed"
+                )
 
 
 def verify_pages_artifact(dest: Path, *, repo_root: Path | None = None) -> None:

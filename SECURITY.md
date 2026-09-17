@@ -13,15 +13,11 @@ SHA), impact, and a reproducer if you have one.
 
 ## Supported versions
 
-The current tagged release is **1.0.0** (`v1.0.0`). Package `__version__` on
-`main` is **1.0.1** until the operator can create `v1.0.1`. `main` may contain
-unpublished patches until the next tag.
-
-Future `v*` tags are an operator-blocked action while the live
-`protect-version-tags` ruleset restricts `refs/tags/v*` with an empty bypass
-list (`current_user_can_bypass: never`, including repository administrators). Do
-not treat a GitHub Release as a substitute for an annotated tag. Do not move or
-overwrite `v1.0.0`.
+The current tagged release is **1.0.1** (`v1.0.1`). Do not treat a GitHub
+Release as a substitute for an annotated tag. Do not move or overwrite
+`v1.0.0`. `protect-version-tags` (id `22371020`) no longer restricts tag
+**creation**; `update` / `deletion` / `non_fast_forward` remain, with an empty
+bypass list (`current_user_can_bypass: never`).
 
 ## Scope
 

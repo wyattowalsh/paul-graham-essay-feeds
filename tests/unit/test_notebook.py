@@ -62,7 +62,7 @@ def test_notebook_static_contract() -> None:
     assert "uvx" in source
     assert '!pip install -q "uv==0.12.15"' in source
     assert "uv>=0.12" not in source
-    assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.0"' in source
+    assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.1"' in source
     assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v0.2.0"' not in source
     assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main"' not in source
     for name in FEED_NAMES:

@@ -16,6 +16,7 @@ _ENRICHED = ("rss.xml", "atom.xml", "feed.json")
 _GIT_MAIN = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main"
 _GIT_V020 = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v0.2.0"
 _GIT_V100 = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.0"
+_GIT_V101 = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.1"
 _HEDGE_SENTENCE = "until the `v1.0.0` tag exists, install from `main`"
 
 
@@ -53,7 +54,7 @@ def test_changelog_1_0_1_closes_unreleased_and_keeps_1_0_0() -> None:
         assert token in section, f"missing {token} in [1.0.1]"
     docs = _text(".github/DOCS.md")
     assert "Package `__version__` is `1.0.1`" in docs
-    assert _GIT_V100 in docs
+    assert _GIT_V101 in docs
 
 
 def test_changelog_1_0_0_lists_pgf_2026_001_through_022() -> None:
@@ -69,21 +70,22 @@ def test_changelog_1_0_0_lists_pgf_2026_001_through_022() -> None:
     assert changelog.index("## [1.0.1]") < start
 
 
-def test_readme_and_notebook_pin_v1_0_0() -> None:
+def test_readme_and_notebook_pin_v1_0_1() -> None:
     readme = _text("README.md")
     notebook = _text("notebook.ipynb")
-    assert _GIT_V100 in readme
+    assert _GIT_V101 in readme
+    assert _GIT_V100 not in readme
     assert _GIT_V020 not in readme
     assert _GIT_MAIN not in readme
     assert _HEDGE_SENTENCE not in readme
-    assert _GIT_V100 in notebook
+    assert _GIT_V101 in notebook
+    assert _GIT_V100 not in notebook
     assert _GIT_V020 not in notebook
     assert _GIT_MAIN not in notebook
     assert _HEDGE_SENTENCE not in notebook
-    assert "v1.0.0" in notebook
-    assert "1.0.0" in notebook
-    assert "@v1.0.1" not in notebook
-    assert _GIT_V100 in _text(".github/DOCS.md")
+    assert "@v1.0.1" in notebook
+    assert _GIT_V101 in _text(".github/DOCS.md")
+    assert _GIT_V100 not in _text(".github/DOCS.md")
     assert "/tmp/pg-action.txt" not in readme
     assert "--result-file .cache/pg-action.txt" in readme
 
@@ -187,6 +189,8 @@ def test_docs_match_current_pages_publication_and_sbom_contracts() -> None:
     security = _text("SECURITY.md")
     assert "Until the `v1.0.0` tag exists" not in security
     assert "v1.0.0" in security
+    assert "1.0.1" in security
+    assert "`v1.0.1`" in security
     readme = _text("README.md")
     assert "same files, first twenty items" not in readme
     assert "/latest/rss.simple.xml" in readme

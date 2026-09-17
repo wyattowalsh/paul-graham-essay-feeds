@@ -193,12 +193,16 @@ def test_slice_latest_json_caps_and_rewrites_identity() -> None:
         }
         for i in range(25)
     ]
+    fingerprint = "\n".join(f"{i}\tid{i}\thttps://paulgraham.com/{i}.html\tT{i}" for i in range(25))
     raw = json.dumps(
         {
             "title": "Paul Graham Essays — Enriched (Unofficial)",
             "feed_url": f"{_HOST}/feed.json",
             "items": items,
-            "_pg_essay_feeds": {"item_count": 25},
+            "_pg_essay_feeds": {
+                "item_count": 25,
+                "index_fingerprint": fingerprint,
+            },
         }
     )
     sliced = json.loads(slice_latest(raw, "json"))
@@ -208,6 +212,9 @@ def test_slice_latest_json_caps_and_rewrites_identity() -> None:
     assert sliced["feed_url"] == f"{_HOST}/latest/feed.json"
     assert "bounded newest-first" in sliced["description"].lower()
     assert sliced["_pg_essay_feeds"]["item_count"] == LATEST_FEED_ITEMS
+    latest_fp = sliced["_pg_essay_feeds"]["index_fingerprint"]
+    assert latest_fp.splitlines() == fingerprint.splitlines()[:LATEST_FEED_ITEMS]
+    assert len(latest_fp.splitlines()) == 20
 
 
 def test_slice_latest_rss_rewrites_header_and_keeps_first_n() -> None:
@@ -405,6 +412,12 @@ def test_assemble_committed_feeds_latest_identity(tmp_path: Path) -> None:
             assert data["title"] == latest_title(simple=simple)
             assert len(data["items"]) == LATEST_FEED_ITEMS
             assert data["items"] == full["items"][:LATEST_FEED_ITEMS]
+            latest_fp = data["_pg_essay_feeds"]["index_fingerprint"]
+            full_fp = full["_pg_essay_feeds"]["index_fingerprint"]
+            assert isinstance(latest_fp, str)
+            assert isinstance(full_fp, str)
+            assert len(latest_fp.splitlines()) == LATEST_FEED_ITEMS
+            assert latest_fp.splitlines() == full_fp.splitlines()[:LATEST_FEED_ITEMS]
         elif "atom" in name:
             root = ET.parse(latest).getroot()
             full_root = ET.parse(dest / name).getroot()

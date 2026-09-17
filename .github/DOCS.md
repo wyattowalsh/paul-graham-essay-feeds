@@ -553,7 +553,7 @@ use the GitHub Pages subscribe URLs in README. Colab is for generating a private
 5. Troubleshooting cell (`#@title` + form-hidden HTML `<details>`)
 
 No package API imports in the kernel; CLI only via `uvx` from
-`git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.0`.
+`git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.1`.
 `notebook.ipynb` stays ruff/ty-excluded.
 
 ---
@@ -569,7 +569,7 @@ No package API imports in the kernel; CLI only via `uvx` from
    runs the same quality gates as CI, then builds wheel/sdist, creates a
    GitHub Release via softprops with **auto-generated release notes** (from
    commits/PRs since the previous tag), and attaches `dist/*`. No `uv publish`
-   on tag. User install pin is `@v1.0.0`.
+   on tag. User install pin is `@v1.0.1`.
 
 Attested `requirements.txt` is **inventory**, not an install pin: a frozen
 `name==version` export of the default runtime graph (`uv export --frozen
@@ -586,7 +586,7 @@ just build   # local: uv build --no-sources + wheel smoke
 
 > [!NOTE]
 > Hatch sdist excludes `/feeds`, `/.github`, `/.venv`, and `/dist`. That does
-> **not** break `uvx --from git+…@v1.0.0`: git install still clones the full
+> **not** break `uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.1`: git install still clones the full
 > repo (committed feeds available locally); installed wheels write `feeds/`
 > at runtime.
 
@@ -621,8 +621,7 @@ requires `content_text` without matching regenerated artifacts in the same chang
 
 Package `__version__` is `1.0.1`. Historical `[0.2.0]` in CHANGELOG is the
 prior advertised-but-untagged integrity work — do not revive `@v0.2.0` as a
-user pin. User docs and the notebook still install from `@v1.0.0` until
-`v1.0.1` exists (tag create is operator-blocked on ruleset `22371020`).
+user pin. User docs and the notebook install from `@v1.0.1`.
 
 ### Branch protection (rulesets)
 
@@ -720,26 +719,31 @@ EOF
 > (`actor_id` `15368`) on a source ruleset. That would let any sufficiently
 > privileged workflow skip review on `src/` and workflows.
 
-Tag protection (separate ruleset; restrict creation of `v*` to a human who
-verified CI on that exact SHA — GitHub cannot bind “CI passed” into tag
-create; `release.yml` also requires the tagged SHA to be an ancestor of
-`origin/main`).
+Tag protection (separate ruleset; target policy has **no** `creation` rule).
+GitHub cannot bind “CI passed” into tag create; `release.yml` still requires
+the tagged SHA to be an ancestor of `origin/main`. Pages deploy integrity is
+`workflow_run` on successful CI; live `main` required checks remain PGF-2026-031
+accepted risk.
 
 > [!IMPORTANT]
-> Live `protect-version-tags` (id `22371020`) is active on `refs/tags/v*`
-> with `creation`, `update`, `deletion`, and `non_fast_forward`, and
-> `bypass_actors: []`. GitHub reports `current_user_can_bypass: never` even
-> for the repository owner. Empty bypass does **not** fall back to
-> repository-admin bypass for tag creation. The next `v*` tag is therefore an
-> **operator-only blocker**: add a named bypass actor, or temporarily relax
-> the ruleset, then restore it. Do not overwrite `v1.0.0`.
+> Live `protect-version-tags` (id `22371020`) is active on `refs/tags/v*` with
+> `update`, `deletion`, and `non_fast_forward` only (`creation` is absent) and
+> `bypass_actors: []`. GitHub reports `current_user_can_bypass: never`. Write
+> collaborators can CREATE `v*` tags; they still cannot move or delete them.
+> Do not overwrite `v1.0.0`. Agents must not PUT unless the operator asked.
 
 Maintainer-apply snippet (do not run from an agent session unless asked).
-If recreating the ruleset, include an explicit bypass actor for the intended
-release operator — an empty list will block everyone, including admins:
+GET ruleset `22371020`, then PUT the same document with `creation` removed.
+GitHub’s verb is PUT `/repos/{owner}/{repo}/rulesets/{id}`, not PATCH. Do not
+POST a new ruleset as the happy path. Keep `bypass_actors` empty; do not grant
+Actions integration bypass.
 
 ```bash
-gh api --method POST repos/wyattowalsh/paul-graham-essay-feeds/rulesets \
+# Read-only GET — agents may run this.
+gh api repos/wyattowalsh/paul-graham-essay-feeds/rulesets/22371020
+
+# PUT target policy — operator only. Agents must not PUT.
+gh api --method PUT repos/wyattowalsh/paul-graham-essay-feeds/rulesets/22371020 \
   --input - <<'EOF'
 {
   "name": "protect-version-tags",
@@ -753,7 +757,6 @@ gh api --method POST repos/wyattowalsh/paul-graham-essay-feeds/rulesets \
     }
   },
   "rules": [
-    { "type": "creation" },
     { "type": "update" },
     { "type": "deletion" },
     { "type": "non_fast_forward" }
@@ -945,7 +948,8 @@ commits the catalog.
 - Commands: `update` + `check` only (no `site` / legacy pipeline escape hatches).
   `update --abandon-recovery` is a flag on `update`, not a third command.
 - Flags override Settings only when explicitly passed (None-sentinel dual bools
-  **or** `_cmdline_or_none` for quiet/verbose — see [§ Precedence](#precedence)).
+  **or** `_cmdline_or_none` for quiet/verbose and `--allow-bootstrap-fallback` /
+  `--no-allow-bootstrap-fallback` — see [§ Precedence](#precedence)).
 - Quiet success → **zero bytes** on stdout **and** stderr. Carve-out:
   `--result-file` and `$GITHUB_OUTPUT` still append `links_checked` /
   `links_skipped` and `action=…` under `--quiet`.
@@ -966,8 +970,7 @@ commits the catalog.
   third-party text.
 - Short source-derived summaries only; no full-body storage.
 - Release tags must match package version; user-facing CHANGELOG only.
-  Package version is `1.0.1`; user docs pin `@v1.0.0` until `v1.0.1`
-  exists (PGF-2026-004).
+  Package version is `1.0.1`; user docs pin `@v1.0.1` (PGF-2026-004).
 - Scheduled automation commits deterministic `catalog.json` + `feeds/` to `main`.
 - Signing of published product files uses **GitHub Actions artifact attestations**
   (`actions/attest-build-provenance` on the Update feeds publish job), not a
@@ -988,8 +991,8 @@ commits the catalog.
   `sha256sum -c SHA256SUMS.txt` and
   `gh attestation verify dist/<asset> --repo wyattowalsh/paul-graham-essay-feeds`
   (expected workflow: `.github/workflows/release.yml`). Attestations are not
-  useful unless verified. The next `v*` tag is operator-blocked while
-  `protect-version-tags` has an empty bypass list.
+  useful unless verified. `protect-version-tags` no longer restricts `v*`
+  **creation**; write collaborators still cannot move or delete those tags.
 
 ### AD-008 — CI clean
 

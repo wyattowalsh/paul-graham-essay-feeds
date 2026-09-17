@@ -10,11 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.1] - 2026-09-17
 
 Audit closer. Package `__version__` is `1.0.1`. User docs and the notebook
-still pin `@v1.0.0` until the operator can create `v1.0.1` (ruleset
-`22371020`). Committed `feeds/` generator chrome stays `pg-essay-feeds/1.0.0`
+pin `@v1.0.1`. Committed `feeds/` generator chrome stays `pg-essay-feeds/1.0.0`
 until the next scheduled generation. HTTP attempt-ceiling **T-011** is skipped.
 
 ### Changed
+
+- **PGF-AUDIT-001:** Tag-protection docs and live ruleset `22371020` drop
+  `creation` (GET then PUT). Offline `tag_create_preflight.py` exits 2 when
+  `creation` is present and 0 when it is absent.
+- **PGF-AUDIT-002:** Pages `/latest/*` JSON slices `index_fingerprint` to the
+  ordered prefix of the full feed (does not copy the full catalog fingerprint).
+- **PGF-AUDIT-009:** CHANGELOG footer compare URLs use existing tags;
+  `[Unreleased]` is `v1.0.1...HEAD`.
 
 - **PGF-FINAL-006:** GitHub Pages `index.html` is a subscribe landing: Simple
   RSS is the primary action; remaining formats are Simple vs Enriched of the
@@ -401,5 +408,4 @@ origin and bot-cycle rebuild 2026-09-01…05 (PGF-2026-023–040). Historical
 [Unreleased]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v1.0.1...HEAD
 [1.0.1]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/releases/tag/v1.0.0
-[0.2.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/releases/tag/v0.1.0

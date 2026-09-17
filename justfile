@@ -204,3 +204,10 @@ build:
     wheel="$(ls -1 dist/*.whl | sort | tail -n 1)"
     {{ uv }} run --isolated --no-project --with "${wheel}" pg-essay-feeds --help
 alias b := build
+
+# Offline tag-create preflight (create-ok fixture). Operator-only live GET:
+#   uv run python .github/scripts/tag_create_preflight.py --live
+[group("checks")]
+[doc("Offline tag-create preflight against the create-ok ruleset fixture")]
+@tag-preflight:
+    {{ uv }} run python .github/scripts/tag_create_preflight.py --ruleset-json tests/fixtures/audit/ruleset_vstar_create_ok.json

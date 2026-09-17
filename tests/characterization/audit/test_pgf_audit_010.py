@@ -25,7 +25,8 @@ def test_notebook_zip_members_are_feeds_prefixed_and_rooted() -> None:
     assert "path escapes ROOT" in source
     assert '!pip install -q "uv==0.12.15"' in source
     assert "uv>=0.12" not in source
-    assert "@v1.0.0" in source
+    assert "@v1.0.1" in source
+    assert "@v1.0.0" not in source
     zip_block = source[source.index("def _must_stay_in_root") : source.index("downloaded")]
     assert "catalog.json" not in zip_block
     assert 'zf.write(src, arcname=f"feeds/{name}")' in zip_block

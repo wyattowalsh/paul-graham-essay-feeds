@@ -103,7 +103,7 @@ twenty items of the corresponding full feed:
 
 ```bash
 mkdir pg-feeds && cd pg-feeds
-uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.0 \
+uvx --from git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.1 \
   pg-essay-feeds update
 ```
 
@@ -239,7 +239,7 @@ after zip). Zips all six `feeds/{rss,atom,feed}{,.simple}.*` files.
 Reachability issues show in a report-only status panel without blocking
 the zip. Output path is under Advanced (`/content/pg-feeds`).
 
-Install pin: `git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.0`.
+Install pin: `git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.1`.
 
 Local clone:
 

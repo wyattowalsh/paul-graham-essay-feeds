@@ -1,0 +1,22 @@
+{
+  "id": 22371020,
+  "name": "protect-version-tags",
+  "target": "tag",
+  "source_type": "Repository",
+  "enforcement": "active",
+  "current_user_can_bypass": "never",
+  "unknown_future_field": true,
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/tags/v*"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    { "type": "creation" },
+    { "type": "update" },
+    { "type": "deletion" },
+    { "type": "non_fast_forward" }
+  ]
+}

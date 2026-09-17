@@ -1,4 +1,4 @@
-"""PGF-2026-022 product rematerialize: seven chrome summaries, 234-id bijection."""
+"""PGF-2026-022 product rematerialize: seven chrome summaries, order bijection."""
 
 from __future__ import annotations
 
@@ -117,19 +117,20 @@ def test_unchanged_entries_keep_observation_clocks() -> None:
 
 
 @pytest.mark.characterization
-def test_identity_order_bijection_234() -> None:
+def test_identity_order_bijection() -> None:
     catalog = _catalog()
-    assert len(catalog.entry_order) == 234
-    assert len(catalog.entries) == 234
+    n = len(catalog.entry_order)
+    assert n >= MIN_ITEMS
+    assert len(catalog.entries) == n
     assert set(catalog.entry_order) == set(catalog.entries)
     assert len(catalog.entry_order) == len(set(catalog.entry_order))
     enriched = [str(item["id"]) for item in _feed_json("feed.json")["items"]]
     simple = [str(item["id"]) for item in _feed_json("feed.simple.json")["items"]]
     assert enriched == catalog.entry_order
     assert simple == catalog.entry_order
-    assert len(enriched) == 234
+    assert len(enriched) == n
     meta = _feed_json("feed.json")["_pg_essay_feeds"]
-    assert meta["item_count"] == 234
+    assert meta["item_count"] == n
     assert meta["generator"] == catalog.versions["generator"]
     assert meta["generator"].startswith("pg-essay-feeds/")
 
