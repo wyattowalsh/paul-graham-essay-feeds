@@ -7,9 +7,10 @@ Prefer returning :class:`VerificationReport` for testability. Use
 from __future__ import annotations
 
 import json
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Final, Literal, cast
@@ -63,11 +64,18 @@ SELF_LINK_MISMATCH: Final = "SELF_LINK_MISMATCH"
 FEED_ID_COLLISION: Final = "FEED_ID_COLLISION"
 VARIANT_IDENTITY: Final = "VARIANT_IDENTITY"
 FEED_CLOCK: Final = "FEED_CLOCK"
+CLOCK_MISMATCH: Final = "CLOCK_MISMATCH"
+FORBIDDEN_CONTENT: Final = "FORBIDDEN_CONTENT"
 SEMANTIC_SUMMARY: Final = "SEMANTIC_SUMMARY"
 CATALOG_UNREADABLE: Final = "CATALOG_UNREADABLE"
 CATALOG_FIELD_MISMATCH: Final = "CATALOG_FIELD_MISMATCH"
 ITEM_HOST: Final = "ITEM_HOST"
 _MAX_ARTIFACT_BYTES: Final = 20 * 1024 * 1024
+_CONTENT_ENCODED_NS: Final = "http://purl.org/rss/1.0/modules/content/"
+_UNIX_EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
+_RFC3339_ATOM: Final = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
+)
 
 _REPLACEMENT = "\ufffd"
 
@@ -162,6 +170,8 @@ class _ItemView:
     title: str
     url: str
     summary: str
+    published_raw: str | None = None
+    modified_raw: str | None = None
     content_text: str | None = None
 
 
@@ -186,6 +196,19 @@ def _text(el: ET.Element | None) -> str:
     return el.text
 
 
+def _optional_child_text(parent: ET.Element, local: str, ns: str | None = None) -> str | None:
+    tag = f"{{{ns}}}{local}" if ns else local
+    raw = _text(parent.find(tag)).strip()
+    return raw or None
+
+
+def _optional_json_str(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    return text or None
+
+
 def _parse_rss_items(raw: bytes, *, path: str) -> list[_ItemView] | VerificationViolation:
     try:
         root = ET.fromstring(raw)
@@ -204,6 +227,7 @@ def _parse_rss_items(raw: bytes, *, path: str) -> list[_ItemView] | Verification
                 title=_text(item.find("title")),
                 url=_text(item.find("link")),
                 summary=_text(item.find("description")),
+                published_raw=_optional_child_text(item, "pubDate"),
             )
         )
     return items
@@ -240,6 +264,8 @@ def _parse_atom_items(raw: bytes, *, path: str) -> list[_ItemView] | Verificatio
                 title=_text(entry.find(f"{{{ATOM_NS}}}title")),
                 url=_atom_link_href(entry),
                 summary=_text(entry.find(f"{{{ATOM_NS}}}summary")),
+                published_raw=_optional_child_text(entry, "published", ATOM_NS),
+                modified_raw=_optional_child_text(entry, "updated", ATOM_NS),
             )
         )
     return items
@@ -290,6 +316,8 @@ def _parse_json_items(raw: bytes, *, path: str) -> list[_ItemView] | Verificatio
                 title=str(title) if title is not None else "",
                 url=str(url) if url is not None else "",
                 summary=summary if isinstance(summary, str) else "",
+                published_raw=_optional_json_str(item.get("date_published")),
+                modified_raw=_optional_json_str(item.get("date_modified")),
                 content_text=content_text if isinstance(content_text, str) else None,
             )
         )
@@ -494,6 +522,19 @@ def _is_valid_uri(value: str) -> bool:
     return bool(parts.netloc or parts.path)
 
 
+def _parse_rfc822(text: str) -> datetime | None:
+    raw = text.strip()
+    if not raw:
+        return None
+    try:
+        parsed = parsedate_to_datetime(raw)
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(UTC)
+
+
 def _is_rfc822(text: str) -> bool:
     raw = text.strip()
     if not raw:
@@ -505,16 +546,64 @@ def _is_rfc822(text: str) -> bool:
     return True
 
 
-def _is_rfc3339(text: str) -> bool:
+def _parse_strict_rfc3339(text: str) -> datetime | None:
     raw = text.strip()
-    if not raw:
-        return False
-    candidate = raw[:-1] + "+00:00" if raw.endswith(("Z", "z")) else raw
+    if not raw or not _RFC3339_ATOM.fullmatch(raw):
+        return None
+    candidate = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
     try:
-        parsed = datetime.fromisoformat(candidate)
+        return datetime.fromisoformat(candidate).astimezone(UTC)
     except ValueError:
-        return False
-    return parsed.tzinfo is not None
+        return None
+
+
+def _is_unix_epoch(value: datetime) -> bool:
+    return value.astimezone(UTC) == _UNIX_EPOCH
+
+
+def _instant_seconds(value: datetime) -> datetime:
+    return value.astimezone(UTC).replace(microsecond=0)
+
+
+def _is_rss_content_encoded(tag: str) -> bool:
+    if tag == "content:encoded":
+        return True
+    return _local_name(tag) == "encoded" and _namespace(tag) == _CONTENT_ENCODED_NS
+
+
+def _is_atom_content(tag: str) -> bool:
+    return _local_name(tag) == "content" and _namespace(tag) in {ATOM_NS, None}
+
+
+def _rfc3339_clock_violations(
+    value: str,
+    *,
+    path: str,
+    name: str,
+    label: str,
+    unparseable_code: str,
+    index: int | None = None,
+) -> list[VerificationViolation]:
+    parsed = _parse_strict_rfc3339(value)
+    if parsed is None:
+        return [
+            VerificationViolation(
+                code=unparseable_code,
+                message=f"{name} {label} is not a parseable RFC3339 timestamp",
+                path=path,
+                index=index,
+            )
+        ]
+    if _is_unix_epoch(parsed):
+        return [
+            VerificationViolation(
+                code=FEED_CLOCK,
+                message=f"{name} {label} must not be the Unix epoch sentinel",
+                path=path,
+                index=index,
+            )
+        ]
+    return []
 
 
 def _path_basename(url: str) -> str:
@@ -712,6 +801,24 @@ def _check_rss_contract(
                     path=path,
                 )
             )
+        else:
+            parsed_build = _parse_rfc822(stamp)
+            if parsed_build is not None and _is_unix_epoch(parsed_build):
+                out.append(
+                    VerificationViolation(
+                        code=FEED_CLOCK,
+                        message=f"{name} lastBuildDate must not be the Unix epoch sentinel",
+                        path=path,
+                    )
+                )
+    if any(_is_rss_content_encoded(el.tag) for el in root.iter()):
+        out.append(
+            VerificationViolation(
+                code=FORBIDDEN_CONTENT,
+                message=f"{name} must not contain content:encoded (full essay body)",
+                path=path,
+            )
+        )
     out.extend(
         _self_link_violations(
             actual=_rss_self_href(channel),
@@ -754,6 +861,19 @@ def _check_rss_contract(
                         index=i,
                     )
                 )
+            else:
+                parsed_pub = _parse_rfc822(stamp)
+                if parsed_pub is not None and _is_unix_epoch(parsed_pub):
+                    out.append(
+                        VerificationViolation(
+                            code=FEED_CLOCK,
+                            message=(
+                                f"{name} items[{i}] pubDate must not be the Unix epoch sentinel"
+                            ),
+                            path=path,
+                            index=i,
+                        )
+                    )
     return out
 
 
@@ -823,10 +943,7 @@ def _check_atom_contract(
                         path=path,
                     )
                 )
-            if value != expected_id and not (kind == "simple" and value == FEED_ID):
-                # Simple triples that still carry FEED_ID are common write_feeds
-                # fixtures used by CLI ``check``. Directory verification still
-                # flags FEED_ID_COLLISION / VARIANT_IDENTITY when both variants exist.
+            if value != expected_id:
                 out.append(
                     VerificationViolation(
                         code=VARIANT_IDENTITY,
@@ -836,12 +953,14 @@ def _check_atom_contract(
                         path=path,
                     )
                 )
-        elif local == "updated" and not _is_rfc3339(value):
-            out.append(
-                VerificationViolation(
-                    code=FEED_CLOCK,
-                    message=f"{name} feed updated is not a parseable RFC3339 timestamp",
+        elif local == "updated":
+            out.extend(
+                _rfc3339_clock_violations(
+                    value,
                     path=path,
+                    name=name,
+                    label="feed updated",
+                    unparseable_code=FEED_CLOCK,
                 )
             )
     authors = _children(feed, "author", ATOM_NS)
@@ -903,26 +1022,28 @@ def _check_atom_contract(
                         index=i,
                     )
                 )
-            if local == "updated" and value and not _is_rfc3339(value):
-                out.append(
-                    VerificationViolation(
-                        code=INVALID_TIMESTAMP,
-                        message=f"{name} entries[{i}] updated is not a parseable RFC3339 timestamp",
+            if local == "updated" and value:
+                out.extend(
+                    _rfc3339_clock_violations(
+                        value,
                         path=path,
+                        name=name,
+                        label=f"entries[{i}] updated",
+                        unparseable_code=INVALID_TIMESTAMP,
                         index=i,
                     )
                 )
         published_els = _children(entry, "published", ATOM_NS)
         if published_els:
             stamp = _text(published_els[0])
-            if stamp.strip() and not _is_rfc3339(stamp):
-                out.append(
-                    VerificationViolation(
-                        code=INVALID_TIMESTAMP,
-                        message=(
-                            f"{name} entries[{i}] published is not a parseable RFC3339 timestamp"
-                        ),
+            if stamp.strip():
+                out.extend(
+                    _rfc3339_clock_violations(
+                        stamp,
                         path=path,
+                        name=name,
+                        label=f"entries[{i}] published",
+                        unparseable_code=INVALID_TIMESTAMP,
                         index=i,
                     )
                 )
@@ -937,6 +1058,14 @@ def _check_atom_contract(
                         index=i,
                     )
                 )
+    if any(_is_atom_content(el.tag) for el in root.iter()):
+        out.append(
+            VerificationViolation(
+                code=FORBIDDEN_CONTENT,
+                message=f"{name} must not contain Atom content (full essay body)",
+                path=path,
+            )
+        )
     return out
 
 
@@ -1019,6 +1148,27 @@ def _check_json_contract(
             format_key="json",
         )
     )
+    if "content_html" in payload:
+        out.append(
+            VerificationViolation(
+                code=FORBIDDEN_CONTENT,
+                message=f"{name} must not contain content_html (full essay body)",
+                path=path,
+            )
+        )
+    meta = payload.get("_pg_essay_feeds")
+    if isinstance(meta, dict):
+        logical = meta.get("logical_updated_at")
+        if isinstance(logical, str) and logical.strip():
+            out.extend(
+                _rfc3339_clock_violations(
+                    logical,
+                    path=path,
+                    name=name,
+                    label="_pg_essay_feeds.logical_updated_at",
+                    unparseable_code=FEED_CLOCK,
+                )
+            )
     for i, raw_item in enumerate(items):
         if not isinstance(raw_item, dict):
             continue
@@ -1033,39 +1183,271 @@ def _check_json_contract(
                     index=i,
                 )
             )
+        if "content_html" in item:
+            out.append(
+                VerificationViolation(
+                    code=FORBIDDEN_CONTENT,
+                    message=f"{name} items[{i}] must not contain content_html (full essay body)",
+                    path=path,
+                    index=i,
+                )
+            )
         for key in ("date_published", "date_modified"):
             value = item.get(key)
-            if isinstance(value, str) and value.strip() and not _is_rfc3339(value):
-                out.append(
-                    VerificationViolation(
-                        code=INVALID_TIMESTAMP,
-                        message=f"{name} items[{i}] {key} is not a parseable RFC3339 timestamp",
+            if isinstance(value, str) and value.strip():
+                out.extend(
+                    _rfc3339_clock_violations(
+                        value,
                         path=path,
+                        name=name,
+                        label=f"items[{i}] {key}",
+                        unparseable_code=INVALID_TIMESTAMP,
                         index=i,
                     )
                 )
     return out
 
 
-def _load_catalog_hints(root: Path) -> tuple[list[str] | None, str | None]:
+def _atom_feed_updated(raw: bytes) -> str | None:
+    root = _xml_root(raw)
+    if root is None or _local_name(root.tag) != "feed":
+        return None
+    ns = _namespace(root.tag)
+    els = _children(root, "updated", ns) if ns else _children(root, "updated")
+    if not els and ns != ATOM_NS:
+        els = _children(root, "updated", ATOM_NS)
+    text = _text(els[0]).strip() if els else ""
+    return text or None
+
+
+def _rss_last_build_date(raw: bytes) -> str | None:
+    root = _xml_root(raw)
+    if root is None:
+        return None
+    channels = _children(root, "channel")
+    if not channels:
+        return None
+    els = _children(channels[0], "lastBuildDate")
+    text = _text(els[0]).strip() if els else ""
+    return text or None
+
+
+def _json_logical_updated_at(raw: bytes) -> str | None:
+    payload = _json_object(raw)
+    if payload is None:
+        return None
+    meta = payload.get("_pg_essay_feeds")
+    if not isinstance(meta, dict):
+        return None
+    value = meta.get("logical_updated_at")
+    return _optional_json_str(value)
+
+
+def _check_feed_clock_parity(
+    *,
+    rss: bytes,
+    atom: bytes,
+    json_feed: bytes,
+    rss_path: str,
+    atom_path: str,
+    json_path: str,
+) -> list[VerificationViolation]:
+    atom_raw = _atom_feed_updated(atom)
+    rss_raw = _rss_last_build_date(rss)
+    json_raw = _json_logical_updated_at(json_feed)
+    parsed: list[tuple[str, datetime]] = []
+    atom_dt = _parse_strict_rfc3339(atom_raw) if atom_raw else None
+    rss_dt = _parse_rfc822(rss_raw) if rss_raw else None
+    json_dt = _parse_strict_rfc3339(json_raw) if json_raw else None
+    if atom_dt is not None:
+        parsed.append((atom_path, atom_dt))
+    if rss_dt is not None:
+        parsed.append((rss_path, rss_dt))
+    if json_dt is not None:
+        parsed.append((json_path, json_dt))
+    if len(parsed) < 2:
+        return []
+    base = _instant_seconds(parsed[0][1])
+    if all(_instant_seconds(dt) == base for _path, dt in parsed[1:]):
+        return []
+    return [
+        VerificationViolation(
+            code=CLOCK_MISMATCH,
+            message=(
+                "Feed clocks disagree across Atom updated, RSS lastBuildDate, "
+                "and JSON logical_updated_at"
+            ),
+            path=atom_path,
+        )
+    ]
+
+
+def _check_item_clock_parity(
+    rss_items: list[_ItemView],
+    atom_items: list[_ItemView],
+    json_items: list[_ItemView],
+    *,
+    rss_path: str,
+    atom_path: str,
+    json_path: str,
+) -> list[VerificationViolation]:
+    out: list[VerificationViolation] = []
+    for i, (rss_item, atom_item, json_item) in enumerate(
+        zip(rss_items, atom_items, json_items, strict=True)
+    ):
+        atom_mod = _parse_strict_rfc3339(atom_item.modified_raw) if atom_item.modified_raw else None
+        json_mod = _parse_strict_rfc3339(json_item.modified_raw) if json_item.modified_raw else None
+        if atom_item.modified_raw and json_item.modified_raw:
+            if (
+                atom_mod is not None
+                and json_mod is not None
+                and _instant_seconds(atom_mod) != _instant_seconds(json_mod)
+            ):
+                out.append(
+                    VerificationViolation(
+                        code=CLOCK_MISMATCH,
+                        message=f"Atom updated and JSON date_modified disagree at index {i}",
+                        path=atom_path,
+                        index=i,
+                    )
+                )
+        elif atom_item.modified_raw or json_item.modified_raw:
+            present = atom_mod if atom_item.modified_raw else json_mod
+            if present is not None:
+                out.append(
+                    VerificationViolation(
+                        code=CLOCK_MISMATCH,
+                        message=(
+                            f"Atom updated / JSON date_modified missing counterpart at index {i}"
+                        ),
+                        path=json_path if json_item.modified_raw is None else atom_path,
+                        index=i,
+                    )
+                )
+
+        rss_pub = _parse_rfc822(rss_item.published_raw) if rss_item.published_raw else None
+        atom_pub = (
+            _parse_strict_rfc3339(atom_item.published_raw) if atom_item.published_raw else None
+        )
+        json_pub = (
+            _parse_strict_rfc3339(json_item.published_raw) if json_item.published_raw else None
+        )
+        present_raw = (
+            bool(rss_item.published_raw),
+            bool(atom_item.published_raw),
+            bool(json_item.published_raw),
+        )
+        if any(present_raw) and not all(present_raw):
+            out.append(
+                VerificationViolation(
+                    code=CLOCK_MISMATCH,
+                    message=(
+                        f"RSS pubDate is allowed only when published_at is set "
+                        f"(presence mismatch at index {i})"
+                    ),
+                    path=rss_path,
+                    index=i,
+                )
+            )
+            continue
+        parsed_pub = [dt for dt in (rss_pub, atom_pub, json_pub) if dt is not None]
+        if len(parsed_pub) >= 2:
+            base = _instant_seconds(parsed_pub[0])
+            if any(_instant_seconds(dt) != base for dt in parsed_pub[1:]):
+                out.append(
+                    VerificationViolation(
+                        code=CLOCK_MISMATCH,
+                        message=f"Published clocks disagree across RSS/Atom/JSON at index {i}",
+                        path=rss_path,
+                        index=i,
+                    )
+                )
+    return out
+
+
+def _catalog_clock_violations(
+    *,
+    row: _ItemView,
+    expected_observed: datetime,
+    expected_published: datetime | None,
+    rel: str,
+    key: str,
+    index: int,
+) -> list[VerificationViolation]:
+    out: list[VerificationViolation] = []
+    if key in {"atom", "json"}:
+        parsed_mod = _parse_strict_rfc3339(row.modified_raw) if row.modified_raw else None
+        if parsed_mod is None or _instant_seconds(parsed_mod) != _instant_seconds(
+            expected_observed
+        ):
+            out.append(
+                VerificationViolation(
+                    code=CATALOG_FIELD_MISMATCH,
+                    message=(
+                        f"{rel} date_modified/updated diverges from catalog "
+                        f"observed_updated_at at index {index}"
+                    ),
+                    path=rel,
+                    index=index,
+                )
+            )
+    parsed_pub: datetime | None
+    if not row.published_raw:
+        parsed_pub = None
+    elif key == "rss":
+        parsed_pub = _parse_rfc822(row.published_raw)
+    else:
+        parsed_pub = _parse_strict_rfc3339(row.published_raw)
+    if expected_published is None:
+        if row.published_raw:
+            out.append(
+                VerificationViolation(
+                    code=CATALOG_FIELD_MISMATCH,
+                    message=(
+                        f"{rel} pubDate/published is present without catalog "
+                        f"published_at at index {index}"
+                    ),
+                    path=rel,
+                    index=index,
+                )
+            )
+    elif parsed_pub is None or _instant_seconds(parsed_pub) != _instant_seconds(expected_published):
+        out.append(
+            VerificationViolation(
+                code=CATALOG_FIELD_MISMATCH,
+                message=(
+                    f"{rel} pubDate/published diverges from catalog published_at at index {index}"
+                ),
+                path=rel,
+                index=index,
+            )
+        )
+    return out
+
+
+def _load_catalog_hints(root: Path) -> list[str] | None:
+    """Return catalog ``entry_order`` when the JSON is a well-formed string list.
+
+    Does not read ``public_base_url``: ``Catalog`` is ``extra="forbid"`` and has
+    no such field, so that key cannot be stored. Self/feed URL checks take the
+    value from Settings via the ``verify_*`` argument.
+    """
     catalog_path = root / "catalog.json"
     if not catalog_path.is_file():
-        return None, None
+        return None
     try:
         payload = json.loads(catalog_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return None, None
+        return None
     if not isinstance(payload, dict):
-        return None, None
+        return None
     order_raw = payload.get("entry_order")
-    order: list[str] | None = None
-    if isinstance(order_raw, list):
-        ids = [item for item in order_raw if isinstance(item, str)]
-        if len(ids) == len(order_raw):
-            order = ids
-    base = payload.get("public_base_url")
-    public = base.strip() if isinstance(base, str) and base.strip() else None
-    return order, public
+    if not isinstance(order_raw, list):
+        return None
+    ids = [item for item in order_raw if isinstance(item, str)]
+    if len(ids) != len(order_raw):
+        return None
+    return ids
 
 
 def _check_dir_catalog_order(
@@ -1193,11 +1575,13 @@ def verify_feed_bytes(
 
     Checks parseability, size caps, count parity, min-items floor, duplicate
     ids, empty id/title/url/summary, JSON ``content_text == summary``, summary
-    length bounds, U+FFFD integrity, ordered id parity, and ordered
-    title/url/summary payload parity across formats. Enriched triples also
-    apply the semantic summary gate (promo/nav chrome). Independently checks
-    feed-level RSS/Atom/JSON contracts (root, namespace, version, clocks,
-    URI syntax, exact self links when known, and variant identity).
+    length bounds, U+FFFD integrity, ordered id parity, ordered
+    title/url/summary payload parity, and clock parity (Atom ``updated`` /
+    JSON ``date_modified``, RSS ``pubDate`` only with ``published_at``).
+    Enriched triples also apply the semantic summary gate (promo/nav chrome).
+    Independently checks feed-level RSS/Atom/JSON contracts (root, namespace,
+    version, clocks, URI syntax, forbidden full-body fields, exact self links
+    when known, and variant identity).
 
     ``kind`` selects violation ``path`` labels (``feeds/rss.xml`` vs
     ``feeds/rss.simple.xml`` and siblings). ``public_base_url`` / ``expected_self``
@@ -1252,6 +1636,16 @@ def verify_feed_bytes(
             path=json_path,
             kind=kind,
             expected_self=expected.get("json"),
+        )
+    )
+    violations.extend(
+        _check_feed_clock_parity(
+            rss=rss,
+            atom=atom,
+            json_feed=json_feed,
+            rss_path=rss_path,
+            atom_path=atom_path,
+            json_path=json_path,
         )
     )
 
@@ -1355,6 +1749,16 @@ def verify_feed_bytes(
                                 index=i,
                             )
                         )
+            violations.extend(
+                _check_item_clock_parity(
+                    rss_items,
+                    atom_items,
+                    json_items,
+                    rss_path=rss_path,
+                    atom_path=atom_path,
+                    json_path=json_path,
+                )
+            )
 
     return VerificationReport(ok=len(violations) == 0, violations=violations)
 
@@ -1375,16 +1779,14 @@ def verify_feed_dir(
     When ``catalog.json`` is present, ``entry_order`` is compared to item id
     sequences in every existing feed among the six artifacts. Sibling
     enriched/simple Atom ids and JSON ``feed_url`` values must not collide.
-    ``public_base_url`` is taken from the argument, else from catalog when present.
+    ``public_base_url`` is taken from the argument only; Catalog cannot persist it.
     """
     paths = _feed_paths(root, relative_dir=relative_dir, kind=kind)
     violations: list[VerificationViolation] = []
     blobs: dict[str, bytes] = {}
     names = _feed_names(kind)
     rel_prefix = relative_dir.strip("/")
-    catalog_ids, catalog_base = _load_catalog_hints(root)
-    if public_base_url is None:
-        public_base_url = catalog_base
+    catalog_ids = _load_catalog_hints(root)
 
     for key, path in paths.items():
         rel = f"{rel_prefix}/{names[key]}"
@@ -1566,6 +1968,16 @@ def verify_bundle(
                             index=index,
                         )
                     )
+                violations.extend(
+                    _catalog_clock_violations(
+                        row=row,
+                        expected_observed=expected.items[index].observed_updated_at,
+                        expected_published=expected.items[index].published_at,
+                        rel=rel,
+                        key=key,
+                        index=index,
+                    )
+                )
                 if row.url and not _https_allowlisted_item_url(row.url):
                     violations.append(
                         VerificationViolation(

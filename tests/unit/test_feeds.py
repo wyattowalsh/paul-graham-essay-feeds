@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import re
@@ -13,6 +14,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
+from paul_graham_essay_feeds.catalog import save_catalog
 from paul_graham_essay_feeds.feeds import (
     catalog_to_feed_snapshot,
     feed_paths,
@@ -264,18 +266,63 @@ def test_render_uses_snapshot_summary() -> None:
     assert "date_published" in item
 
 
+def _simple_copy(snap: FeedSnapshot) -> FeedSnapshot:
+    return snap.model_copy(update={"variant": "simple", "title": FEED_TITLE_SIMPLE})
+
+
 def _write_sample(repo_root: Path, snap: FeedSnapshot | None = None) -> FeedSnapshot:
     snap = snap if snap is not None else _snapshot()
+    simple = _simple_copy(snap)
     write_feeds(
         repo_root,
         rss=render_rss(snap),
         atom=render_atom(snap),
         json_feed=render_json(snap),
-        simple_rss=render_rss(snap),
-        simple_atom=render_atom(snap),
-        simple_json_feed=render_json(snap),
+        simple_rss=render_rss(simple),
+        simple_atom=render_atom(simple),
+        simple_json_feed=render_json(simple),
     )
     return snap
+
+
+def _write_hosted(repo_root: Path, *, public_base_url: str) -> Catalog:
+    """Write both feed variants plus catalog using a hosted public base URL."""
+    a = _catalog_entry(
+        sid="https://paulgraham.com/a.html",
+        title="A",
+        position=0,
+        summary="Short summary for essay A.",
+    )
+    b = _catalog_entry(
+        sid="https://paulgraham.com/b.html",
+        title="B",
+        position=1,
+        observed_updated_at=T1,
+        summary="Short summary for essay B.",
+    )
+    catalog = _catalog([a, b])
+    enriched = catalog_to_feed_snapshot(
+        catalog,
+        generator=GENERATOR,
+        public_base_url=public_base_url,
+    )
+    simple = catalog_to_feed_snapshot(
+        catalog,
+        generator=GENERATOR,
+        public_base_url=public_base_url,
+        summary_mode="title_only",
+    )
+    write_feeds(
+        repo_root,
+        rss=render_rss(enriched),
+        atom=render_atom(enriched),
+        json_feed=render_json(enriched),
+        simple_rss=render_rss(simple),
+        simple_atom=render_atom(simple),
+        simple_json_feed=render_json(simple),
+    )
+    save_catalog(repo_root / "catalog.json", catalog)
+    return catalog
 
 
 def _assert_no_staging_temps(feeds_dir: Path) -> None:
@@ -371,16 +418,20 @@ def test_write_feeds_replace_failure_leaves_safe_state(
     prior = {name: (feeds_dir / name).read_bytes() for name in feed_names}
 
     one = _snapshot([_entry_snap()])
+    simple_one = _simple_copy(one)
     new_rss = render_rss(one)
     new_atom = render_atom(one)
     new_json = render_json(one)
+    new_simple_rss = render_rss(simple_one)
+    new_simple_atom = render_atom(simple_one)
+    new_simple_json = render_json(simple_one)
     new_blobs = {
         "rss.xml": new_rss,
         "atom.xml": new_atom,
         "feed.json": new_json,
-        "rss.simple.xml": new_rss,
-        "atom.simple.xml": new_atom,
-        "feed.simple.json": new_json,
+        "rss.simple.xml": new_simple_rss,
+        "atom.simple.xml": new_simple_atom,
+        "feed.simple.json": new_simple_json,
     }
 
     real_replace = os.replace
@@ -401,9 +452,9 @@ def test_write_feeds_replace_failure_leaves_safe_state(
             rss=new_rss,
             atom=new_atom,
             json_feed=new_json,
-            simple_rss=new_rss,
-            simple_atom=new_atom,
-            simple_json_feed=new_json,
+            simple_rss=new_simple_rss,
+            simple_atom=new_simple_atom,
+            simple_json_feed=new_simple_json,
         )
 
     _assert_no_staging_temps(feeds_dir)
@@ -509,14 +560,15 @@ def test_summary_mode_title_only_ignores_catalog_summary() -> None:
 
 def test_write_feeds_relative_dir_custom(repo_root: Path) -> None:
     snap = _snapshot()
+    simple = _simple_copy(snap)
     write_feeds(
         repo_root,
         rss=render_rss(snap),
         atom=render_atom(snap),
         json_feed=render_json(snap),
-        simple_rss=render_rss(snap),
-        simple_atom=render_atom(snap),
-        simple_json_feed=render_json(snap),
+        simple_rss=render_rss(simple),
+        simple_atom=render_atom(simple),
+        simple_json_feed=render_json(simple),
         relative_dir="feeds/custom",
     )
     paths = feed_paths(repo_root, relative_dir="feeds/custom")
@@ -553,6 +605,30 @@ def test_verify_feed_artifacts_simple_unparseable_reports_simple_path(repo_root:
     message = str(excinfo.value)
     assert "UNPARSEABLE_XML" in message
     assert "feeds/rss.xml is not valid XML" not in message
+
+
+def test_verify_feed_artifacts_signature_public_base_url() -> None:
+    params = inspect.signature(verify_feed_artifacts).parameters
+    assert tuple(params) == ("root", "min_items", "public_base_url")
+    assert params["min_items"].kind is inspect.Parameter.KEYWORD_ONLY
+    assert params["public_base_url"].kind is inspect.Parameter.KEYWORD_ONLY
+    assert params["public_base_url"].default is None
+
+
+def test_verify_feed_artifacts_accepts_matching_public_base_url(repo_root: Path) -> None:
+    base = "https://example.com/pg-feeds/"
+    _write_hosted(repo_root, public_base_url=base)
+    verify_feed_artifacts(repo_root, min_items=2, public_base_url=base)
+
+
+def test_verify_feed_artifacts_rejects_mismatched_public_base_url(repo_root: Path) -> None:
+    _write_hosted(repo_root, public_base_url="https://example.com/pg-feeds/")
+    with pytest.raises(FeedError, match="SELF_LINK_MISMATCH"):
+        verify_feed_artifacts(
+            repo_root,
+            min_items=2,
+            public_base_url="https://other.example/feeds/",
+        )
 
 
 def test_observed_falls_back_to_first_seen() -> None:
@@ -890,15 +966,31 @@ def test_render_snapshot_feeds_parity() -> None:
 
 
 def test_summary_truncated_to_feed_limit() -> None:
-    long = "word " * 200
+    """Projection truncates to FEED_SUMMARY_CHARS; CatalogEntry is schema-capped."""
+    at_cap = "w" * FEED_SUMMARY_CHARS
     entry = _catalog_entry(
         sid="https://paulgraham.com/a.html",
         title="Long",
         position=0,
-        summary=long,
+        summary=at_cap,
     )
     snap = catalog_to_feed_snapshot(_catalog([entry]), generator=GENERATOR)
-    assert 1 <= len(snap.items[0].summary) <= FEED_SUMMARY_CHARS
+    assert snap.items[0].summary == at_cap
+
+    long = "word " * 200
+    assert len(long) > FEED_SUMMARY_CHARS
+    bypass = CatalogEntry.model_construct(
+        stable_id="https://paulgraham.com/a.html",
+        url="https://paulgraham.com/a.html",
+        title="Long",
+        position=0,
+        first_seen_at=T0,
+        last_seen_at=T0,
+        observed_updated_at=T1,
+        summary=long,
+    )
+    truncated = catalog_to_feed_snapshot(_catalog([bypass]), generator=GENERATOR)
+    assert 1 <= len(truncated.items[0].summary) <= FEED_SUMMARY_CHARS
 
 
 def test_turbify_non_permalink_renders() -> None:

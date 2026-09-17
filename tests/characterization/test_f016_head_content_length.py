@@ -35,3 +35,27 @@ def test_head_with_large_content_length_is_allowed() -> None:
             ok = False
             err = str(exc)
     assert ok, f"HEAD large Content-Length should be allowed, got: {err}"
+
+
+@pytest.mark.characterization
+@respx.mock
+def test_head_with_large_entity_is_not_buffered() -> None:
+    """RV-C-001: a misbehaving HEAD entity must not be drained into memory."""
+    payload = b"x" * 200_000
+    respx.head("https://paulgraham.com/big.html").mock(
+        return_value=httpx.Response(
+            200,
+            content=payload,
+            headers={"content-length": str(len(payload)), "content-type": "text/html"},
+        )
+    )
+    with httpx.Client(trust_env=False, follow_redirects=False) as client:
+        response = hop_safe_request(
+            client,
+            "HEAD",
+            "https://paulgraham.com/big.html",
+            allowed_hosts=ALLOWED_HOSTS,
+            max_bytes=1024,
+        )
+    assert response.status_code == 200
+    assert response.content == b""

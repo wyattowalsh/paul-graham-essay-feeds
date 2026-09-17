@@ -508,7 +508,11 @@ class CatalogEntry(_StrictModel):
     published_hint: str | None = Field(
         default=None, description="Month-year or other non-feed date hint."
     )
-    summary: str | None = Field(default=None, description="Short source-derived summary.")
+    summary: str | None = Field(
+        default=None,
+        max_length=FEED_SUMMARY_CHARS,
+        description="Short source-derived summary (≤ FEED_SUMMARY_CHARS).",
+    )
     summary_source: str | None = Field(
         default=None,
         description=(
@@ -528,7 +532,11 @@ class CatalogEntry(_StrictModel):
         ),
     )
     prior_good_summary: str | None = Field(
-        default=None, description="Last good summary retained across recoverable failures."
+        default=None,
+        max_length=FEED_SUMMARY_CHARS,
+        description=(
+            "Last good summary retained across recoverable failures (≤ FEED_SUMMARY_CHARS)."
+        ),
     )
     page: ResourceState = Field(
         default_factory=ResourceState, description="Per-page fetch/cache evidence."

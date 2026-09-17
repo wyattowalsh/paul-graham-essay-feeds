@@ -359,13 +359,51 @@ jobs:
               except pi.ProductIdentityError:
                   return None
 
-          def set_push_remote(worktree: Path) -> None:
-              url = f"https://x-access-token:{token}@github.com/{github_repo}.git"
+          def ensure_tokenless_origin(worktree: Path) -> None:
+              url = f"https://github.com/{github_repo}.git"
               subprocess.run(
                   ["git", "-C", str(worktree), "remote", "set-url", "origin", url],
                   check=True,
                   capture_output=True,
               )
+
+          def unset_push_auth(worktree: Path) -> None:
+              for key in (
+                  "http.https://github.com/.extraheader",
+                  "credential.helper",
+                  "credential.https://github.com.helper",
+              ):
+                  subprocess.run(
+                      [
+                          "git",
+                          "-C",
+                          str(worktree),
+                          "config",
+                          "--local",
+                          "--unset-all",
+                          key,
+                      ],
+                      check=False,
+                      capture_output=True,
+                  )
+
+          def push_with_ephemeral_auth(
+              argv: list[str], worktree: Path
+          ) -> subprocess.CompletedProcess[str]:
+              cmd = [
+                  "git",
+                  "-c",
+                  "http.https://github.com/.extraheader=",
+                  "-c",
+                  f"http.https://github.com/.extraheader=AUTHORIZATION: bearer {token}",
+                  *argv[1:],
+              ]
+              try:
+                  return subprocess.run(
+                      cmd, cwd=worktree, capture_output=True, text=True
+                  )
+              finally:
+                  unset_push_auth(worktree)
 
           pi.fetch_exact_commit(repo, source_sha)
           origin = fetch_origin()
@@ -463,7 +501,7 @@ jobs:
           pi.validate_push_argv(argv)
           if "--no-follow-tags" not in argv:
               raise SystemExit("push argv missing --no-follow-tags")
-          set_push_remote(worktree)
+          ensure_tokenless_origin(worktree)
           published = False
           last_outcome = "command_error"
           for attempt in range(pi.MAX_PUSH_RETRIES + 1):
@@ -478,7 +516,7 @@ jobs:
                       "command_ok", origin, source_sha, product_sha
                   )
               else:
-                  pushed = subprocess.run(argv, cwd=worktree, capture_output=True, text=True)
+                  pushed = push_with_ephemeral_auth(argv, worktree)
                   last_outcome = "command_ok" if pushed.returncode == 0 else "command_error"
                   origin = fetch_origin()
                   classification = pi.classify_publication(

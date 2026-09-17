@@ -461,8 +461,14 @@ def write_feeds(
     logger.info("Wrote {} feed files → {}", len(artifacts), feeds_dir)
 
 
-def verify_feed_artifacts(root: Path, *, min_items: int) -> None:
-    """Deep-validate on-disk enriched and simple ``feeds/`` projections."""
+def verify_feed_artifacts(
+    root: Path, *, min_items: int, public_base_url: str | None = None
+) -> None:
+    """Deep-validate on-disk enriched and simple ``feeds/`` projections.
+
+    ``public_base_url`` comes from Settings (or the caller). Catalog JSON cannot
+    store this key, so self/feed URL checks must receive it here.
+    """
     from paul_graham_essay_feeds.catalog import default_catalog_path
     from paul_graham_essay_feeds.verify import raise_on_failure, verify_bundle, verify_feed_bytes
 
@@ -482,6 +488,7 @@ def verify_feed_artifacts(root: Path, *, min_items: int) -> None:
                 json_feed=json_feed,
                 min_items=min_items,
                 kind=kind,
+                public_base_url=public_base_url,
             )
         )
     catalog_path = default_catalog_path(root)
@@ -494,7 +501,13 @@ def verify_feed_artifacts(root: Path, *, min_items: int) -> None:
         except (OSError, FeedError, ConfigurationError, ValueError):
             loaded = None
         if loaded is not None:
-            raise_on_failure(verify_bundle(Path(root), min_items=min_items))
+            raise_on_failure(
+                verify_bundle(
+                    Path(root),
+                    min_items=min_items,
+                    public_base_url=public_base_url,
+                )
+            )
 
 
 def _entry_summary(summary: str | None, title: str) -> str:

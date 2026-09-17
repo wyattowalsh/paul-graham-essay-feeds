@@ -60,16 +60,25 @@ def test_notebook_static_contract() -> None:
     assert "from paul_graham_essay_feeds" not in source
     assert "import paul_graham_essay_feeds" not in source
     assert "uvx" in source
+    assert '!pip install -q "uv==0.12.15"' in source
+    assert "uv>=0.12" not in source
     assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v1.0.0"' in source
     assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@v0.2.0"' not in source
     assert 'pkg = "git+https://github.com/wyattowalsh/paul-graham-essay-feeds@main"' not in source
     for name in FEED_NAMES:
         assert name in source
     assert "catalog.json" in source
-    zip_block = source[source.index("ZipFile") : source.index("downloaded")]
+    assert "_must_stay_in_root" in source
+    assert "is_relative_to(root)" in source
+    assert 'arcname=f"feeds/{name}"' in source
+    assert "arcname=name" not in source
+    zip_block = source[source.index("def _must_stay_in_root") : source.index("downloaded")]
     assert "catalog.json" not in zip_block
+    assert "is_relative_to(root)" in zip_block
+    assert 'arcname=f"feeds/{name}"' in zip_block
+    assert "arcname=name" not in zip_block
     for name in FEED_NAMES:
-        assert name in zip_block or "arcname=name" in zip_block
+        assert name in zip_block
 
 
 def test_notebook_parser_dedicated_probe_failure() -> None:

@@ -80,3 +80,13 @@ def test_verify_rejects_simple_atom_id_on_enriched_kind() -> None:
     report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=1, kind="enriched")
     assert report.ok is False
     assert VARIANT_IDENTITY in {v.code for v in report.violations}
+
+
+def test_verify_rejects_enriched_atom_id_on_simple_kind() -> None:
+    """VARIANT_IDENTITY: simple kind must not accept the enriched FEED_ID."""
+    rss = render_rss(_snap(variant="simple"))
+    atom = render_atom(_snap(variant="enriched"))
+    jf = render_json(_snap(variant="simple"))
+    report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=1, kind="simple")
+    assert report.ok is False
+    assert VARIANT_IDENTITY in {v.code for v in report.violations}

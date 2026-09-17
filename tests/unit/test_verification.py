@@ -26,13 +26,17 @@ from paul_graham_essay_feeds.models import (
 )
 from paul_graham_essay_feeds.verify import (
     BELOW_MIN_ITEMS,
+    CLOCK_MISMATCH,
     CONTENT_TEXT_MISMATCH,
     COUNT_MISMATCH,
     DUPLICATE_ID,
     EMPTY_SUMMARY,
     EMPTY_TITLE,
     EMPTY_URL,
+    FEED_CLOCK,
+    FORBIDDEN_CONTENT,
     ID_ORDER_MISMATCH,
+    INVALID_TIMESTAMP,
     MISSING_FILE,
     SELF_LINK_MISMATCH,
     SEMANTIC_SUMMARY,
@@ -40,6 +44,7 @@ from paul_graham_essay_feeds.verify import (
     UNICODE_REPLACEMENT,
     UNPARSEABLE_JSON,
     UNPARSEABLE_XML,
+    VARIANT_IDENTITY,
     VerificationReport,
     assert_verified,
     raise_on_failure,
@@ -92,8 +97,14 @@ def _snapshot(essays: list[Essay] | None = None) -> FeedSnapshot:
     )
 
 
-def _good_triple(essays: list[Essay] | None = None) -> tuple[bytes, bytes, bytes]:
+def _good_triple(
+    essays: list[Essay] | None = None,
+    *,
+    kind: Literal["enriched", "simple"] = "enriched",
+) -> tuple[bytes, bytes, bytes]:
     snap = _snapshot(essays)
+    if kind == "simple":
+        snap = snap.model_copy(update={"variant": "simple"})
     return render_rss(snap), render_atom(snap), render_json(snap)
 
 
@@ -136,7 +147,7 @@ def test_verify_feed_bytes_rejects_chrome_summary_on_enriched() -> None:
 def test_verify_feed_bytes_simple_skips_semantic_gate() -> None:
     essays = _sample()
     essays[0] = essays[0].model_copy(update={"summary": "Arabic Translation"})
-    rss, atom, jf = _good_triple(essays)
+    rss, atom, jf = _good_triple(essays, kind="simple")
     report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=2, kind="simple")
     assert SEMANTIC_SUMMARY not in _codes(report)
 
@@ -618,3 +629,98 @@ def test_verify_feed_dir_catalog_order_all_six_files(tmp_path: Path) -> None:
     assert "feeds/rss.simple.xml" in paths
     assert "feeds/atom.simple.xml" in paths
     assert "feeds/feed.simple.json" in paths
+
+
+def test_rfc3339_rejects_space_separator_and_lowercase_z() -> None:
+    rss, atom, jf = _good_triple()
+    space = atom.replace(b"2024-01-01T12:00:00Z", b"2024-01-01 12:00:00Z", 1)
+    report = verify_feed_bytes(rss=rss, atom=space, json_feed=jf, min_items=2)
+    assert report.ok is False
+    assert FEED_CLOCK in _codes(report) or INVALID_TIMESTAMP in _codes(report)
+
+    lower = atom.replace(b"2024-01-01T12:00:00Z", b"2024-01-01T12:00:00z", 1)
+    report2 = verify_feed_bytes(rss=rss, atom=lower, json_feed=jf, min_items=2)
+    assert report2.ok is False
+    assert FEED_CLOCK in _codes(report2) or INVALID_TIMESTAMP in _codes(report2)
+
+
+def test_rfc3339_accepts_offset_equivalent_of_z() -> None:
+    rss, atom, jf = _good_triple()
+    payload = json.loads(jf.decode("utf-8"))
+    payload["items"][0]["date_modified"] = "2024-01-01T12:00:00+00:00"
+    jf = (json.dumps(payload, indent=2) + "\n").encode("utf-8")
+    report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=2)
+    assert report.ok is True
+    assert CLOCK_MISMATCH not in _codes(report)
+
+
+def test_clock_mismatch_when_json_date_modified_diverges() -> None:
+    rss, atom, jf = _good_triple()
+    payload = json.loads(jf.decode("utf-8"))
+    payload["items"][0]["date_modified"] = "2001-01-01T12:00:00Z"
+    jf = (json.dumps(payload, indent=2) + "\n").encode("utf-8")
+    report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=2)
+    assert report.ok is False
+    assert CLOCK_MISMATCH in _codes(report)
+
+
+def test_rss_pubdate_without_published_at_is_clock_mismatch() -> None:
+    rss, atom, jf = _good_triple()
+    rss = rss.replace(
+        b"<description>Short summary for essay A.</description>",
+        b"<description>Short summary for essay A.</description>"
+        b"<pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>",
+        1,
+    )
+    report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=2)
+    assert report.ok is False
+    assert CLOCK_MISMATCH in _codes(report)
+
+
+def test_forbidden_content_rss_atom_json() -> None:
+    rss, atom, jf = _good_triple()
+    rss = rss.replace(
+        b"<description>Short summary for essay A.</description>",
+        b"<description>Short summary for essay A.</description>"
+        b'<content:encoded xmlns:content="http://purl.org/rss/1.0/modules/content/">'
+        b"full essay</content:encoded>",
+        1,
+    )
+    report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=2)
+    assert FORBIDDEN_CONTENT in _codes(report)
+
+    rss2, atom2, jf2 = _good_triple()
+    atom2 = atom2.replace(
+        b"</entry>",
+        b'<content type="text">full essay</content></entry>',
+        1,
+    )
+    report2 = verify_feed_bytes(rss=rss2, atom=atom2, json_feed=jf2, min_items=2)
+    assert FORBIDDEN_CONTENT in _codes(report2)
+
+    rss3, atom3, jf3 = _good_triple()
+    payload = json.loads(jf3.decode("utf-8"))
+    payload["items"][0]["content_html"] = "<p>full essay</p>"
+    jf3 = (json.dumps(payload, indent=2) + "\n").encode("utf-8")
+    report3 = verify_feed_bytes(rss=rss3, atom=atom3, json_feed=jf3, min_items=2)
+    assert FORBIDDEN_CONTENT in _codes(report3)
+
+
+def test_unix_epoch_sentinel_rejected_on_atom_feed_updated() -> None:
+    rss, atom, jf = _good_triple()
+    epoch = b"<updated>1970-01-01T00:00:00Z</updated>"
+    atom = atom.replace(b"<updated>2024-01-01T12:00:00Z</updated>", epoch, 1)
+    report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=2)
+    assert report.ok is False
+    assert FEED_CLOCK in _codes(report)
+
+
+def test_simple_kind_rejects_enriched_feed_id() -> None:
+    rss, atom, jf = _good_triple(kind="simple")
+    report = verify_feed_bytes(rss=rss, atom=atom, json_feed=jf, min_items=2, kind="simple")
+    assert report.ok is True
+
+    _rss_e, atom_e, _jf_e = _good_triple(kind="enriched")
+    bad = verify_feed_bytes(rss=rss, atom=atom_e, json_feed=jf, min_items=2, kind="simple")
+    assert bad.ok is False
+    assert VARIANT_IDENTITY in _codes(bad)

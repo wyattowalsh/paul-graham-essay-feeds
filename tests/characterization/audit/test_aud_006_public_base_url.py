@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -15,12 +16,15 @@ from paul_graham_essay_feeds.feeds import (
     render_atom,
     render_json,
     render_rss,
+    verify_feed_artifacts,
+    write_feeds,
 )
 from paul_graham_essay_feeds.models import (
     ATOM_NS,
     Catalog,
     CatalogEntry,
     ConfigurationError,
+    FeedError,
     ResourceState,
 )
 from paul_graham_essay_feeds.settings import Settings
@@ -133,3 +137,41 @@ def test_aud_006_unicode_host_idna() -> None:
     )
     assert all("münchen" not in href for href in hrefs)
     assert feed_self_url("https://münchen.example.com/feeds/feed.json", kind="rss") == hrefs[0]
+
+
+def test_aud_006_verify_feed_artifacts_uses_canonical_settings_base(tmp_path: Path) -> None:
+    """RV-C-007: check-path verify uses Settings-canonical directory base, not catalog JSON."""
+    settings = Settings.model_validate({"public_base_url": "https://example.com/pg-feeds"})
+    assert settings.public_base_url == "https://example.com/pg-feeds/"
+    catalog = _catalog()
+    snap = catalog_to_feed_snapshot(
+        catalog,
+        generator=GENERATOR,
+        public_base_url=settings.public_base_url,
+    )
+    simple = catalog_to_feed_snapshot(
+        catalog,
+        generator=GENERATOR,
+        public_base_url=settings.public_base_url,
+        summary_mode="title_only",
+    )
+    write_feeds(
+        tmp_path,
+        rss=render_rss(snap),
+        atom=render_atom(snap),
+        json_feed=render_json(snap),
+        simple_rss=render_rss(simple),
+        simple_atom=render_atom(simple),
+        simple_json_feed=render_json(simple),
+    )
+    verify_feed_artifacts(
+        tmp_path,
+        min_items=1,
+        public_base_url=settings.public_base_url,
+    )
+    with pytest.raises(FeedError, match="SELF_LINK_MISMATCH"):
+        verify_feed_artifacts(
+            tmp_path,
+            min_items=1,
+            public_base_url="https://other.example/feeds/",
+        )

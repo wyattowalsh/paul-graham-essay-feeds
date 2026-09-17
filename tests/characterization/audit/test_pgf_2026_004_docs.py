@@ -23,11 +23,37 @@ def _text(name: str) -> str:
     return (_REPO / name).read_text(encoding="utf-8")
 
 
-def test_package_version_is_1_0_0() -> None:
-    assert __version__ == "1.0.0"
+def test_package_version_is_1_0_1() -> None:
+    assert __version__ == "1.0.1"
     data = tomllib.loads(_text("pyproject.toml"))
     assert data["tool"]["hatch"]["version"]["path"] == ("src/paul_graham_essay_feeds/__init__.py")
     assert data["project"]["dynamic"] == ["version"]
+
+
+def test_changelog_1_0_1_closes_unreleased_and_keeps_1_0_0() -> None:
+    changelog = _text("CHANGELOG.md")
+    unreleased = changelog.index("## [Unreleased]")
+    v101 = changelog.index("## [1.0.1]")
+    v100 = changelog.index("## [1.0.0]")
+    assert unreleased < v101 < v100
+    section = changelog[v101:v100]
+    for n in range(1, 8):
+        assert f"PGF-FINAL-{n:03d}" in section, f"missing PGF-FINAL-{n:03d} in [1.0.1]"
+    for token in (
+        "PGF-AUDIT-003",
+        "PGF-AUDIT-004",
+        "PGF-AUDIT-005",
+        "PGF-AUDIT-007",
+        "PGF-AUDIT-010",
+        "RV-C-001",
+        "RV-C-007",
+        "RV-S-001",
+        "RV-S-004",
+    ):
+        assert token in section, f"missing {token} in [1.0.1]"
+    docs = _text(".github/DOCS.md")
+    assert "Package `__version__` is `1.0.1`" in docs
+    assert _GIT_V100 in docs
 
 
 def test_changelog_1_0_0_lists_pgf_2026_001_through_022() -> None:
@@ -40,6 +66,7 @@ def test_changelog_1_0_0_lists_pgf_2026_001_through_022() -> None:
     assert "advertised-but-untagged" in section
     assert "## [0.2.0]" in changelog
     assert changelog.index("## [Unreleased]") < start
+    assert changelog.index("## [1.0.1]") < start
 
 
 def test_readme_and_notebook_pin_v1_0_0() -> None:
@@ -55,6 +82,10 @@ def test_readme_and_notebook_pin_v1_0_0() -> None:
     assert _HEDGE_SENTENCE not in notebook
     assert "v1.0.0" in notebook
     assert "1.0.0" in notebook
+    assert "@v1.0.1" not in notebook
+    assert _GIT_V100 in _text(".github/DOCS.md")
+    assert "/tmp/pg-action.txt" not in readme
+    assert "--result-file .cache/pg-action.txt" in readme
 
 
 def test_readme_subscribe_simple_first_six_raw_feeds() -> None:

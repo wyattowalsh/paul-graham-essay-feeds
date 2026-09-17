@@ -52,7 +52,7 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 | Area | Responsibility |
 | :--- | :--- |
 | `src/paul_graham_essay_feeds/` | Domain package (~12 modules: cli, settings, pipeline, http, discover, enrich, catalog, feeds, verify, models, publication, pages) |
-| `assets/brand/` | Brand source; `site/` is the Pages overlay |
+| `assets/brand/` | Brand source; `assets/brand/site/` is the Pages overlay (no committed `site/` product tree) |
 | `tests/` | unit / integration / e2e / smoke / live / characterization |
 | `.github/DOCS.md` | Developer + architecture decision SSOT |
 | `DESIGN.md` | Visual / brand spec |
@@ -94,6 +94,8 @@ feeds/rss.simple.xml|atom.simple.xml|feed.simple.json  # simple (title/link)
 
 ## Gates
 
+**`just ci-local`** is the full bar. `just all` is the shorter loop (no lockfile sync, check not quiet, no wheel). See [`.github/DOCS.md`](./.github/DOCS.md).
+
 ```bash
 uv sync --locked --all-groups
 uv run ruff format --check .
@@ -104,5 +106,3 @@ uv run pg-essay-feeds check --quiet
 uv run python -m paul_graham_essay_feeds.pages --out _site
 uv build --no-sources
 ```
-
-Prefer `just all` / `just ci-local`. See [`.github/DOCS.md`](./.github/DOCS.md).

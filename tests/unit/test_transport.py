@@ -72,7 +72,11 @@ def test_head_large_content_length_allowed_f016() -> None:
     assert ev.media_type == "text/html"
     assert ev.charset == "utf-8"
     assert ev.error_message is None
+    assert result.body == b""
+    assert result.raw_body == b""
+    assert ev.bytes_received == 0
     assert result.response is not None
+    assert result.response.content == b""
 
 
 @respx.mock
@@ -92,6 +96,72 @@ def test_head_with_evidence_wrapper_f016() -> None:
         )
     assert result.evidence.result_kind is ResultKind.FETCHED
     assert result.evidence.content_length_header == 50_000_000
+    assert result.body == b""
+    assert result.raw_body == b""
+    assert result.evidence.bytes_received == 0
+    assert result.evidence.decoded_bytes_received == 0
+
+
+class _CountingByteStream(httpx.SyncByteStream):
+    """Yields *payload* in chunks and records how many bytes were pulled."""
+
+    def __init__(self, payload: bytes) -> None:
+        self._payload = payload
+        self.bytes_yielded = 0
+
+    def __iter__(self):
+        step = 8192
+        for start in range(0, len(self._payload), step):
+            piece = self._payload[start : start + step]
+            self.bytes_yielded += len(piece)
+            yield piece
+
+
+class _HeadEntityTransport(httpx.BaseTransport):
+    """Offers a large entity only if the client reads the stream."""
+
+    def __init__(self, payload: bytes) -> None:
+        self.payload = payload
+        self.stream: _CountingByteStream | None = None
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        self.stream = _CountingByteStream(self.payload)
+        return httpx.Response(
+            200,
+            headers={
+                "Content-Type": "text/html",
+                "Content-Length": str(len(self.payload)),
+            },
+            stream=self.stream,
+            request=request,
+        )
+
+
+def test_head_with_evidence_large_entity_not_buffered() -> None:
+    """RV-C-001: HEAD must close without buffering a misbehaving entity body."""
+    payload = b"x" * 200_000
+    transport = _HeadEntityTransport(payload)
+    with httpx.Client(
+        transport=transport,
+        trust_env=False,
+        follow_redirects=False,
+    ) as client:
+        result = head_with_evidence(
+            client,
+            "https://paulgraham.com/big.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+    assert result.evidence.result_kind is ResultKind.FETCHED
+    assert result.body == b""
+    assert result.raw_body == b""
+    assert result.evidence.bytes_received == 0
+    assert result.evidence.decoded_bytes_received == 0
+    assert result.evidence.content_length_header == len(payload)
+    assert result.response is not None
+    assert result.response.content == b""
+    assert transport.stream is not None
+    assert transport.stream.bytes_yielded == 0
 
 
 @respx.mock

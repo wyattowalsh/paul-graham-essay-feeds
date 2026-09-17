@@ -17,7 +17,8 @@ Python **3.12+** and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync --all-groups
-just all
+just all        # shorter loop: lint + types + tests + check + pages
+just ci-local   # full bar: locked sync, quiet check, wheel
 ```
 
 Default tests are offline (`-m 'not live'`). Do not hit paulgraham.com unless

@@ -6,6 +6,7 @@ import json
 import os
 import sys
 import traceback
+import uuid
 from pathlib import Path
 from typing import Annotated
 
@@ -15,7 +16,11 @@ from pydantic import ValidationError
 from rich.console import Console
 from rich.logging import RichHandler
 
-from paul_graham_essay_feeds.catalog import default_catalog_path, load_catalog
+from paul_graham_essay_feeds.catalog import (
+    default_catalog_path,
+    load_catalog,
+    require_contained_path,
+)
 from paul_graham_essay_feeds.feeds import (
     ENRICHED_FEED_NAMES,
     SIMPLE_FEED_NAMES,
@@ -33,7 +38,7 @@ from paul_graham_essay_feeds.models import (
     exit_code_for_exception,
     format_validation_error,
 )
-from paul_graham_essay_feeds.pipeline import run_catalog_pipeline
+from paul_graham_essay_feeds.pipeline import PipelineAction, run_catalog_pipeline
 from paul_graham_essay_feeds.publication import abandon_recovery as abandon_publication_recovery
 from paul_graham_essay_feeds.settings import (
     DEFAULT_MAX_LINK_VALIDATIONS,
@@ -85,9 +90,81 @@ def _assert_catalog_feed_id_parity(catalog: Catalog, root: Path) -> None:
             )
 
 
+_SIDE_CHANNEL_ACTIONS: frozenset[str] = frozenset(item.value for item in PipelineAction)
+
+
+def _side_channel_action(action: str) -> str:
+    """Allowlist ``unchanged|state_changed|updated`` so GITHUB_OUTPUT cannot inject keys."""
+    if action not in _SIDE_CHANNEL_ACTIONS:
+        raise FeedError(f"Invalid update action for side-channel: {action!r}")
+    return action
+
+
+def _side_channel_count(value: object) -> int:
+    """Render a non-negative integer token; non-ints become 0."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        return 0
+    if value < 0:
+        raise FeedError(f"Invalid side-channel count: {value}")
+    return value
+
+
+def _side_channel_failed_ids(ids: object) -> tuple[str, ...]:
+    """Keep at most 50 failed-id strings."""
+    if not isinstance(ids, list | tuple):
+        return ()
+    cleaned: list[str] = []
+    for item in ids[:50]:
+        text = str(item)
+        if not text:
+            continue
+        cleaned.append(text)
+    return tuple(cleaned)
+
+
+def _result_file_failed_ids(ids: tuple[str, ...]) -> tuple[str, ...]:
+    """Omit ids that would break ``key=value`` lines (newline / CR / NUL)."""
+    return tuple(item for item in ids if not any(ch in item for ch in "\n\r\0"))
+
+
+def _contained_result_file(repo_root: Path, result_file: Path) -> Path:
+    """Resolve ``--result-file`` under ``repo_root`` and reject escapes / symlink parents."""
+    root = Path(repo_root).expanduser().resolve()
+    target = Path(result_file).expanduser()
+    if not target.is_absolute():
+        target = root / target
+    return require_contained_path(root, target)
+
+
+def _github_heredoc(name: str, value: str) -> str:
+    """GitHub Actions multiline output block (delimiter cannot appear in ``value``)."""
+    delimiter = f"PGF_{uuid.uuid4().hex}"
+    while delimiter in value:
+        delimiter = f"PGF_{uuid.uuid4().hex}"
+    return f"{name}<<{delimiter}\n{value}\n{delimiter}\n"
+
+
+def _side_channel_counts_block(
+    *,
+    links_checked: int,
+    links_attempted: int,
+    links_healthy: int,
+    links_failed: int,
+    links_skipped: int,
+) -> str:
+    return (
+        f"links_checked={links_checked}\n"
+        f"links_attempted={links_attempted}\n"
+        f"links_healthy={links_healthy}\n"
+        f"links_failed={links_failed}\n"
+        f"links_skipped={links_skipped}\n"
+    )
+
+
 def _emit_update_action(
     action: str,
     *,
+    repo_root: Path,
     result_file: Path | None,
     links_checked: int = 0,
     links_skipped: int = 0,
@@ -99,29 +176,41 @@ def _emit_update_action(
     """Append machine side-channel keys for ``--result-file`` / ``$GITHUB_OUTPUT``.
 
     ``action`` is last so existing consumers that ``endswith`` still match.
+    ``--result-file`` is contained under ``repo_root``. ``$GITHUB_OUTPUT`` uses
+    id-only count/action tokens and a heredoc for ``links_failed_ids``.
     """
-    attempted = links_checked if links_attempted is None else links_attempted
-    payload = (
-        f"links_checked={links_checked}\n"
-        f"links_attempted={attempted}\n"
-        f"links_healthy={links_healthy}\n"
-        f"links_failed={links_failed}\n"
-        f"links_skipped={links_skipped}\n"
-        f"action={action}\n"
+    action = _side_channel_action(action)
+    links_checked = _side_channel_count(links_checked)
+    links_skipped = _side_channel_count(links_skipped)
+    links_healthy = _side_channel_count(links_healthy)
+    links_failed = _side_channel_count(links_failed)
+    attempted = links_checked if links_attempted is None else _side_channel_count(links_attempted)
+    failed_ids = _side_channel_failed_ids(links_failed_ids)
+    counts = _side_channel_counts_block(
+        links_checked=links_checked,
+        links_attempted=attempted,
+        links_healthy=links_healthy,
+        links_failed=links_failed,
+        links_skipped=links_skipped,
     )
-    if links_failed_ids:
-        payload = payload.replace(
-            f"action={action}\n",
-            "links_failed_ids=" + ",".join(links_failed_ids[:50]) + f"\naction={action}\n",
-        )
     if result_file is not None:
-        result_file.parent.mkdir(parents=True, exist_ok=True)
-        with result_file.open("a", encoding="utf-8") as handle:
-            handle.write(payload)
+        contained = _contained_result_file(repo_root, result_file)
+        file_ids = _result_file_failed_ids(failed_ids)
+        file_payload = counts
+        if file_ids:
+            file_payload += "links_failed_ids=" + ",".join(file_ids) + "\n"
+        file_payload += f"action={action}\n"
+        contained.parent.mkdir(parents=True, exist_ok=True)
+        with contained.open("a", encoding="utf-8") as handle:
+            handle.write(file_payload)
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:
+        gha_payload = counts
+        if failed_ids:
+            gha_payload += _github_heredoc("links_failed_ids", ",".join(failed_ids))
+        gha_payload += f"action={action}\n"
         with Path(github_output).open("a", encoding="utf-8") as handle:
-            handle.write(payload)
+            handle.write(gha_payload)
 
 
 def configure_logging(*, verbose: bool = False, quiet: bool = False) -> None:
@@ -337,12 +426,16 @@ def update_cmd(
         force=force,
         public_base_url=public_base_url,
         all_pages=all_pages,
-        allow_bootstrap_fallback=True if allow_bootstrap_fallback else None,
+        allow_bootstrap_fallback=_cmdline_or_none(
+            ctx, "allow_bootstrap_fallback", allow_bootstrap_fallback
+        ),
     )
     global _DEBUG
     _DEBUG = bool(debug)
     configure_logging(verbose=settings.verbose, quiet=settings.quiet)
     try:
+        if result_file is not None:
+            result_file = _contained_result_file(settings.repo_root, result_file)
         reporter = ProgressReporter(
             OutputPolicy(quiet=settings.quiet, machine=not sys.stderr.isatty())
         )
@@ -365,6 +458,7 @@ def update_cmd(
 
         _emit_update_action(
             action,
+            repo_root=settings.repo_root,
             result_file=result_file,
             links_checked=result.links_checked,
             links_skipped=result.links_skipped,
@@ -435,7 +529,11 @@ def check_cmd(
         feeds = root / "feeds"
         if not feeds.is_dir():
             raise ConfigurationError(f"Missing feeds directory: {feeds}")
-        verify_feed_artifacts(root, min_items=settings.min_items)
+        verify_feed_artifacts(
+            root,
+            min_items=settings.min_items,
+            public_base_url=settings.public_base_url,
+        )
         catalog_path = default_catalog_path(root)
         # Normal repository bundles require catalog.json (M-25).
         if not catalog_path.is_file():

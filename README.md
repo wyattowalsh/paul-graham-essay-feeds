@@ -133,7 +133,7 @@ pg-essay-feeds update --from-feeds
 pg-essay-feeds update --force
 
 # quiet success → zero bytes on stdout/stderr; machine sinks still get action=
-pg-essay-feeds update -q --result-file /tmp/pg-action.txt
+pg-essay-feeds update -q --result-file .cache/pg-action.txt
 # ($GITHUB_OUTPUT also receives action=unchanged|state_changed|updated when set)
 
 # verify feeds + required catalog.json (parity + content_text)
@@ -256,7 +256,8 @@ Contributor docs (architecture, tests, CI): **[`.github/DOCS.md`](./.github/DOCS
 
 ```bash
 uv sync --all-groups
-just all    # lint + types + tests (≥90% cov) + check
+just all        # shorter loop: lint + types + tests (≥90% cov) + check + pages
+just ci-local   # full bar: locked sync, lint, types, tests, quiet check, pages, wheel
 ```
 
 | Doc | Audience |

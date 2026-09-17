@@ -25,8 +25,8 @@ from paul_graham_essay_feeds.http import (
     create_http_client,
     decode_html_document,
     get_with_evidence,
+    head_with_evidence,
     hop_safe_get,
-    hop_safe_request,
     run_with_retry,
 )
 from paul_graham_essay_feeds.models import (
@@ -1016,18 +1016,24 @@ def _probe_once(
     max_bytes: int,
     host_cooldown: HostCooldown | None = None,
 ) -> None:
-    """Single probe attempt; raises httpx errors for tenacity."""
+    """Single probe attempt; raises httpx errors for tenacity.
+
+    HEAD uses :func:`head_with_evidence` so a misbehaving entity is never
+    buffered (RV-C-001). GET fallback remains body-capped.
+    """
     if host_cooldown is not None:
         host = urlsplit(essay.url).hostname or ""
         host_cooldown.wait(host)
-    response = hop_safe_request(
+    result = head_with_evidence(
         client,
-        "HEAD",
         essay.url,
         allowed_hosts=ALLOWED_HOSTS,
         max_bytes=max_bytes,
         allow_loopback=None,
     )
+    if result.response is None:
+        raise httpx.TransportError(result.evidence.error_message or f"HEAD failed for {essay.url}")
+    response = result.response
     if response.status_code in {405, 501}:
         response = hop_safe_get(
             client,

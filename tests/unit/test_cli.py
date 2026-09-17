@@ -26,7 +26,11 @@ from paul_graham_essay_feeds.cli import (
     app,
     main,
 )
-from paul_graham_essay_feeds.feeds import render_snapshot_feeds, write_feeds
+from paul_graham_essay_feeds.feeds import (
+    catalog_to_feed_snapshot,
+    render_snapshot_feeds,
+    write_feeds,
+)
 from paul_graham_essay_feeds.models import (
     FEED_TITLE_SIMPLE,
     Catalog,
@@ -548,6 +552,141 @@ def test_update_result_file_and_github_output(
     assert "links_skipped=" in first_block
 
 
+def test_update_result_file_rejects_path_outside_repo(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline = _mock_update_pipeline(monkeypatch)
+    outside = tmp_path.parent / f"{tmp_path.name}-escape-result.txt"
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(tmp_path),
+            "--quiet",
+            "--result-file",
+            str(outside),
+        ],
+    )
+    assert result.exit_code == 1
+    combined = f"{result.stderr or ''}{result.output or ''}"
+    assert "escapes repository root" in combined
+    assert not outside.exists()
+    pipeline.assert_not_called()
+
+
+def test_update_result_file_relative_stays_in_repo(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_update_pipeline(monkeypatch)
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(tmp_path),
+            "--quiet",
+            "--result-file",
+            "out/result.txt",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    text = (tmp_path / "out" / "result.txt").read_text(encoding="utf-8")
+    assert text.endswith("action=unchanged\n")
+
+
+def _github_output_keys(text: str) -> dict[str, str]:
+    """Parse GitHub output file keys, treating ``name<<DELIM`` bodies as one value."""
+    keys: dict[str, str] = {}
+    lines = iter(text.splitlines())
+    for line in lines:
+        if "<<" in line:
+            name, delimiter = line.split("<<", 1)
+            chunks: list[str] = []
+            for body in lines:
+                if body == delimiter:
+                    break
+                chunks.append(body)
+            keys[name] = "\n".join(chunks)
+            continue
+        if "=" in line:
+            name, value = line.split("=", 1)
+            keys[name] = value
+    return keys
+
+
+def test_update_github_output_failed_link_ids_uses_heredoc(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline = _mock_update_pipeline(monkeypatch)
+    pipeline.return_value.links_checked = 2
+    pipeline.return_value.links_healthy = 1
+    pipeline.return_value.links_failed = 1
+    pipeline.return_value.links_failed_ids = ("https://paulgraham.com/a.html",)
+    github_path = tmp_path / "gha" / "output.txt"
+    github_path.parent.mkdir()
+    github_path.write_text("", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_OUTPUT", str(github_path))
+    result_path = tmp_path / "result.txt"
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(tmp_path),
+            "--quiet",
+            "--result-file",
+            str(result_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    gha = github_path.read_text(encoding="utf-8")
+    assert "links_failed_ids<<" in gha
+    assert gha.endswith("action=unchanged\n")
+    assert _github_output_keys(gha)["links_failed_ids"] == "https://paulgraham.com/a.html"
+    assert _github_output_keys(gha)["action"] == "unchanged"
+    assert "links_failed_ids=https://paulgraham.com/a.html\n" in result_path.read_text(
+        encoding="utf-8"
+    )
+
+
+def test_update_github_output_failed_link_newline_not_injected(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline = _mock_update_pipeline(monkeypatch)
+    pipeline.return_value.links_failed = 1
+    pipeline.return_value.links_failed_ids = ("https://paulgraham.com/a.html\naction=updated",)
+    github_path = tmp_path / "gha-output.txt"
+    github_path.write_text("", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_OUTPUT", str(github_path))
+    result_path = tmp_path / "result.txt"
+    result = runner.invoke(
+        app,
+        [
+            "update",
+            "--repo-root",
+            str(tmp_path),
+            "--quiet",
+            "--result-file",
+            str(result_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    gha = github_path.read_text(encoding="utf-8")
+    assert gha.endswith("action=unchanged\n")
+    keys = _github_output_keys(gha)
+    assert keys["action"] == "unchanged"
+    assert keys["links_failed_ids"] == "https://paulgraham.com/a.html\naction=updated"
+    result_text = result_path.read_text(encoding="utf-8")
+    assert "links_failed_ids=" not in result_text
+    assert "action=updated" not in result_text
+    assert result_text.endswith("action=unchanged\n")
+
+
 def test_update_skips_when_refresh_not_due(repo_root: Path, sample_html_path: Path) -> None:
     """Second update with same source skips rewrite when refresh planner says not due."""
     args = [
@@ -604,35 +743,68 @@ def test_update_verbose(repo_root: Path, sample_html_path: Path) -> None:
     assert result.exit_code == 0, result.output
 
 
-def _write_one_essay(repo_root: Path) -> None:
+def _write_one_essay(repo_root: Path, *, public_base_url: str | None = None) -> None:
     from paul_graham_essay_feeds.catalog import save_catalog
     from paul_graham_essay_feeds.models import Catalog, CatalogEntry
 
     now = utc_now()
-    snapshot = FeedSnapshot(
-        logical_updated_at=now,
-        generator="pg-essay-feeds/test",
-        items=[
-            FeedEntrySnapshot(
-                id="https://paulgraham.com/a.html",
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        entry_order=["https://paulgraham.com/a.html"],
+        entries={
+            "https://paulgraham.com/a.html": CatalogEntry(
+                stable_id="https://paulgraham.com/a.html",
                 url="https://paulgraham.com/a.html",
                 title="A",
-                summary="Short summary for check tests.",
+                position=0,
+                first_seen_at=now,
+                last_seen_at=now,
                 observed_updated_at=now,
-            ),
-        ],
+                summary="Short summary for check tests.",
+            )
+        },
     )
-    rss, atom, jf = render_snapshot_feeds(snapshot)
-    simple = snapshot.model_copy(
-        update={
-            "variant": "simple",
-            "title": FEED_TITLE_SIMPLE,
-            "items": [
-                item.model_copy(update={"summary": blurb(item.title)}) for item in snapshot.items
+    if public_base_url is None:
+        snapshot = FeedSnapshot(
+            logical_updated_at=now,
+            generator="pg-essay-feeds/test",
+            items=[
+                FeedEntrySnapshot(
+                    id="https://paulgraham.com/a.html",
+                    url="https://paulgraham.com/a.html",
+                    title="A",
+                    summary="Short summary for check tests.",
+                    observed_updated_at=now,
+                ),
             ],
-        }
-    )
-    sr, sa, sj = render_snapshot_feeds(simple)
+        )
+        rss, atom, jf = render_snapshot_feeds(snapshot)
+        simple = snapshot.model_copy(
+            update={
+                "variant": "simple",
+                "title": FEED_TITLE_SIMPLE,
+                "items": [
+                    item.model_copy(update={"summary": blurb(item.title)})
+                    for item in snapshot.items
+                ],
+            }
+        )
+        sr, sa, sj = render_snapshot_feeds(simple)
+    else:
+        snapshot = catalog_to_feed_snapshot(
+            catalog,
+            generator="pg-essay-feeds/test",
+            public_base_url=public_base_url,
+        )
+        simple = catalog_to_feed_snapshot(
+            catalog,
+            generator="pg-essay-feeds/test",
+            public_base_url=public_base_url,
+            summary_mode="title_only",
+        )
+        rss, atom, jf = render_snapshot_feeds(snapshot)
+        sr, sa, sj = render_snapshot_feeds(simple)
     write_feeds(
         repo_root,
         rss=rss,
@@ -643,26 +815,7 @@ def _write_one_essay(repo_root: Path) -> None:
         simple_json_feed=sj,
     )
     # Repository check requires catalog.json parity with feed ids (M-25).
-    save_catalog(
-        repo_root / "catalog.json",
-        Catalog(
-            schema_version=2,
-            material_config_fingerprint="test",
-            entry_order=["https://paulgraham.com/a.html"],
-            entries={
-                "https://paulgraham.com/a.html": CatalogEntry(
-                    stable_id="https://paulgraham.com/a.html",
-                    url="https://paulgraham.com/a.html",
-                    title="A",
-                    position=0,
-                    first_seen_at=now,
-                    last_seen_at=now,
-                    observed_updated_at=now,
-                    summary="Short summary for check tests.",
-                )
-            },
-        ),
-    )
+    save_catalog(repo_root / "catalog.json", catalog)
 
 
 def test_check_ok(repo_root: Path) -> None:
@@ -674,6 +827,54 @@ def test_check_ok(repo_root: Path) -> None:
     assert result.exit_code == 0
     assert result.stdout == ""
     assert result.stderr == ""
+
+
+def test_check_forwards_settings_public_base_url(
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_one_essay(repo_root)
+    monkeypatch.setenv("PG_ESSAY_FEEDS_PUBLIC_BASE_URL", "https://example.com/pg-feeds/")
+    seen: dict[str, object] = {}
+
+    def _capture(
+        root: Path,
+        *,
+        min_items: int,
+        public_base_url: str | None = None,
+    ) -> None:
+        seen["root"] = root
+        seen["min_items"] = min_items
+        seen["public_base_url"] = public_base_url
+
+    monkeypatch.setattr("paul_graham_essay_feeds.cli.verify_feed_artifacts", _capture)
+    result = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
+    )
+    assert result.exit_code == 0, result.output
+    assert seen["min_items"] == 1
+    assert seen["public_base_url"] == "https://example.com/pg-feeds/"
+
+
+def test_check_rejects_self_url_mismatch_from_settings(
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PG_ESSAY_FEEDS_PUBLIC_BASE_URL", "https://example.com/pg-feeds/")
+    _write_one_essay(repo_root, public_base_url="https://example.com/pg-feeds/")
+    ok = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
+    )
+    assert ok.exit_code == 0, ok.output
+    monkeypatch.setenv("PG_ESSAY_FEEDS_PUBLIC_BASE_URL", "https://other.example/feeds/")
+    bad = runner.invoke(
+        app,
+        ["check", "--repo-root", str(repo_root), "--min-items", "1", "--quiet"],
+    )
+    assert bad.exit_code == 2
+    assert "SELF_LINK" in f"{bad.output}{bad.stderr}"
 
 
 def test_check_fails_wrong_content_text(repo_root: Path) -> None:
@@ -954,6 +1155,32 @@ def test_env_quiet_not_clobbered_by_cli_default(
     assert result.exit_code == 0, result.output
     configure.assert_called_once()
     assert configure.call_args.kwargs["quiet"] is True
+
+
+@pytest.mark.parametrize(
+    ("extra", "expected"),
+    [
+        ([], True),
+        (["--no-allow-bootstrap-fallback"], False),
+        (["--allow-bootstrap-fallback"], True),
+    ],
+)
+def test_env_allow_bootstrap_fallback_cmdline_gated(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    extra: list[str],
+    expected: bool,
+) -> None:
+    """Env true is kept unless --no-allow-bootstrap-fallback is on the command line."""
+    monkeypatch.setenv("PG_ESSAY_FEEDS_ALLOW_BOOTSTRAP_FALLBACK", "true")
+    pipeline = _mock_update_pipeline(monkeypatch)
+    result = runner.invoke(
+        app,
+        ["update", "--repo-root", str(tmp_path), "--quiet", *extra],
+    )
+    assert result.exit_code == 0, result.output
+    settings = pipeline.call_args.args[0]
+    assert settings.allow_bootstrap_fallback is expected
 
 
 def test_cli_quiet_and_verbose_prefer_quiet(

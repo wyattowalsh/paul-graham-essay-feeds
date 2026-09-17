@@ -198,7 +198,7 @@ flag uses `_is_cmdline`):
 | Pattern | Flags | Mechanism |
 | :--- | :--- | :--- |
 | **None-sentinel dual bools** | `--enrich/--no-enrich`, `--validate-links/--no-validate-links`, `--force/--no-force`, `--all-pages/--no-all-pages` | Typer `bool \| None = None`; omitted → keep Settings/env |
-| **Cmdline-gated defaults** | `-q` / `--quiet`, `-v` / `--verbose` | Typer `bool = False`; `_cmdline_or_none` applies only when `ParameterSource.COMMANDLINE` |
+| **Cmdline-gated defaults** | `-q` / `--quiet`, `-v` / `--verbose`, `--allow-bootstrap-fallback` / `--no-allow-bootstrap-fallback` | Typer `bool = False`; `_cmdline_or_none` applies only when `ParameterSource.COMMANDLINE` |
 
 Optional scalars (`--repo-root`, `--min-items`, `--timeout`, …) use `T | None = None`
 the same way as dual bools. If both quiet and verbose end up true, quiet wins.
@@ -226,7 +226,7 @@ the same way as dual bools. If both quiet and verbose end up true, quiet wins.
 | `--all-pages` / `--no-all-pages` | off (env) | Uncap page fetches and dedicated link probes (full due corpus). Default caps are 40 / 40 (matching CI). |
 | `--from-feeds` | off | Seed the in-memory catalog candidate from existing feeds; persist only after successful verification/publication |
 | `--abandon-recovery` / `--no-abandon-recovery` | off | Explicit repair for irrecoverable `.cache/materialize.json` (quarantines pointer + generation). Not a third command. |
-| `--result-file PATH` | — | Append `links_checked`, `links_skipped`, then `action=unchanged\|state_changed\|updated`; also writes `$GITHUB_OUTPUT` when set (quiet success side-channel) |
+| `--result-file PATH` | — | Append `links_checked`, `links_skipped`, then `action=unchanged\|state_changed\|updated`; PATH must stay under `--repo-root` (escapes / symlink parents rejected). Also writes `$GITHUB_OUTPUT` when set (quiet success side-channel) |
 | `--allow-bootstrap-fallback` | off | Allow discovery fallback when no prior catalog exists |
 | `--debug` | off | Print tracebacks for unexpected errors |
 | `-q` / `--quiet` | off (env) | Quiet success → zero stdout **and** stderr; errors only; result-file / `$GITHUB_OUTPUT` still write |
@@ -278,6 +278,7 @@ Env-only (no CLI flag): `MAX_BYTES`, `LINK_WORKERS`, `ENRICH_WORKERS`, `STALE_AF
 | `PG_ESSAY_FEEDS_MAX_LINK_VALIDATIONS` | `40` | Cap dedicated link probes per run (`none`/`unlimited` = uncapped; empty keeps 40) |
 | `PG_ESSAY_FEEDS_ALL_PAGES` | `false` | Uncap both fetch budgets (same as `--all-pages`) |
 | `PG_ESSAY_FEEDS_ALLOW_DISCOVERY_FALLBACK` | `true` | Sparse-marker discovery fallback (env-only) |
+| `PG_ESSAY_FEEDS_ALLOW_BOOTSTRAP_FALLBACK` | `false` | Empty-catalog discovery fallback; cmdline-gated like quiet/verbose |
 | `PG_ESSAY_FEEDS_HOST_COOLDOWN_SECONDS` | `0.25` | Min seconds between requests to the same host (shared `HostCooldown`; env-only) |
 | `PG_ESSAY_FEEDS_QUIET` / `PG_ESSAY_FEEDS_VERBOSE` | false | Log levels |
 
@@ -538,7 +539,7 @@ use the GitHub Pages subscribe URLs in README. Colab is for generating a private
    `catalog.json` on disk and zip packaging
 2. Form cell (`#@title` + `cellView: form`): **Enrich**, **Auto-download**;
    `ROOT` under Advanced (default `/content/pg-feeds`)
-3. `!pip install -q "uv>=0.12"` → `subprocess` `uvx … update` (capture + print
+3. `!pip install -q "uv==0.12.15"` → `subprocess` `uvx … update` (capture + print
    logs; `+ --no-enrich` when off; **do not** pass `--no-validate-links` —
    package default `validate_links=True`; fetch-pages phase: enrich GET =
    check + summary for due IDs, dedicated probes only for non-enriched URLs) →
@@ -569,6 +570,15 @@ No package API imports in the kernel; CLI only via `uvx` from
    GitHub Release via softprops with **auto-generated release notes** (from
    commits/PRs since the previous tag), and attaches `dist/*`. No `uv publish`
    on tag. User install pin is `@v1.0.0`.
+
+Attested `requirements.txt` is **inventory**, not an install pin: a frozen
+`name==version` export of the default runtime graph (`uv export --frozen
+--no-hashes --no-dev --no-emit-project`; no `brotli` extra). Checksums and
+attestations prove that file was not swapped on the GitHub Release; they do
+**not** bind each PyPI object at install time. **`uv.lock` is the
+install-integrity SSOT.** CI and `just ci-local` install with
+`uv sync --locked`. `uv pip install --require-hashes` is not a supported
+path.
 
 ```bash
 just build   # local: uv build --no-sources + wheel smoke
@@ -609,9 +619,10 @@ requires `content_text` without matching regenerated artifacts in the same chang
 
 ### Version pin (PGF-2026-004)
 
-Package `__version__` is `1.0.0`. Historical `[0.2.0]` in CHANGELOG is the
+Package `__version__` is `1.0.1`. Historical `[0.2.0]` in CHANGELOG is the
 prior advertised-but-untagged integrity work — do not revive `@v0.2.0` as a
-user pin. User docs install from `@v1.0.0`.
+user pin. User docs and the notebook still install from `@v1.0.0` until
+`v1.0.1` exists (tag create is operator-blocked on ruleset `22371020`).
 
 ### Branch protection (rulesets)
 
@@ -955,7 +966,8 @@ commits the catalog.
   third-party text.
 - Short source-derived summaries only; no full-body storage.
 - Release tags must match package version; user-facing CHANGELOG only.
-  Package version is `1.0.0`; user docs pin `@v1.0.0` (PGF-2026-004).
+  Package version is `1.0.1`; user docs pin `@v1.0.0` until `v1.0.1`
+  exists (PGF-2026-004).
 - Scheduled automation commits deterministic `catalog.json` + `feeds/` to `main`.
 - Signing of published product files uses **GitHub Actions artifact attestations**
   (`actions/attest-build-provenance` on the Update feeds publish job), not a
@@ -970,7 +982,9 @@ commits the catalog.
   hosted subscribe URLs track bot commits (PGF-2026-040). Release tags
   additionally run `git merge-base --is-ancestor` against `origin/main`
   (PGF-2026-033). Wheel/sdist/`requirements.txt`/`bom.cdx.json` checksums live in
-  `SHA256SUMS.txt` on the GitHub Release. Consumers verify with
+  `SHA256SUMS.txt` on the GitHub Release. Attested `requirements.txt` is a
+  name==version inventory of that default runtime graph; **`uv.lock` is the
+  install-integrity SSOT** (`uv sync --locked`). Consumers verify with
   `sha256sum -c SHA256SUMS.txt` and
   `gh attestation verify dist/<asset> --repo wyattowalsh/paul-graham-essay-feeds`
   (expected workflow: `.github/workflows/release.yml`). Attestations are not

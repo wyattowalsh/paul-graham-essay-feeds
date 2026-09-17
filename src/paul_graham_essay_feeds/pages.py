@@ -10,8 +10,11 @@ newest-first projection with its own feed-level identity (PGF-FINAL-001).
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+import os
 import shutil
+import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Final, Literal
@@ -63,8 +66,12 @@ _PAGES_BRAND_FILES: Final[frozenset[str]] = frozenset(
         "site.webmanifest",
     }
 )
+_MANAGED_MARKER: Final[str] = ".pgf-pages-output"
 _PAGES_EXPECTED_FILES: Final[frozenset[str]] = (
-    frozenset({".nojekyll", "index.html"}) | _PAGES_FEED_COPIES | _PAGES_LATEST | _PAGES_BRAND_FILES
+    frozenset({".nojekyll", "index.html", _MANAGED_MARKER})
+    | _PAGES_FEED_COPIES
+    | _PAGES_LATEST
+    | _PAGES_BRAND_FILES
 )
 _INDEX_HREFS: Final[tuple[str, ...]] = (
     "rss.xml",
@@ -570,27 +577,54 @@ def _copy_pages_brand_assets(root: Path, dest: Path) -> None:
     shutil.copytree(site_assets, dest, dirs_exist_ok=True)
 
 
-def assemble_pages(repo_root: Path, dest: Path) -> Path:
-    """Copy committed feeds, write ``/latest/*``, index, brand files, and ``.nojekyll``.
+def _absolute_unresolved(path: Path) -> Path:
+    path = Path(path)
+    if path.is_absolute():
+        return path
+    return Path.cwd() / path
 
-    Also mirrors the six files under ``feeds/`` so the previous GitHub Pages
-    layout (``/feeds/rss.xml``) keeps working.
-    """
-    root = Path(repo_root).resolve()
-    dest = Path(dest)
-    if not dest.is_absolute():
-        dest = (Path.cwd() / dest).resolve()
+
+def _raise_if_symlink_lineage(path: Path) -> None:
+    for current in (path, *path.parents):
+        if current.is_symlink():
+            raise FeedError(
+                f"Pages output must not be a symlink or have a symlink ancestor: {path}"
+            )
+
+
+def _directory_is_empty(path: Path) -> bool:
+    with os.scandir(path) as entries:
+        return next(entries, None) is None
+
+
+def _is_marked_pages_dest(dest: Path) -> bool:
+    marker = dest / _MANAGED_MARKER
+    return marker.is_file() and not marker.is_symlink()
+
+
+def _assert_managed_destination(dest: Path, *, root: Path) -> bool:
+    """Validate dest. Return True when a marked tree should be replaced."""
+    _raise_if_symlink_lineage(dest)
     feeds = root / "feeds"
-    if dest in (root, feeds):
+    resolved = dest.resolve()
+    if resolved in (root, feeds):
         raise FeedError("Pages output must not be the repository root or feeds/")
-    if not feeds.is_dir():
-        raise FeedError(f"Missing feeds directory: {feeds}")
-    if dest.exists():
-        if dest.is_dir():
-            shutil.rmtree(dest)
-        else:
-            dest.unlink()
-    dest.mkdir(parents=True)
+    if not dest.exists():
+        return False
+    if not dest.is_dir():
+        raise FeedError(f"Pages output must not be a file: {dest}")
+    if _is_marked_pages_dest(dest):
+        return True
+    if _directory_is_empty(dest):
+        return False
+    raise FeedError(
+        f"Pages output is not empty and is not a managed Pages artifact "
+        f"(missing {_MANAGED_MARKER}): {dest}"
+    )
+
+
+def _write_pages_contents(root: Path, dest: Path) -> None:
+    feeds = root / "feeds"
     latest_dir = dest / "latest"
     latest_dir.mkdir()
     mirror = dest / "feeds"
@@ -611,6 +645,58 @@ def assemble_pages(repo_root: Path, dest: Path) -> Path:
     _copy_pages_brand_assets(root, dest)
     (dest / "index.html").write_text(index_html(), encoding="utf-8", newline="\n")
     (dest / ".nojekyll").write_bytes(b"")
+    (dest / _MANAGED_MARKER).write_bytes(b"")
+
+
+def _install_pages_tree(*, dest: Path, staged: Path, replace_existing: bool) -> None:
+    if replace_existing and dest.exists():
+        backup = Path(tempfile.mkdtemp(prefix=f".{dest.name}.old.", dir=str(dest.parent)))
+        try:
+            backup.rmdir()
+            os.rename(dest, backup)
+        except OSError:
+            if backup.exists():
+                shutil.rmtree(backup, ignore_errors=True)
+            raise
+        try:
+            os.rename(staged, dest)
+        except OSError:
+            with contextlib.suppress(OSError):
+                os.rename(backup, dest)
+            raise
+        shutil.rmtree(backup, ignore_errors=True)
+        return
+    if dest.exists():
+        dest.rmdir()
+    os.rename(staged, dest)
+
+
+def assemble_pages(repo_root: Path, dest: Path) -> Path:
+    """Copy committed feeds, write ``/latest/*``, index, brand files, and ``.nojekyll``.
+
+    Also mirrors the six files under ``feeds/`` so the previous GitHub Pages
+    layout (``/feeds/rss.xml``) keeps working.
+
+    Destination policy: missing dest and empty unmarked directories assemble;
+    nonempty unmarked dest, a file dest, and a symlink dest or ancestor raise
+    ``FeedError`` without deletion. A dest marked with ``.pgf-pages-output`` is
+    replaced via a sibling temp directory. Never writes onto the repository
+    root or ``feeds/``.
+    """
+    root = Path(repo_root).resolve()
+    dest = _absolute_unresolved(dest)
+    replace_existing = _assert_managed_destination(dest, root=root)
+    feeds = root / "feeds"
+    if not feeds.is_dir():
+        raise FeedError(f"Missing feeds directory: {feeds}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    staged = Path(tempfile.mkdtemp(prefix=f".{dest.name}.", dir=str(dest.parent)))
+    try:
+        _write_pages_contents(root, staged)
+        _install_pages_tree(dest=dest, staged=staged, replace_existing=replace_existing)
+    finally:
+        if staged.exists():
+            shutil.rmtree(staged, ignore_errors=True)
     return dest
 
 
@@ -815,6 +901,8 @@ def verify_pages_artifact(dest: Path, *, repo_root: Path | None = None) -> None:
         )
     if (dest / ".nojekyll").read_bytes() != b"":
         raise FeedError("Pages .nojekyll must be an empty file")
+    if (dest / _MANAGED_MARKER).is_symlink() or (dest / _MANAGED_MARKER).read_bytes() != b"":
+        raise FeedError("Pages managed-output marker must be an empty regular file")
     for name in _FEED_NAMES:
         root_bytes = (dest / name).read_bytes()
         mirror_bytes = (dest / "feeds" / name).read_bytes()

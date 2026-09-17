@@ -100,6 +100,31 @@ def test_head_large_content_length_still_allowed_f016() -> None:
             max_bytes=1024,
         )
     assert response.status_code == 200
+    assert response.content == b""
+
+
+@pytest.mark.characterization
+@respx.mock
+def test_head_large_entity_not_buffered() -> None:
+    """RV-C-001: HEAD must not buffer a misbehaving entity body."""
+    payload = b"x" * 200_000
+    respx.head("https://paulgraham.com/big.html").mock(
+        return_value=httpx.Response(
+            200,
+            content=payload,
+            headers={"content-length": str(len(payload)), "content-type": "text/html"},
+        )
+    )
+    with httpx.Client(trust_env=False, follow_redirects=False) as client:
+        response = hop_safe_request(
+            client,
+            "HEAD",
+            "https://paulgraham.com/big.html",
+            allowed_hosts=ALLOWED_HOSTS,
+            max_bytes=1024,
+        )
+    assert response.status_code == 200
+    assert response.content == b""
 
 
 @pytest.mark.characterization

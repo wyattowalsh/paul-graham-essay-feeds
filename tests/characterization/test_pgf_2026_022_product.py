@@ -11,7 +11,6 @@ import pytest
 from paul_graham_essay_feeds.catalog import load_catalog
 from paul_graham_essay_feeds.feeds import all_feed_paths, verify_feed_artifacts
 from paul_graham_essay_feeds.models import (
-    GENERATOR,
     MIN_ITEMS,
     Catalog,
     blurb,
@@ -131,7 +130,8 @@ def test_identity_order_bijection_234() -> None:
     assert len(enriched) == 234
     meta = _feed_json("feed.json")["_pg_essay_feeds"]
     assert meta["item_count"] == 234
-    assert meta["generator"] == GENERATOR
+    assert meta["generator"] == catalog.versions["generator"]
+    assert meta["generator"].startswith("pg-essay-feeds/")
 
 
 @pytest.mark.characterization

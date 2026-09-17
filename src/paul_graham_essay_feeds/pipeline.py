@@ -105,7 +105,7 @@ class PipelineResult:
     catalog: Catalog
     changeset: ChangeSet
     refresh_plan: RefreshPlan
-    index_hash: str
+    index_hash: str | None
     essay_count: int
     skipped: bool
     action: str  # PipelineAction value: unchanged | state_changed | updated
@@ -631,7 +631,7 @@ def _result_for_locked_write(
     *,
     changeset: ChangeSet,
     refresh_plan: RefreshPlan,
-    index_hash: str,
+    index_hash: str | None,
     essay_count: int,
     links_checked: int = 0,
     links_skipped: int = 0,
@@ -986,7 +986,7 @@ def _essays_from_catalog(catalog: Catalog) -> list[Essay]:
                 title=entry.title,
                 url=entry.url,
                 stable_id=entry.stable_id,
-                is_permalink=True,
+                is_permalink=(entry.stable_id == entry.url),
                 summary=entry.summary,
                 published_hint=entry.published_hint,
                 published_at=entry.published_at,
@@ -1134,11 +1134,9 @@ def run_catalog_pipeline(
         essays = _essays_from_catalog(prior)
         catalog = prior
         changeset = ChangeSet()
-        index_hash = (
-            prior.index.decoded_sha256
-            or prior.index.raw_sha256
-            or content_sha256("304-not-modified")
-        )
+        # RV-C-003: reuse a real prior digest, or omit. Never hash a sentinel
+        # string — that would fabricate JSON ``_pg_essay_feeds.index_hash``.
+        index_hash = prior.index.decoded_sha256 or prior.index.raw_sha256
         index_raw_sha256 = prior.index.raw_sha256
         index_decoded_sha256 = prior.index.decoded_sha256
         index_selected_encoding = prior.index.selected_encoding
@@ -1208,7 +1206,7 @@ def run_catalog_pipeline(
     if skip_network:
         logger.info(
             "Catalog refresh not due (hash {}); skipping enrich/page fetches",
-            index_hash[:12],
+            index_hash[:12] if index_hash is not None else "omitted",
         )
 
     if settings.validate_links or (not skip_network and settings.enrich and due_ids):
@@ -1425,7 +1423,7 @@ def run_catalog_pipeline(
     ):
         logger.info(
             "Post-enrich material unchanged (hash {}); committing under writer lock",
-            index_hash[:12],
+            index_hash[:12] if index_hash is not None else "omitted",
         )
         committed = _save_catalog_under_lock(
             root,

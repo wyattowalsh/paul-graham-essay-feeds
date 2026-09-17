@@ -29,10 +29,13 @@ from paul_graham_essay_feeds.models import (
     FeedError,
     ResourceState,
     blurb,
+    content_sha256,
+    make_stable_id,
 )
 from paul_graham_essay_feeds.pipeline import (
     _apply_enrichment,
     _complete_index_state,
+    _essays_from_catalog,
     _finalize_under_lock,
     _material_unchanged_vs_disk,
     _rotate_probe_essays,
@@ -960,6 +963,132 @@ def test_index_304_page_due_still_enriches(
     assert enrich.call_count > first_calls
     assert second.refresh_plan is not None
     assert any(d.fetch_page for d in second.refresh_plan.decisions)
+    sentinel = content_sha256("304-not-modified")
+    assert second.index_hash is not None
+    assert second.index_hash != sentinel
+    json_text = (tmp_path / "feeds" / "feed.json").read_text(encoding="utf-8")
+    payload = json.loads(json_text)
+    assert payload["_pg_essay_feeds"]["index_hash"] == second.index_hash
+    assert sentinel not in json_text
+
+
+def test_index_304_reuses_prior_sha256_not_sentinel(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RV-C-003: 304 reuses the prior index digest; never hashes a sentinel."""
+    from paul_graham_essay_feeds.http import IndexFetchResult
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+
+    html = synthetic_index_html()
+    settings = _settings(tmp_path, min_items=MIN_ITEMS, enrich=False)
+    first = run_catalog_pipeline(settings, html=html, now=T0)
+    assert first.action == "updated"
+    assert first.index_hash is not None
+    sentinel = content_sha256("304-not-modified")
+    assert first.index_hash != sentinel
+
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.pipeline.fetch_index",
+        MagicMock(
+            return_value=IndexFetchResult(
+                html=None,
+                not_modified=True,
+                etag='"idx-reuse"',
+                status_code=304,
+            )
+        ),
+    )
+    second = run_catalog_pipeline(settings, now=T0)
+    assert second.action == "unchanged"
+    assert second.index_hash == first.index_hash
+    payload = json.loads((tmp_path / "feeds" / "feed.json").read_text(encoding="utf-8"))
+    assert payload["_pg_essay_feeds"]["index_hash"] == first.index_hash
+    assert sentinel not in (tmp_path / "feeds" / "feed.json").read_text(encoding="utf-8")
+
+
+def test_index_304_omits_index_hash_when_prior_digest_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RV-C-003: 304 without a prior sha256 omits JSON index_hash (no fabrication)."""
+    import shutil
+
+    from paul_graham_essay_feeds.http import IndexFetchResult
+    from paul_graham_essay_feeds.models import MIN_ITEMS
+
+    html = synthetic_index_html()
+    settings = _settings(tmp_path, min_items=MIN_ITEMS, enrich=False)
+    first = run_catalog_pipeline(settings, html=html, now=T0)
+    assert first.action == "updated"
+    seeded = load_catalog(default_catalog_path(tmp_path))
+    assert seeded is not None
+    save_catalog(
+        default_catalog_path(tmp_path),
+        seeded.model_copy(
+            update={
+                "index": seeded.index.model_copy(
+                    update={"raw_sha256": None, "decoded_sha256": None}
+                )
+            }
+        ),
+    )
+    shutil.rmtree(tmp_path / "feeds")
+
+    monkeypatch.setattr(
+        "paul_graham_essay_feeds.pipeline.fetch_index",
+        MagicMock(
+            return_value=IndexFetchResult(
+                html=None,
+                not_modified=True,
+                etag='"idx-omit"',
+                status_code=304,
+            )
+        ),
+    )
+    second = run_catalog_pipeline(settings, now=T0)
+    assert second.index_hash is None
+    sentinel = content_sha256("304-not-modified")
+    json_text = (tmp_path / "feeds" / "feed.json").read_text(encoding="utf-8")
+    payload = json.loads(json_text)
+    assert "index_hash" not in payload["_pg_essay_feeds"]
+    assert sentinel not in json_text
+    simple_text = (tmp_path / "feeds" / "feed.simple.json").read_text(encoding="utf-8")
+    simple = json.loads(simple_text)
+    assert "index_hash" not in simple["_pg_essay_feeds"]
+    assert sentinel not in simple_text
+
+
+def test_essays_from_catalog_permalink_is_stable_id_eq_url() -> None:
+    """RV-C-004: 304 catalog rebuild must not force is_permalink=True."""
+    permalink_url = "https://paulgraham.com/a.html"
+    turbify_url = "https://sep.turbifycdn.com/ty/cdn/paulgraham/acl1.txt"
+    turbify_sid, turbify_is_permalink = make_stable_id(turbify_url)
+    assert turbify_is_permalink is False
+    assert turbify_sid != turbify_url
+    catalog = Catalog(
+        schema_version=2,
+        material_config_fingerprint="test",
+        entry_order=[permalink_url, turbify_sid],
+        entries={
+            permalink_url: CatalogEntry(
+                stable_id=permalink_url,
+                url=permalink_url,
+                title="A",
+                position=0,
+            ),
+            turbify_sid: CatalogEntry(
+                stable_id=turbify_sid,
+                url=turbify_url,
+                title="Chapter 1 of Ansi Common Lisp",
+                position=1,
+            ),
+        },
+    )
+    essays = _essays_from_catalog(catalog)
+    by_id = {essay.stable_id: essay for essay in essays}
+    assert by_id[permalink_url].is_permalink is True
+    assert by_id[turbify_sid].is_permalink is False
 
 
 def test_default_catalog_path_is_repo_root() -> None:

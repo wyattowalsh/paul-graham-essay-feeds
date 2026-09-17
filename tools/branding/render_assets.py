@@ -870,7 +870,7 @@ under `assets/brand/qa/`.
 
 The current GitHub Pages product is assembled by
 `src/paul_graham_essay_feeds/pages.py`. It writes the feed files, `/latest/`,
-`index.html`, and `.nojekyll`, but it does not yet copy static brand assets.
+`index.html`, and `.nojekyll`. Pages copies brand via `_copy_pages_brand_assets`.
 
 ## 1. Keep the source assets in the repository
 

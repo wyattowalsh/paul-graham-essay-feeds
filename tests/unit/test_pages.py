@@ -280,6 +280,7 @@ def test_assemble_pages_writes_feeds_latest_and_index(tmp_path: Path) -> None:
     assemble_pages(repo, dest)
     verify_pages_artifact(dest, repo_root=repo)
     assert (dest / ".nojekyll").is_file()
+    assert (dest / ".pgf-pages-output").is_file()
     html = (dest / "index.html").read_text(encoding="utf-8")
     assert "Paul Graham essay feeds" in html
     assert "href='latest/" not in html
@@ -296,15 +297,19 @@ def test_assemble_pages_writes_feeds_latest_and_index(tmp_path: Path) -> None:
 
 
 def test_assemble_pages_missing_feeds(tmp_path: Path) -> None:
+    dest = tmp_path / "out"
     with pytest.raises(FeedError, match="Missing feeds"):
-        assemble_pages(tmp_path, tmp_path / "out")
+        assemble_pages(tmp_path, dest)
+    assert not dest.exists()
 
 
 def test_assemble_pages_missing_brand_assets(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     _populate_feeds(repo / "feeds", 1, brand=False)
+    dest = tmp_path / "out"
     with pytest.raises(FeedError, match="Missing Pages brand assets"):
-        assemble_pages(repo, tmp_path / "out")
+        assemble_pages(repo, dest)
+    assert not dest.exists()
 
 
 def test_assemble_pages_rejects_extra_brand_file(tmp_path: Path) -> None:
@@ -334,14 +339,41 @@ def test_assemble_pages_refuses_repo_root(tmp_path: Path) -> None:
 
 
 def test_assemble_pages_replaces_stale_output(tmp_path: Path) -> None:
+    """Nonempty unmarked dest is refused; leftover files are not deleted."""
     repo = tmp_path / "repo"
     _populate_feeds(repo / "feeds", 1)
     dest = tmp_path / "_site"
     dest.mkdir()
-    (dest / "stale.txt").write_text("leftover", encoding="utf-8")
+    leftover = dest / "stale.txt"
+    leftover.write_text("leftover", encoding="utf-8")
+    with pytest.raises(FeedError, match="not empty"):
+        assemble_pages(repo, dest)
+    assert leftover.read_text(encoding="utf-8") == "leftover"
+    assert not (dest / "rss.xml").exists()
+    assert {path.name for path in dest.iterdir()} == {"stale.txt"}
+
+
+def test_assemble_pages_assembles_empty_unmarked_directory(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _populate_feeds(repo / "feeds", 1)
+    dest = tmp_path / "_site"
+    dest.mkdir()
     assemble_pages(repo, dest)
-    assert not (dest / "stale.txt").exists()
+    assert (dest / ".pgf-pages-output").is_file()
     assert (dest / "rss.xml").is_file()
+    verify_pages_artifact(dest, repo_root=repo)
+
+
+def test_assemble_pages_replaces_marked_stale_output(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _populate_feeds(repo / "feeds", 1)
+    dest = tmp_path / "_site"
+    assemble_pages(repo, dest)
+    stale = dest / "stale.txt"
+    stale.write_text("leftover", encoding="utf-8")
+    assemble_pages(repo, dest)
+    assert not stale.exists()
+    assert (dest / ".pgf-pages-output").is_file()
     verify_pages_artifact(dest, repo_root=repo)
 
 
@@ -490,8 +522,10 @@ def test_verify_rejects_atom_id_collision_with_full_feed(tmp_path: Path) -> None
 
 def test_assemble_pages_missing_artifact(tmp_path: Path) -> None:
     (tmp_path / "feeds").mkdir()
+    dest = tmp_path / "out"
     with pytest.raises(FeedError, match="Missing feed artifact"):
-        assemble_pages(tmp_path, tmp_path / "out")
+        assemble_pages(tmp_path, dest)
+    assert not dest.exists()
 
 
 def test_index_html_uses_relative_links() -> None:
@@ -532,9 +566,37 @@ def test_assemble_pages_replaces_file_dest(tmp_path: Path, monkeypatch: pytest.M
     dest = tmp_path / "built"
     dest.write_text("not a directory", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
-    assemble_pages(repo, Path("built"))
-    assert dest.is_dir()
-    assert (dest / "rss.xml").is_file()
+    with pytest.raises(FeedError, match="must not be a file"):
+        assemble_pages(repo, Path("built"))
+    assert dest.is_file()
+    assert dest.read_text(encoding="utf-8") == "not a directory"
+
+
+def test_assemble_pages_refuses_symlink_dest(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _populate_feeds(repo / "feeds", 1)
+    real = tmp_path / "real_site"
+    real.mkdir()
+    dest = tmp_path / "_site"
+    dest.symlink_to(real)
+    with pytest.raises(FeedError, match="symlink"):
+        assemble_pages(repo, dest)
+    assert dest.is_symlink()
+    assert list(real.iterdir()) == []
+
+
+def test_assemble_pages_refuses_symlink_ancestor(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    _populate_feeds(repo / "feeds", 1)
+    real_parent = tmp_path / "real_parent"
+    real_parent.mkdir()
+    linked = tmp_path / "linked"
+    linked.symlink_to(real_parent)
+    dest = linked / "_site"
+    with pytest.raises(FeedError, match="symlink"):
+        assemble_pages(repo, dest)
+    assert not dest.exists()
+    assert not (real_parent / "_site").exists()
 
 
 def test_pages_main_writes_and_verifies(tmp_path: Path) -> None:

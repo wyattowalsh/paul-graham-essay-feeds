@@ -379,3 +379,37 @@ def test_catalog_order_extended_to_all_six_files(tmp_path: Path) -> None:
         "feeds/atom.simple.xml",
         "feeds/feed.simple.json",
     }
+
+
+def test_catalog_json_public_base_url_is_not_a_self_url_hint(tmp_path: Path) -> None:
+    """RV-C-007: Catalog cannot store public_base_url; hints keep entry_order only."""
+    rss_e, atom_e, jf_e = _triple(kind="enriched")
+    rss_s, atom_s, jf_s = _triple(kind="simple")
+    write_feeds(
+        tmp_path,
+        rss=rss_e,
+        atom=atom_e,
+        json_feed=jf_e,
+        simple_rss=rss_s,
+        simple_atom=atom_s,
+        simple_json_feed=jf_s,
+    )
+    (tmp_path / "catalog.json").write_text(
+        json.dumps(
+            {
+                "entry_order": [_ITEM_URL],
+                "public_base_url": "https://example.com/feeds",
+            }
+        ),
+        encoding="utf-8",
+    )
+    ignored = verify_feed_dir(tmp_path, min_items=1)
+    assert ignored.ok is True
+    assert SELF_LINK_MISMATCH not in _codes(ignored)
+
+    required = verify_feed_dir(
+        tmp_path,
+        min_items=1,
+        public_base_url="https://example.com/feeds",
+    )
+    assert SELF_LINK_MISMATCH in _codes(required)

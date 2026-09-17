@@ -354,6 +354,7 @@ def test_hop_safe_request_head() -> None:
             max_bytes=None,
         )
     assert response.status_code == 200
+    assert response.content == b""
 
 
 @respx.mock
@@ -535,6 +536,63 @@ def test_hop_safe_request_stream_oversize() -> None:
             allowed_hosts=frozenset({"paulgraham.com"}),
             max_bytes=50,
         )
+
+
+class _CountingByteStream(httpx.SyncByteStream):
+    """Yields *payload* in chunks and records how many bytes were pulled."""
+
+    def __init__(self, payload: bytes) -> None:
+        self._payload = payload
+        self.bytes_yielded = 0
+
+    def __iter__(self):
+        step = 8192
+        for start in range(0, len(self._payload), step):
+            piece = self._payload[start : start + step]
+            self.bytes_yielded += len(piece)
+            yield piece
+
+
+class _HeadEntityTransport(httpx.BaseTransport):
+    """Offers a large entity only if the client reads the stream."""
+
+    def __init__(self, payload: bytes) -> None:
+        self.payload = payload
+        self.stream: _CountingByteStream | None = None
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        self.stream = _CountingByteStream(self.payload)
+        return httpx.Response(
+            200,
+            headers={
+                "Content-Type": "text/html",
+                "Content-Length": str(len(self.payload)),
+            },
+            stream=self.stream,
+            request=request,
+        )
+
+
+def test_hop_safe_request_head_large_entity_not_buffered() -> None:
+    """RV-C-001: a misbehaving HEAD entity must not be drained into memory."""
+    payload = b"x" * 200_000
+    transport = _HeadEntityTransport(payload)
+    with httpx.Client(
+        transport=transport,
+        trust_env=False,
+        follow_redirects=False,
+    ) as client:
+        response = hop_safe_request(
+            client,
+            "HEAD",
+            "https://paulgraham.com/big.html",
+            allowed_hosts=frozenset({"paulgraham.com"}),
+            max_bytes=1024,
+        )
+    assert response.status_code == 200
+    assert response.content == b""
+    assert transport.stream is not None
+    assert transport.stream.bytes_yielded == 0
 
 
 def test_assert_hop_rejects_userinfo() -> None:

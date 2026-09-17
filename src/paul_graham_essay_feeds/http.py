@@ -1348,6 +1348,10 @@ def hop_safe_request(
     When ``max_bytes`` is set, enforce size via Content-Length (when present) and
     a streaming read hard-stop before the body is fully buffered unbounded.
 
+    **HEAD** never drains an entity (RV-C-001 / F-016): the response is closed
+    after headers and rebuilt empty, matching :func:`_hop_exchange`.
+    ``Content-Length`` is not a download budget.
+
     ``allow_loopback`` defaults from the start URL host (``None`` → start host in
     loopback). That fixed boolean applies to every hop, including the final URL.
     """
@@ -1365,59 +1369,33 @@ def hop_safe_request(
     for _hop in range(max_hops):
         _assert_hop_allowed(current, allowed_hosts, allow_loopback=allow_loopback)
         logger.debug("{} {}", method_u, current)
-        if budget is None:
-            req = client.build_request(method_u, current)
-            response = client.send(req, stream=True, follow_redirects=False)
-            try:
-                if response.is_redirect:
-                    location = response.headers.get("location")
-                    response.close()
-                    response = None
-                    if not location:
-                        raise FeedError(f"Redirect without Location from {current}")
-                    current = str(httpx.URL(current).join(location))
-                    _assert_hop_allowed(current, allowed_hosts, allow_loopback=allow_loopback)
-                    continue
+        req = client.build_request(method_u, current)
+        response = client.send(req, stream=True, follow_redirects=False)
+        try:
+            if response.is_redirect:
+                location = response.headers.get("location")
+                response.close()
+                response = None
+                if not location:
+                    raise FeedError(f"Redirect without Location from {current}")
+                current = str(httpx.URL(current).join(location))
+                _assert_hop_allowed(current, allowed_hosts, allow_loopback=allow_loopback)
+                continue
+            if method_u == "HEAD":
+                # RV-C-001: close without response.read(); never buffer a HEAD entity.
+                response.close()
+                response = _rebuild_response(response, body=b"")
+            elif budget is None:
                 response.read()
-                break
-            except Exception:
-                if response is not None:
-                    with contextlib.suppress(Exception):
-                        response.close()
-                raise
-
-        else:
-            req = client.build_request(method_u, current)
-            response = client.send(req, stream=True, follow_redirects=False)
-            try:
-                if response.is_redirect:
-                    location = response.headers.get("location")
-                    response.close()
-                    response = None
-                    if not location:
-                        raise FeedError(f"Redirect without Location from {current}")
-                    current = str(httpx.URL(current).join(location))
-                    _assert_hop_allowed(current, allowed_hosts, allow_loopback=allow_loopback)
-                    continue
-                assert budget is not None
+            else:
                 body = _read_body_capped(response, max_bytes=budget)
-                headers = httpx.Headers(response.headers)
-                headers.pop("Content-Encoding", None)
-                headers.pop("Content-Length", None)
-                response = httpx.Response(
-                    status_code=response.status_code,
-                    headers=headers,
-                    content=body,
-                    request=response.request,
-                    extensions=response.extensions,
-                    history=response.history,
-                )
-                break
-            except Exception:
-                if response is not None:
-                    with contextlib.suppress(Exception):
-                        response.close()
-                raise
+                response = _rebuild_response(response, body=body)
+            break
+        except Exception:
+            if response is not None:
+                with contextlib.suppress(Exception):
+                    response.close()
+            raise
     else:
         raise FeedError(f"Too many redirects for {url}")
 

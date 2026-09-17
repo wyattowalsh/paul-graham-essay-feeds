@@ -61,14 +61,15 @@ def test_page_only_summary_change_must_not_skip(tmp_path: Path) -> None:
             )
         ],
     )
+    simple = snap.model_copy(update={"variant": "simple"})
     write_feeds(
         tmp_path,
         rss=render_rss(snap),
         atom=render_atom(snap),
         json_feed=render_json(snap),
-        simple_rss=render_rss(snap),
-        simple_atom=render_atom(snap),
-        simple_json_feed=render_json(snap),
+        simple_rss=render_rss(simple),
+        simple_atom=render_atom(simple),
+        simple_json_feed=render_json(simple),
     )
     e2 = _essay(summary="Updated page-derived summary that should publish.")
     assert e2.index_fingerprint() == fp  # index fields unchanged

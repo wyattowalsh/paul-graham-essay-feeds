@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-17
+
+Audit closer. Package `__version__` is `1.0.1`. User docs and the notebook
+still pin `@v1.0.0` until the operator can create `v1.0.1` (ruleset
+`22371020`). Committed `feeds/` generator chrome stays `pg-essay-feeds/1.0.0`
+until the next scheduled generation. HTTP attempt-ceiling **T-011** is skipped.
+
 ### Changed
 
 - **PGF-FINAL-006:** GitHub Pages `index.html` is a subscribe landing: Simple
@@ -17,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   graphics). RSS/Atom/JSON Feed emit icon fields when `public_base_url` is
   set. Visual spec: [DESIGN.md](DESIGN.md). `/latest/*` is still generated but
   is not a landing subscribe group.
+- **PGF-AUDIT-007:** Build backend is pinned `hatchling==1.32.0`.
+- **PGF-AUDIT-010 / RV-S-003:** Colab `feeds.zip` members use
+  `arcname=f"feeds/{name}"` under a ROOT guard. Notebook uv pin is exact
+  `uv==0.12.15`.
+- **RV-S-002:** Attested `requirements.txt` is inventory; **`uv.lock` is the
+  install-integrity SSOT**.
+- **RV-A-003:** Branding INTEGRATION blurb matches Pages
+  `_copy_pages_brand_assets`.
+- **RV-A-002 / RV-A-004:** AGENTS/README layout: `assets/brand/site/` is the
+  Pages overlay; `just ci-local` is the full bar.
 
 ### Fixed
 
@@ -41,6 +58,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PGF-FINAL-005:** `product-provenance.json` is uploaded with the
   `product-identity-*` artifact (`retention-days: 90`) in addition to being
   attested. It is not part of the seven-file public product.
+- **PGF-AUDIT-004:** `--no-allow-bootstrap-fallback` is cmdline-gated via
+  `_cmdline_or_none` (env is no longer clobbered by the CLI default).
+- **PGF-AUDIT-005:** Pages dest refuses nonempty unmarked trees, files, and
+  symlink dest/ancestors. Missing dest and empty unmarked dirs assemble.
+  Marked dest refreshes via sibling temp replace. No unmanaged `rmtree`.
+- **PGF-AUDIT-003:** Verifier requires RFC3339 with `T` and `Z` / `±HH:MM`.
+  Atom `updated` ↔ JSON `date_modified` ↔ catalog `observed_updated_at`.
+- **RV-C-005:** Verifier rejects RSS `content:encoded`, Atom `<content>`,
+  JSON `content_html`, and `1970-01-01T00:00:00Z` feed clocks.
+- **RV-C-002:** Simple Atom uses `FEED_ID_SIMPLE`; fixtures render
+  `variant="simple"`.
+- **RV-C-001:** HEAD probes close like `_hop_exchange` (empty body; no entity
+  buffer).
+- **RV-S-001:** Product push keeps a tokenless `origin` URL and uses a
+  push-scoped bearer `http.extraheader`.
+- **RV-C-003:** HTTP 304 no longer fabricates
+  `content_sha256("304-not-modified")` as `index_hash`.
+- **RV-C-004:** Catalog rebuild `is_permalink` is `stable_id == url`.
+- **RV-C-006:** Durable `CatalogEntry.summary` /
+  `prior_good_summary` are capped at `FEED_SUMMARY_CHARS`.
+- **RV-S-004:** `--result-file` must be contained under repo-root.
+  `$GITHUB_OUTPUT` uses GitHub heredoc or id-only values; `action=` stays last.
+- **RV-C-007:** `check` passes `settings.public_base_url` into
+  `verify_feed_artifacts`. Catalog JSON cannot store that key.
 
 ## [1.0.0] - 2026-09-05
 
@@ -357,7 +398,8 @@ origin and bot-cycle rebuild 2026-09-01…05 (PGF-2026-023–040). Historical
   migrated on load (resource lifecycle clocks + migration_history entry).
 - New module `publication.py` for writer lock + staged materialize.
 
-[Unreleased]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/releases/tag/v1.0.0
 [0.2.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/wyattowalsh/paul-graham-essay-feeds/releases/tag/v0.1.0

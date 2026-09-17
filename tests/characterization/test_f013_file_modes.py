@@ -49,9 +49,9 @@ def test_written_feeds_are_group_and_other_readable(tmp_path: Path) -> None:
         rss=render_rss(snap),
         atom=render_atom(snap),
         json_feed=render_json(snap),
-        simple_rss=render_rss(snap),
-        simple_atom=render_atom(snap),
-        simple_json_feed=render_json(snap),
+        simple_rss=render_rss(snap.model_copy(update={"variant": "simple"})),
+        simple_atom=render_atom(snap.model_copy(update={"variant": "simple"})),
+        simple_json_feed=render_json(snap.model_copy(update={"variant": "simple"})),
     )
     for name in (
         "rss.xml",
