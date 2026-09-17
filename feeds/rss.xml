@@ -5,12 +5,27 @@
     <link>https://paulgraham.com/articles.html</link>
     <description>Unofficial titles, links, page metadata, and short source excerpts for Paul Graham's essays — never complete essay bodies. Ordered newest to oldest from the official index. Dates may be when this feed observed or detected a change, not the essay's original publication date.</description>
     <language>en-US</language>
-    <lastBuildDate>Mon, 31 Aug 2026 17:52:38 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 14 Sep 2026 06:53:14 GMT</lastBuildDate>
     <category>Essays</category>
     <generator>pg-essay-feeds/1.0.0</generator>
     <docs>https://www.rssboard.org/rss-specification</docs>
     <ttl>1440</ttl>
     <atom:link rel="self" type="application/rss+xml" href="https://wyattowalsh.github.io/paul-graham-essay-feeds/rss.xml" />
+    <image>
+      <url>https://wyattowalsh.github.io/paul-graham-essay-feeds/rss-channel-image-144x144.png</url>
+      <title>Paul Graham Essays — Enriched (Unofficial)</title>
+      <link>https://paulgraham.com/articles.html</link>
+      <width>144</width>
+      <height>144</height>
+    </image>
+    <item>
+      <title>Making Startups Powerful</title>
+      <link>https://paulgraham.com/powerful.html</link>
+      <description>September 2026 One of the most useful heuristics I have when doing office hours with startups is to ask: what would make this company more powerful?</description>
+      <dc:creator>Paul Graham</dc:creator>
+      <category>Essays</category>
+      <guid isPermaLink="true">https://paulgraham.com/powerful.html</guid>
+    </item>
     <item>
       <title>How Universities Should Prepare Founders</title>
       <link>https://paulgraham.com/prepare.html</link>
